@@ -7,6 +7,7 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Logging;
 using Unity.Networking.Transport;
+using UnityEngine.UIElements;
 
 public struct SpawnPlayerRequest : IRpcCommand
 {
@@ -62,7 +63,7 @@ public partial struct PlayerSpawnerSystem : ISystem
             }
 
             connectionsSeen[index] = reqSrc.ValueRO.SourceConnection;
-            var networkId = networkIdFromEntity[reqSrc.ValueRO.SourceConnection];
+            NetworkId networkId = networkIdFromEntity[reqSrc.ValueRO.SourceConnection];
             
             commandBuffer.AddComponent<PlayerSpawned>(reqSrc.ValueRO.SourceConnection);
 

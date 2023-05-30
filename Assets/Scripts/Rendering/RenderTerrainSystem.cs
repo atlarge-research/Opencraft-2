@@ -226,7 +226,14 @@ partial struct CreateTerrainRenderPlanes : IJobEntity
     private void SpawnFace(int3 location, float3 direction)
     {
         Entity newFace = ecb.Instantiate(1, face);
-        quaternion rotation = quaternion.LookRotationSafe( math.down(), direction);
+        // Returns identity if colinear, so math.up as direction functions as intended if the mesh is already facing up :)
+        quaternion rotation = quaternion.LookRotationSafe( math.up(), direction);
+        if (direction.Equals(math.down()))
+        {
+            // Rotations are in radians
+            rotation = quaternion.RotateZ(math.PI);
+        }
+
         LocalTransform lt = new LocalTransform() { Position = location + 0.5f * direction + new float3(0.5f), Rotation = rotation, Scale = 1.0f};
         ecb.SetComponent(1, newFace, lt);
     }

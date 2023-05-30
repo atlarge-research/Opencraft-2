@@ -33,11 +33,10 @@ public partial struct SamplePlayerInput : ISystem
             }
             commandBuffer.Playback(state.EntityManager);
         }
-        
-        bool left = Input.GetKey("left");
-        bool right = Input.GetKey("right");
-        bool down = Input.GetKey("down");
-        bool up = Input.GetKey("up");
+        bool left = Input.GetKey("a");
+        bool right = Input.GetKey("d");
+        bool down = Input.GetKey("s");
+        bool up = Input.GetKey("w");
         bool space = Input.GetKeyDown("space");
         bool mouse1 = Input.GetKeyDown(KeyCode.Mouse0);
         bool mouse2 = Input.GetKeyDown(KeyCode.Mouse1);

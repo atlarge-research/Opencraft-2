@@ -71,6 +71,7 @@ public partial struct GoInGameServerSystem : ISystem
         foreach (var (reqSrc, reqEntity) in SystemAPI.Query<RefRO<ReceiveRpcCommandRequest>>().WithAll<GoInGameRequest>().WithEntityAccess())
         {
             commandBuffer.AddComponent<NetworkStreamInGame>(reqSrc.ValueRO.SourceConnection);
+            commandBuffer.AddComponent(reqSrc.ValueRO.SourceConnection, new GhostConnectionPosition{ Position = new float3() });
             var networkId = networkIdFromEntity[reqSrc.ValueRO.SourceConnection];
 
             UnityEngine.Debug.Log($"'{worldName}' setting connection '{networkId.Value}' to in game!");
