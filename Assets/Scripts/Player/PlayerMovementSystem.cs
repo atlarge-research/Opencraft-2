@@ -170,39 +170,43 @@ partial struct PlayerMovementSystem : ISystem
 
     private PlayerUtilities.PlayerSupportState CheckPlayerSupported(RigidTransform transform)
     {
-        float offset = 0.0f;
-        // Need to check each corner under player for support
-        NativeHashSet<int3> set = new NativeHashSet<int3>(4, Allocator.Temp);
-        set.Add(new int3((int)math.floor(transform.pos.x +offset), (int)math.floor(transform.pos.y),
-            (int)math.floor(transform.pos.z+offset)));
-        set.Add(new int3((int)math.ceil(transform.pos.x -offset), (int)math.floor(transform.pos.y),
-            (int)math.floor(transform.pos.z+offset)));
-        set.Add(new int3((int)math.floor(transform.pos.x +offset), (int)math.floor(transform.pos.y),
-            (int)math.ceil(transform.pos.z-offset)));
-        set.Add(new int3((int)math.ceil(transform.pos.x -offset), (int)math.floor(transform.pos.y),
-            (int)math.ceil(transform.pos.z-offset)));
-        
+        // Check corners under player
+        float offset = 0.5f;
+        NativeHashSet<float3> set = new NativeHashSet<float3>(4, Allocator.Temp);
+        set.Add(new float3(
+            transform.pos.x + offset, 
+            transform.pos.y-1.1f, 
+            transform.pos.z + offset));
+        set.Add(new float3(
+            transform.pos.x + offset, 
+            transform.pos.y-1.1f, 
+            transform.pos.z - offset));
+        set.Add(new float3(
+            transform.pos.x - offset, 
+            transform.pos.y-1.1f, 
+            transform.pos.z - offset));
+        set.Add(new float3(
+            transform.pos.x - offset, 
+            transform.pos.y-1.1f, 
+            transform.pos.z + offset));
+
         foreach (var pos in set)
-        {
-            //Debug.DrawLine(transform.pos, new float3(pos), Color.cyan);
-            //Debug.Log($"Checking pos {pos}");
             if (IsBlockAtPosition(pos))
-            {
-                Debug.DrawLine(transform.pos, new float3(pos), Color.cyan);
                 return PlayerUtilities.PlayerSupportState.Supported;
-            }
-        }
+        
+
         return PlayerUtilities.PlayerSupportState.Unsupported;
     }
 
-    private bool IsBlockAtPosition(int3 pos)
+    private bool IsBlockAtPosition(float3 pos)
     {
         if (GetTerrainAreaByPosition(pos, out Entity containingArea, out int3 containingAreaLocation))
         {
             var terrainBuffer = _bufferLookup[containingArea];
-            int localx = pos.x - containingAreaLocation.x-1; 
-            int localy = pos.y - containingAreaLocation.y-1; 
-            int localz = pos.z - containingAreaLocation.z-1; 
+            int localx = (int)math.floor(pos.x) - containingAreaLocation.x; 
+            int localy = (int)math.floor(pos.y) - containingAreaLocation.y; 
+            int localz = (int)math.floor(pos.z) - containingAreaLocation.z; 
+            //Debug.Log($"Found block at {pos}, corresponding to chunk {containingAreaLocation} with local index {localx}, {localy}, {localz}");
             int index = localx + localy * blocksPerChunkSide + localz  * blocksPerChunkSide * blocksPerChunkSide;
             int4 block = terrainBuffer[index].Value; 
             if (block.w != -1)
@@ -231,7 +235,7 @@ partial struct PlayerMovementSystem : ISystem
         return false;
     }
 
-    private bool GetTerrainAreaByPosition(int3 pos, out Entity containingArea, out int3 containingAreaLocation)
+    private bool GetTerrainAreaByPosition(float3 pos, out Entity containingArea, out int3 containingAreaLocation)
     {
         for (int i = 0; i < terrainAreas.Length; i++ )
         {
@@ -246,7 +250,7 @@ partial struct PlayerMovementSystem : ISystem
                 return true;
             }
         }
-        containingArea = new Entity();
+        containingArea = Entity.Null;
         containingAreaLocation = new int3(-1);
         return false;
     }
@@ -256,22 +260,38 @@ partial struct PlayerMovementSystem : ISystem
     {
         float deltaTime = stepInput.DeltaTime;
         float3 newPosition = transform.pos + deltaTime * linearVelocity;
+        
+        
         float3 newVelocity = linearVelocity;
         float3 norm = math.normalize(linearVelocity);
         
-        /* Need to check four corners of the mesh for obstacles
-        NativeHashSet<int3> set = new NativeHashSet<int3>(2, Allocator.Temp);
+        float offset = 0.5f;
+        NativeHashSet<float3> set = new NativeHashSet<float3>(4, Allocator.Temp);
+        set.Add(new float3(
+            newPosition.x + offset, 
+            newPosition.y-1.0f, 
+            newPosition.z + offset));
+        set.Add(new float3(
+            newPosition.x + offset, 
+            newPosition.y-1.0f, 
+            newPosition.z - offset));
+        set.Add(new float3(
+            newPosition.x - offset, 
+            newPosition.y-1.0f, 
+            newPosition.z - offset));
+        set.Add(new float3(
+            newPosition.x - offset, 
+            newPosition.y-1.0f, 
+            newPosition.z + offset));
         
-        set.Add((int3)(transform.pos + norm + new float3(0.5f,0.0f,0.0f)));
+        foreach (var pos in set)
+            if (IsBlockAtPosition(pos))
+            {
+                linearVelocity = new float3(0,0,0);
+                return;
+            }
         
-        int3 pos = (int3)(transform.pos + new float3(0.1f,0.1f,0.0f) + norm);
-        Debug.DrawLine(transform.pos, (float3) pos, Color.magenta);
-        if (IsBlockAtPosition(pos))
-        {
-            //Debug.DrawLine(transform.pos, (float3) pos, Color.magenta);
-            //transform.pos = newPosition;
-            //linearVelocity = new float3(0);
-        }*/
+
         transform.pos = newPosition;
         linearVelocity = newVelocity; 
 

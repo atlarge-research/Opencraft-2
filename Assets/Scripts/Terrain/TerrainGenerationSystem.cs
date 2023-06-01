@@ -1,9 +1,13 @@
-﻿using Unity.Entities;
+﻿using System.Collections.Generic;
+using Unity.Entities;
+using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.NetCode;
 using Unity.Transforms;
 using Unity.Burst;
 using Unity.Collections;
+using Unity.Logging.Internal.Debug;
+using UnityEngine;
 
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
 [UpdateInGroup(typeof(PredictedSimulationSystemGroup))]
@@ -36,8 +40,29 @@ public partial struct TerrainGenerationSystem : ISystem
         {
             return;
         }
+
+        //NativeArray<int3> chunksToSpawn = chunksToSpawnBuffer.ToNativeArray(Allocator.TempJob);
+        NativeArray<int3> chunksToSpawn = chunksToSpawnBuffer.AsNativeArray();
+        // Sort the chunks to spawn so ones closer to 0,0 are first
+        SortJob<int3, Int3Comparer> sortJob = chunksToSpawn.SortJob(new Int3Comparer{});
+        JobHandle sortHandle = sortJob.Schedule();
+
+        // Spawn the terrain area entities
+        state.EntityManager.Instantiate(terrainSpawner.TerrainArea,
+            chunksToSpawn.Length > terrainSpawner.maxChunkSpawnsPerTick ? terrainSpawner.maxChunkSpawnsPerTick : chunksToSpawn.Length,
+            Allocator.Temp);
+        // Then populate them on worker threads
+        JobHandle populateHandle = new PopulateTerrainAreas
+        {
+            initialAreas = terrainSpawner.initialAreas,
+            chunksToSpawn = chunksToSpawn,
+            noiseSeed = terrainSpawner.seed,
+            blocksPerChunkSide = terrainSpawner.blocksPerChunkSide,
+            YBounds = terrainSpawner.YBounds,
+        }.ScheduleParallel(sortHandle);
+        populateHandle.Complete();
         
-        NativeArray<int3> chunksToSpawn = chunksToSpawnBuffer.ToNativeArray(Allocator.TempJob);
+        // Remove spawned areas from the toSpawn buffer
         if (chunksToSpawnBuffer.Length > terrainSpawner.maxChunkSpawnsPerTick)
         {
             chunksToSpawnBuffer.RemoveRange(0, terrainSpawner.maxChunkSpawnsPerTick);
@@ -46,21 +71,21 @@ public partial struct TerrainGenerationSystem : ISystem
         {
             chunksToSpawnBuffer.Clear();
         }
+    }
+}
 
-        // Spawn the terrain area entities
-        state.EntityManager.Instantiate(terrainSpawner.TerrainArea,
-            chunksToSpawn.Length > terrainSpawner.maxChunkSpawnsPerTick ? terrainSpawner.maxChunkSpawnsPerTick : chunksToSpawn.Length,
-            Allocator.Temp);
-        // Then populate them on worker threads
-        new PopulateTerrainAreas
-        {
-            initialAreas = terrainSpawner.initialAreas,
-            chunksToSpawn = chunksToSpawn,
-            //ecb = parallelEcb,
-            noiseSeed = terrainSpawner.seed,
-            blocksPerChunkSide = terrainSpawner.blocksPerChunkSide,
-            YBounds = terrainSpawner.YBounds,
-        }.ScheduleParallel();
+
+public struct Int3Comparer : IComparer<int3>
+{
+    public int Compare(int3 a, int3 b)
+    {
+        int lSum = math.abs(a.x) + math.abs(a.y) + math.abs(a.z);
+        int rSum = math.abs(b.x) + math.abs(b.y) + math.abs(b.z);
+        if (lSum > rSum)
+            return 1;
+        if (lSum < rSum)
+            return -1;
+        return 0;
     }
 }
 
@@ -68,7 +93,7 @@ public partial struct TerrainGenerationSystem : ISystem
 [BurstCompile]
 partial struct PopulateTerrainAreas : IJobEntity
 {
-    [DeallocateOnJobCompletion] public NativeArray<int3> chunksToSpawn;
+    public NativeArray<int3> chunksToSpawn;
 
     public int3 initialAreas;
     public int blocksPerChunkSide;
@@ -78,11 +103,10 @@ partial struct PopulateTerrainAreas : IJobEntity
 
     public void Execute(Entity entity, [EntityIndexInQuery] int index, ref DynamicBuffer<TerrainBlocks> terrainBlocksBuffer, ref LocalTransform localTransform, ref TerrainArea terrainArea)
     {
-        
         int3 chunk = chunksToSpawn[index];
-        int areaX = chunk.x * blocksPerChunkSide - (int)(0.5f*initialAreas.x*blocksPerChunkSide);
-        int areaY = chunk.y * blocksPerChunkSide - (int)(0.5f*initialAreas.y*blocksPerChunkSide);
-        int areaZ = chunk.z * blocksPerChunkSide - (int)(0.5f*initialAreas.z*blocksPerChunkSide);
+        int areaX = chunk.x * blocksPerChunkSide;// - (int)(0.5f*initialAreas.x*blocksPerChunkSide);
+        int areaY = chunk.y * blocksPerChunkSide;// - (int)(0.5f*initialAreas.y*blocksPerChunkSide);
+        int areaZ = chunk.z * blocksPerChunkSide;// - (int)(0.5f*initialAreas.z*blocksPerChunkSide);
         // Physically place the area even though its invisible, useful for checking where to bother rendering
         localTransform.Position = new float3(areaX, areaY, areaZ); 
         terrainArea.location = new int3(areaX, areaY, areaZ);

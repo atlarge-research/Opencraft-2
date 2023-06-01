@@ -46,15 +46,15 @@ public class TerrainSpawnerAuthoring : MonoBehaviour
             component.maxChunkSpawnsPerTick = authoring.maxChunkSpawnsPerTick;
             component.seed = authoring.seed;
             component.initialAreas = authoring.initialAreas;
-            
+
             // Add to the TerrainSpawner entity a buffer of int3s, fill it with initial values
             var toSpawnBuffer = AddBuffer<TerrainAreasToSpawn>(entity);
             DynamicBuffer<int3> intBuffer = toSpawnBuffer.Reinterpret<int3>();
-            for (int x = 0; x < authoring.initialAreas.x; x++)
-                for (int y = 0; y < authoring.initialAreas.y; y++)
-                    for (int z = 0; z < authoring.initialAreas.z; z++)
+            for (int x = -(int)math.floor(authoring.initialAreas.x / 2.0f); x < math.ceil(authoring.initialAreas.x / 2.0f); x++)
+                for (int y = -(int)math.floor(authoring.initialAreas.y / 2.0f); y < math.ceil(authoring.initialAreas.y / 2.0f); y++)
+                    for (int z = -(int)math.floor(authoring.initialAreas.z / 2.0f); z < math.ceil(authoring.initialAreas.z / 2.0f); z++)
                         intBuffer.Add(new int3(x, y, z));
-            
+                        
             AddComponent(entity, component);
             
         }

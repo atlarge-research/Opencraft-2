@@ -173,10 +173,10 @@ MonoBehaviour:
     type: 3}
   seed: 43
   initialAreas:
-    x: 1
+    x: 2
     y: 1
-    z: 1
-  maxChunkSpawnsPerTick: 10
+    z: 2
+  maxChunkSpawnsPerTick: 1
   blocksPerChunkSide: 4
   YBounds:
     x: 0
