@@ -6,9 +6,9 @@ using Unity.NetCode;
 using Unity.Transforms;
 using Unity.Burst;
 using Unity.Collections;
-using Unity.Logging.Internal.Debug;
 using UnityEngine;
 
+[assembly: RegisterGenericJobType(typeof(SortJob<int3, Int3Comparer>))]
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
 [UpdateInGroup(typeof(PredictedSimulationSystemGroup))]
 [BurstCompile]
@@ -21,7 +21,6 @@ public partial struct TerrainGenerationSystem : ISystem
         state.RequireForUpdate<TerrainSpawner>();
     }
     
-    [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
         // Disable the NewSpawn tag component from the areas we populated in the previous tick
@@ -44,7 +43,7 @@ public partial struct TerrainGenerationSystem : ISystem
         //NativeArray<int3> chunksToSpawn = chunksToSpawnBuffer.ToNativeArray(Allocator.TempJob);
         NativeArray<int3> chunksToSpawn = chunksToSpawnBuffer.AsNativeArray();
         // Sort the chunks to spawn so ones closer to 0,0 are first
-        SortJob<int3, Int3Comparer> sortJob = chunksToSpawn.SortJob(new Int3Comparer{});
+        SortJob<int3, Int3Comparer> sortJob = chunksToSpawn.SortJob<int3, Int3Comparer>(new Int3Comparer{});
         JobHandle sortHandle = sortJob.Schedule();
 
         // Spawn the terrain area entities
@@ -115,7 +114,7 @@ partial struct PopulateTerrainAreas : IJobEntity
         var perLayer = blocksPerChunkSide * blocksPerChunkSide;
         var numBlocks = perLayer * blocksPerChunkSide;
         terrainBlocksBuffer.Resize(numBlocks, NativeArrayOptions.UninitializedMemory);
-        DynamicBuffer<int4> terrainBlocks = terrainBlocksBuffer.Reinterpret<int4>();
+        DynamicBuffer<int> terrainBlocks = terrainBlocksBuffer.Reinterpret<int>();
         for (int block = 0; block < numBlocks; block++)
         {
             var blockX = (block % blocksPerChunkSide);
@@ -131,11 +130,11 @@ partial struct PopulateTerrainAreas : IJobEntity
                 if (globalY > cutoff)
                 {
                     // "air" terrain
-                    terrainBlocks[block] = new int4(-1);
+                    terrainBlocks[block] = -1;
                     continue;
                 }
             }
-            terrainBlocks[block] = new int4(blockX, blockY, blockZ, 1);
+            terrainBlocks[block] = 1;
             terrainArea.numBlocks++;
         }
     }

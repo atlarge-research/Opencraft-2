@@ -13,7 +13,8 @@ public class TerrainAreaAuthoring : MonoBehaviour
             var entity = GetEntity(TransformUsageFlags.Dynamic);
             AddComponent<TerrainArea>(entity);
             AddComponent<NewSpawn>(entity);
-            AddComponent<NotRendered>(entity);
+            var notRendered = new NotRendered {};
+            AddComponent(entity, notRendered);
             AddBuffer<TerrainBlocks>(entity);
             //SetComponentEnabled<Visible>(entity, false);
         }
@@ -26,13 +27,14 @@ public struct TerrainArea: IComponentData
     [GhostField] public int numBlocks;
 }
 public struct NewSpawn: IComponentData, IEnableableComponent {}
-public struct NotRendered: IComponentData, IEnableableComponent {}
 
-// todo don't store x,y,z, infer it from index
+public struct NotRendered : IComponentData, IEnableableComponent {}
+
+
 [InternalBufferCapacity(512)]
 public struct TerrainBlocks : IBufferElementData
 {
-    [GhostField] public int4 Value; // x,y,z,type if exists, all -1s if not
+    [GhostField] public int Value; //type if exists, -1 if not
 }
 
 

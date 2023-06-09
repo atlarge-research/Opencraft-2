@@ -9,6 +9,7 @@ using UnityEngine;
 [UpdateInGroup(typeof(PresentationSystemGroup))]
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 [UpdateAfter(typeof(TerrainGenerationSystem))]
+[BurstCompile]
 public partial class RenderTerrainSystem : SystemBase
 {
     //private EntityQuery query;
@@ -16,8 +17,10 @@ public partial class RenderTerrainSystem : SystemBase
 
     protected override void OnCreate()
     {
+        //Enabled = false;
     }
-
+    
+    [BurstCompile]
     protected override void OnUpdate()
     {
         _bufferLookup = GetBufferLookup<TerrainBlocks>(true);
@@ -43,8 +46,8 @@ public partial class RenderTerrainSystem : SystemBase
         ecb.Playback(EntityManager);
         ecb.Dispose();
         // Disable the NotRendered tag component from the areas we have rendered faces for
-        var newSpawnQuery = SystemAPI.QueryBuilder().WithAll<NotRendered>().Build();
-        EntityManager.SetComponentEnabled<NotRendered>(newSpawnQuery, false);
+        //var newSpawnQuery = SystemAPI.QueryBuilder().WithAll<NotRendered>().Build();
+        //EntityManager.SetComponentEnabled<NotRendered>(newSpawnQuery, false);
 
     }
 }
@@ -58,7 +61,7 @@ partial struct CreateTerrainRenderPlanes : IJobEntity
     [ReadOnly] public NativeArray<TerrainArea> terrainAreas;
     [ReadOnly] public BufferLookup<TerrainBlocks> terrainBufferLookup;
     public int blocksPerChunkSide;
-    public void Execute(in DynamicBuffer<TerrainBlocks> terrainBlocksBuffer, in TerrainArea terrainArea, in NotRendered nr)
+    public void Execute(Entity entity, in DynamicBuffer<TerrainBlocks> terrainBlocksBuffer, in TerrainArea terrainArea, in NotRendered nr)
     {
         int3 area = terrainArea.location;
         bool neighborAreaUpExists = false;
@@ -115,97 +118,104 @@ partial struct CreateTerrainRenderPlanes : IJobEntity
         // Calculate per-block visibility
         for (int i = 0; i < terrainBlocksBuffer.Length; i++)
         {
-            int4 block = terrainBlocksBuffer[i].Value;
+            int block = terrainBlocksBuffer[i].Value;
             // Check if this block is empty
-            if (block.x == -1)
+            if (block == -1)
             {
                 continue;
             }
-            int3 blockNeighboringAreas = GetBlockNeighboringAreas(block.xyz);
+            var perLayer = blocksPerChunkSide * blocksPerChunkSide;
+            var blockX = (i % blocksPerChunkSide);
+            var blockY = (i % perLayer) / blocksPerChunkSide;
+            var blockZ = (i / perLayer);
+            var blockLoc = new int3(blockX, blockY, blockZ);
+            int3 blockNeighboringAreas = GetBlockNeighboringAreas(blockLoc);
             //Debug.Log($"Checking block {block} with neighboring areas {blockNeighboringAreas}");
             
-            int4 currentNeighborBlock;
+            int currentNeighborBlock;
             // Check right
             if (blockNeighboringAreas.x == 1)
             {
                 // Check value of block neighbor inside neighboring area
-                currentNeighborBlock =  neighborAreaRightExists ? neighborAreaRight[i - blocksPerChunkSide + 1].Value : new int4(-1);
+                currentNeighborBlock =  neighborAreaRightExists ? neighborAreaRight[i - blocksPerChunkSide + 1].Value : -1;
             }
             else
             {
                 // Check value of block neighbor inside this area
                 currentNeighborBlock = terrainBlocksBuffer[i + 1].Value;
             }
-            if (currentNeighborBlock.w == -1) // Check block neighbor exists
+            if (currentNeighborBlock== -1) // Check block neighbor exists
             {
-                SpawnFace(terrainArea.location + block.xyz, math.right());
+                SpawnFace(terrainArea.location + blockLoc, math.right());
             }
             // Check left
             if (blockNeighboringAreas.x == -1)
             {
-                currentNeighborBlock =  neighborAreaLeftExists ? neighborAreaLeft[i + blocksPerChunkSide - 1].Value : new int4(-1);
+                currentNeighborBlock =  neighborAreaLeftExists ? neighborAreaLeft[i + blocksPerChunkSide - 1].Value : -1;
             }
             else
             {
                 currentNeighborBlock = terrainBlocksBuffer[i - 1].Value;
             }
-            if (currentNeighborBlock.w == -1)
+            if (currentNeighborBlock == -1)
             {
-                SpawnFace(terrainArea.location + block.xyz, math.left());
+                SpawnFace(terrainArea.location + blockLoc, math.left());
             }
             // Check up
             if (blockNeighboringAreas.y == 1)
             {
-                currentNeighborBlock =  neighborAreaUpExists ? neighborAreaUp[i - (blocksPerChunkSide * (blocksPerChunkSide-1))].Value : new int4(-1);
+                currentNeighborBlock =  neighborAreaUpExists ? neighborAreaUp[i - (blocksPerChunkSide * (blocksPerChunkSide-1))].Value : -1;
             }
             else
             {
                 currentNeighborBlock = terrainBlocksBuffer[i + blocksPerChunkSide].Value;
             }
-            if (currentNeighborBlock.w == -1)
+            if (currentNeighborBlock == -1)
             {
-                SpawnFace(terrainArea.location + block.xyz, math.up());
+                SpawnFace(terrainArea.location + blockLoc, math.up());
             }
             // Check down
             if (blockNeighboringAreas.y == -1)
             {
-                currentNeighborBlock =  neighborAreaDownExists ? neighborAreaDown[i + (blocksPerChunkSide * (blocksPerChunkSide-1))].Value : new int4(-1);
+                currentNeighborBlock =  neighborAreaDownExists ? neighborAreaDown[i + (blocksPerChunkSide * (blocksPerChunkSide-1))].Value : -1;
             }
             else
             {
                 currentNeighborBlock = terrainBlocksBuffer[i - blocksPerChunkSide].Value;
             }
-            if (currentNeighborBlock.w == -1)
+            if (currentNeighborBlock == -1)
             {
-                SpawnFace(terrainArea.location + block.xyz, math.down());
+                SpawnFace(terrainArea.location + blockLoc, math.down());
             }
             // Check forward
              if (blockNeighboringAreas.z == 1)
              {
-                 currentNeighborBlock =  neighborAreaForwardExists ? neighborAreaForward[i - (blocksPerChunkSide * blocksPerChunkSide * (blocksPerChunkSide-1))].Value : new int4(-1);
+                 currentNeighborBlock =  neighborAreaForwardExists ? neighborAreaForward[i - (blocksPerChunkSide * blocksPerChunkSide * (blocksPerChunkSide-1))].Value : -1;
              }
              else
              {
                  currentNeighborBlock = terrainBlocksBuffer[i + (blocksPerChunkSide * blocksPerChunkSide)].Value;
              }
-             if (currentNeighborBlock.w == -1)
+             if (currentNeighborBlock == -1)
              {
-                 SpawnFace(terrainArea.location + block.xyz, math.forward());
+                 SpawnFace(terrainArea.location + blockLoc, math.forward());
              }
             // Check back
             if (blockNeighboringAreas.z == -1)
             {
-                currentNeighborBlock =  neighborAreaBackExists ? neighborAreaBack[i + (blocksPerChunkSide * blocksPerChunkSide * (blocksPerChunkSide-1))].Value : new int4(-1);
+                currentNeighborBlock =  neighborAreaBackExists ? neighborAreaBack[i + (blocksPerChunkSide * blocksPerChunkSide * (blocksPerChunkSide-1))].Value : -1;
             }
             else
             {
                 currentNeighborBlock = terrainBlocksBuffer[i - (blocksPerChunkSide * blocksPerChunkSide)].Value;
             }
-            if (currentNeighborBlock.w == -1)
+            if (currentNeighborBlock == -1)
             {
-                SpawnFace(terrainArea.location + block.xyz, math.back());
+                SpawnFace(terrainArea.location + blockLoc, math.back());
             }
         }
+        // Mark as rendered
+        ecb.SetComponentEnabled<NotRendered>(entity.Index, entity, false);
     }
 
     // Checks if a block is next to which neighboring chunks

@@ -8,9 +8,15 @@ using UnityEngine;
 [RequireMatchingQueriesForUpdate]
 [UpdateInGroup(typeof(PresentationSystemGroup))]
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
+[BurstCompile]
 public partial class DebugRenderSystem : SystemBase
 {
+    protected override void OnCreate()
+    {
+        //Enabled = false;
+    }
 
+    [BurstCompile]
     protected override void OnUpdate()
     {
         var terrainSpawner = SystemAPI.GetSingleton<TerrainSpawner>();

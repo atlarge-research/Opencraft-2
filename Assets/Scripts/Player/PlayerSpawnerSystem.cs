@@ -81,7 +81,7 @@ public partial struct PlayerSpawnerSystem : ISystem
                 const float halfCharacterWidthPlusHalfPadding = .55f;
                 const float spawnStaggeredOffset = 0.25f;
                 var staggeredXPos = networkId.Value * math.@select(halfCharacterWidthPlusHalfPadding, -halfCharacterWidthPlusHalfPadding, isEven) + math.@select(-spawnStaggeredOffset, spawnStaggeredOffset, isEven);
-                var preventZFighting = 2 + -0.01f * networkId.Value;
+                var preventZFighting = 2.5f + -0.01f * networkId.Value;
 
                 commandBuffer.SetComponent(player, LocalTransform.FromPosition(new float3(staggeredXPos, preventZFighting, 0)));
 

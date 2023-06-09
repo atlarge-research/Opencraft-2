@@ -1,5 +1,4 @@
-﻿using NUnit.Framework;
-using Unity.Entities;
+﻿using Unity.Entities;
 using Unity.Burst;
 using Unity.Physics;
 using Unity.Mathematics;
@@ -13,7 +12,8 @@ using UnityEngine;
 
 [UpdateInGroup(typeof(PhysicsSystemGroup))]
 [UpdateBefore(typeof(PhysicsInitializeGroup))]
-[BurstCompile]
+//[BurstCompile]
+// Adapted from https://github.com/Unity-Technologies/EntityComponentSystemSamples/blob/master/NetcodeSamples/Assets/Samples/HelloNetcode/2_Intermediate/01_CharacterController/CharacterControllerSystem.cs
 partial struct PlayerMovementSystem : ISystem
 {
     const float k_DefaultTau = 0.4f;
@@ -45,7 +45,7 @@ partial struct PlayerMovementSystem : ISystem
         _bufferLookup = state.GetBufferLookup<TerrainBlocks>(true);
     }
 
-    [BurstCompile]
+    //[BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
         state.CompleteDependency();
@@ -205,18 +205,17 @@ partial struct PlayerMovementSystem : ISystem
             var terrainBuffer = _bufferLookup[containingArea];
             int localx = (int)math.floor(pos.x) - containingAreaLocation.x; 
             int localy = (int)math.floor(pos.y) - containingAreaLocation.y; 
-            int localz = (int)math.floor(pos.z) - containingAreaLocation.z; 
-            //Debug.Log($"Found block at {pos}, corresponding to chunk {containingAreaLocation} with local index {localx}, {localy}, {localz}");
+            int localz = (int)math.floor(pos.z) - containingAreaLocation.z;
             int index = localx + localy * blocksPerChunkSide + localz  * blocksPerChunkSide * blocksPerChunkSide;
-            int4 block = terrainBuffer[index].Value; 
-            if (block.w != -1)
+            int block = terrainBuffer[index].Value; 
+            if (block != -1)
             {
                 int d = 1;
                 //terrainArea.ValueRO.location
                 float3 baseLocation = new float3(
-                    containingAreaLocation.x + block.x,
-                    containingAreaLocation.y + block.y,
-                    containingAreaLocation.z + block.z);
+                    containingAreaLocation.x + localx,
+                    containingAreaLocation.y + localy,
+                    containingAreaLocation.z + localz);
                 Debug.DrawLine(baseLocation, baseLocation + new float3(d,0,0), Color.green);
                 Debug.DrawLine(baseLocation, baseLocation + new float3(0,d,0), Color.green);
                 Debug.DrawLine(baseLocation, baseLocation + new float3(0,0,d), Color.green);
@@ -241,9 +240,9 @@ partial struct PlayerMovementSystem : ISystem
         {
             var terrainArea = terrainAreas[i];
             int3 loc = terrainArea.location;
-            if (pos.x > loc.x && pos.x <= loc.x + blocksPerChunkSide &&
-                pos.y > loc.y && pos.y <= loc.y + blocksPerChunkSide &&
-                pos.z > loc.z && pos.z <= loc.z + blocksPerChunkSide)
+            if (pos.x >= loc.x && pos.x < loc.x + blocksPerChunkSide &&
+                pos.y >= loc.y && pos.y < loc.y + blocksPerChunkSide &&
+                pos.z >= loc.z && pos.z < loc.z + blocksPerChunkSide)
             {
                 containingArea = terrainAreasEntities[i];
                 containingAreaLocation = loc;

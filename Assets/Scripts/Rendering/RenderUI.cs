@@ -10,11 +10,23 @@ public class RenderUI : MonoBehaviour
     public Text tooltipTextPrefab;
     private Text debugText;
     private Text tooltipText;
+    private EntityQuery terrainQuery;
+    private EntityQuery terrainFacesQuery;
+    private EntityQuery playerQuery;
     private void OnEnable()
     {
         debugText = Instantiate(debugTextPrefab, m_Canvas.transform, false);
         tooltipText = Instantiate(tooltipTextPrefab, m_Canvas.transform, false);
         tooltipText.text = "Press TAB to spawn your player!";
+        foreach (var world in World.All)
+        {
+            if (world.Name == "ClientWorld")
+            {
+                terrainQuery = world.EntityManager.CreateEntityQuery(ComponentType.ReadOnly<TerrainArea>());
+                terrainFacesQuery = world.EntityManager.CreateEntityQuery(ComponentType.ReadOnly<TerrainFace>());
+                playerQuery = world.EntityManager.CreateEntityQuery(ComponentType.ReadOnly<PlayerInput>(), ComponentType.ReadOnly<GhostOwnerIsLocal>());
+            }
+        }
     }
 
     private void Update()
@@ -23,12 +35,9 @@ public class RenderUI : MonoBehaviour
         {
             if (world.Name == "ClientWorld")
             {
-                var terrainQuery = world.EntityManager.CreateEntityQuery(ComponentType.ReadOnly<TerrainArea>());
-                int areas= terrainQuery.CalculateEntityCount();
-                var terrainFacesQuery = world.EntityManager.CreateEntityQuery(ComponentType.ReadOnly<TerrainFace>());
+                int areas = terrainQuery.CalculateEntityCount();
                 int faces = terrainFacesQuery.CalculateEntityCount();
                 debugText.text = $"NumAreas {areas}\nNumFaces {faces}";
-                var playerQuery = world.EntityManager.CreateEntityQuery(ComponentType.ReadOnly<PlayerInput>(), ComponentType.ReadOnly<GhostOwnerIsLocal>());
                 tooltipText.enabled = playerQuery.CalculateEntityCount() == 0;
                 break;
             }
