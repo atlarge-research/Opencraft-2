@@ -9,39 +9,48 @@ using UnityEngine;
 [UpdateInGroup(typeof(PresentationSystemGroup))]
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 [BurstCompile]
-public partial class DebugRenderSystem : SystemBase
+public partial struct DebugRenderSystem : ISystem
 {
-    protected override void OnCreate()
+    private EntityQuery _terrainSpawnerQuery;
+    [BurstCompile]
+    public void OnCreate(ref SystemState state)
     {
-        //Enabled = false;
+        state.RequireForUpdate<TerrainSpawner>();
+        state.RequireForUpdate<TerrainArea>();
+        _terrainSpawnerQuery = state.GetEntityQuery(ComponentType.ReadOnly<TerrainSpawner>());
     }
 
     [BurstCompile]
-    protected override void OnUpdate()
+    public void OnUpdate(ref SystemState state)
     {
-        var terrainSpawner = SystemAPI.GetSingleton<TerrainSpawner>();
-        foreach (var terrainArea in SystemAPI.Query<RefRO<TerrainArea>>())
-        {
-            int d = terrainSpawner.blocksPerChunkSide;
-            //terrainArea.ValueRO.location
-            float3 baseLocation = new float3(
-                terrainArea.ValueRO.location.x,
-                terrainArea.ValueRO.location.y,
-                terrainArea.ValueRO.location.z);
-            Debug.DrawLine(baseLocation, baseLocation + new float3(d,0,0));
-            Debug.DrawLine(baseLocation, baseLocation + new float3(0,d,0));
-            Debug.DrawLine(baseLocation, baseLocation + new float3(0,0,d));
-            Debug.DrawLine(baseLocation + new float3(d,d,0), baseLocation + new float3(d,0,0));
-            Debug.DrawLine(baseLocation + new float3(d,d,0), baseLocation + new float3(0,d,0));
-            Debug.DrawLine(baseLocation + new float3(d,d,0), baseLocation + new float3(d,d,d));
-            Debug.DrawLine(baseLocation + new float3(0,d,d), baseLocation + new float3(0,d,0));
-            Debug.DrawLine(baseLocation + new float3(0,d,d), baseLocation + new float3(0,0,d));
-            Debug.DrawLine(baseLocation + new float3(0,d,d), baseLocation + new float3(d,d,d));
-            Debug.DrawLine(baseLocation + new float3(d,0,d), baseLocation + new float3(d,0,0));
-            Debug.DrawLine(baseLocation + new float3(d,0,d), baseLocation + new float3(d,d,d));
-            Debug.DrawLine(baseLocation + new float3(d,0,d), baseLocation + new float3(0,0,d));
-        }
+        TerrainSpawner terrainSpawner = _terrainSpawnerQuery.GetSingleton<TerrainSpawner>();
+        
+        new DebugDrawTerrain{blocksPerSide = terrainSpawner.blocksPerSide}.ScheduleParallel();
+    }
+}
 
+[BurstCompile]
+public partial struct DebugDrawTerrain : IJobEntity
+{
+    public int blocksPerSide;
+    public void Execute(in TerrainArea terrainChunk, in LocalTransform t)
+    {
+
+        var baseLocation = t.Position;
+        var d = blocksPerSide;
+        // Draw a bounding box
+        Debug.DrawLine(baseLocation, baseLocation + new float3(d,0,0));
+        Debug.DrawLine(baseLocation, baseLocation + new float3(0,d,0));
+        Debug.DrawLine(baseLocation, baseLocation + new float3(0,0,d));
+        Debug.DrawLine(baseLocation + new float3(d,d,0), baseLocation + new float3(d,0,0));
+        Debug.DrawLine(baseLocation + new float3(d,d,0), baseLocation + new float3(0,d,0));
+        Debug.DrawLine(baseLocation + new float3(d,d,0), baseLocation + new float3(d,d,d));
+        Debug.DrawLine(baseLocation + new float3(0,d,d), baseLocation + new float3(0,d,0));
+        Debug.DrawLine(baseLocation + new float3(0,d,d), baseLocation + new float3(0,0,d));
+        Debug.DrawLine(baseLocation + new float3(0,d,d), baseLocation + new float3(d,d,d));
+        Debug.DrawLine(baseLocation + new float3(d,0,d), baseLocation + new float3(d,0,0));
+        Debug.DrawLine(baseLocation + new float3(d,0,d), baseLocation + new float3(d,d,d));
+        Debug.DrawLine(baseLocation + new float3(d,0,d), baseLocation + new float3(0,0,d));
     }
 }
 

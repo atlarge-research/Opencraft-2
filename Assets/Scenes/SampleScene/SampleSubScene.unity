@@ -169,15 +169,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   TerrainArea: {fileID: 3194879136077857405, guid: fbe285af02efd794da108f614fa73983,
     type: 3}
-  TerrainFace: {fileID: 8123702849073069357, guid: 1648581b08e7ca045bef1afd2ed74b03,
-    type: 3}
+  TerrainMaterial: {fileID: 2100000, guid: 2e01ef40587306e4c92d3d61aa003fa9, type: 2}
   seed: 43
   initialAreas:
-    x: 5
+    x: 10
     y: 1
-    z: 5
+    z: 10
   maxChunkSpawnsPerTick: 25
-  blocksPerChunkSide: 4
+  blocksPerAreaSide: 4
   YBounds:
     x: 0
     y: 8

@@ -7,6 +7,7 @@ using Unity.Collections;
 using Unity.Entities.Content;
 using Unity.NetCode;
 using Unity.Physics.Systems;
+using Unity.Transforms;
 using UnityEngine;
 
 
@@ -30,7 +31,7 @@ partial struct PlayerMovementSystem : ISystem
     
     private BufferLookup<TerrainBlocks> _bufferLookup;
     private NativeArray<Entity> terrainAreasEntities;
-    private NativeArray<TerrainArea> terrainAreas;
+    private NativeArray<LocalTransform> terrainAreaTransforms;
     private int blocksPerChunkSide;
 
     public void OnCreate(ref SystemState state)
@@ -58,10 +59,10 @@ partial struct PlayerMovementSystem : ISystem
         var networkTime = SystemAPI.GetSingleton<NetworkTime>();
         
         _bufferLookup.Update(ref state);
-        var terrainAreasQuery = SystemAPI.QueryBuilder().WithAll<TerrainArea>().Build();
+        var terrainAreasQuery = SystemAPI.QueryBuilder().WithAll<TerrainArea, LocalTransform>().Build();
         terrainAreasEntities = terrainAreasQuery.ToEntityArray(state.WorldUpdateAllocator);
-        terrainAreas = terrainAreasQuery.ToComponentDataArray<TerrainArea>(state.WorldUpdateAllocator);
-        blocksPerChunkSide = SystemAPI.GetSingleton<TerrainSpawner>().blocksPerChunkSide;
+        terrainAreaTransforms = terrainAreasQuery.ToComponentDataArray<LocalTransform>(state.WorldUpdateAllocator);
+        blocksPerChunkSide = SystemAPI.GetSingleton<TerrainSpawner>().blocksPerSide;
         
         foreach (var player in SystemAPI.Query<PlayerAspect>().WithAll<Simulate>())
         {
@@ -200,12 +201,12 @@ partial struct PlayerMovementSystem : ISystem
 
     private bool IsBlockAtPosition(float3 pos)
     {
-        if (GetTerrainAreaByPosition(pos, out Entity containingArea, out int3 containingAreaLocation))
+        if (GetTerrainAreaByPosition(pos, out Entity containingArea, out float3 containingAreaLocation))
         {
             var terrainBuffer = _bufferLookup[containingArea];
-            int localx = (int)math.floor(pos.x) - containingAreaLocation.x; 
-            int localy = (int)math.floor(pos.y) - containingAreaLocation.y; 
-            int localz = (int)math.floor(pos.z) - containingAreaLocation.z;
+            int localx = (int)math.floor(pos.x - containingAreaLocation.x); 
+            int localy = (int)math.floor(pos.y - containingAreaLocation.y); 
+            int localz = (int)math.floor(pos.z - containingAreaLocation.z);
             int index = localx + localy * blocksPerChunkSide + localz  * blocksPerChunkSide * blocksPerChunkSide;
             int block = terrainBuffer[index].Value; 
             if (block != -1)
@@ -234,12 +235,12 @@ partial struct PlayerMovementSystem : ISystem
         return false;
     }
 
-    private bool GetTerrainAreaByPosition(float3 pos, out Entity containingArea, out int3 containingAreaLocation)
+    private bool GetTerrainAreaByPosition(float3 pos, out Entity containingArea, out float3 containingAreaLocation)
     {
-        for (int i = 0; i < terrainAreas.Length; i++ )
+        for (int i = 0; i < terrainAreaTransforms.Length; i++ )
         {
-            var terrainArea = terrainAreas[i];
-            int3 loc = terrainArea.location;
+            var terrainArea = terrainAreaTransforms[i];
+            float3 loc = terrainArea.Position;
             if (pos.x >= loc.x && pos.x < loc.x + blocksPerChunkSide &&
                 pos.y >= loc.y && pos.y < loc.y + blocksPerChunkSide &&
                 pos.z >= loc.z && pos.z < loc.z + blocksPerChunkSide)
