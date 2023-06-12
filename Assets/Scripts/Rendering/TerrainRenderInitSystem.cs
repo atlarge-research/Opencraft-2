@@ -8,7 +8,7 @@ using UnityEngine;
 
 // Adds components to TerrainArea entities on client side for rendering purposes
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
-[UpdateInGroup(typeof(PredictedSimulationSystemGroup))]
+[UpdateInGroup(typeof(InitializationSystemGroup))]
 [UpdateAfter(typeof(TerrainNeighborSystem))]
 public partial class TerrainRenderInitSystem : SystemBase
 {
@@ -16,6 +16,7 @@ public partial class TerrainRenderInitSystem : SystemBase
     private EntityQuery _newSpawnQuery;
     protected override void OnCreate()
     {
+        RequireForUpdate<TerrainSpawner>();
         RequireForUpdate<TerrainArea>();
         RequireForUpdate<NewSpawn>();
         _terrainSpawnerQuery = GetEntityQuery(ComponentType.ReadOnly<TerrainSpawner>(), ComponentType.ReadOnly<MaterialBank>());
@@ -29,7 +30,7 @@ public partial class TerrainRenderInitSystem : SystemBase
         var terrainSpawner = _terrainSpawnerQuery.GetSingleton<TerrainSpawner>();
         // On each new terrain area, add a new Mesh managed object
         EntityCommandBuffer ecb = new EntityCommandBuffer(Allocator.Temp);
-        float3 boundsExtents = new float3(0.75 * terrainSpawner.blocksPerSide);
+        float3 boundsExtents = new float3(0.5 * terrainSpawner.blocksPerSide);
         MaterialBank materialBank = _terrainSpawnerQuery.GetSingleton<MaterialBank>();
         foreach (var ( terrainArea, entity) in SystemAPI.Query< RefRO<TerrainArea>>().WithAll<NewSpawn>().WithEntityAccess())
         {
@@ -41,11 +42,12 @@ public partial class TerrainRenderInitSystem : SystemBase
 
             ecb.AddSharedComponentManaged(entity, renderMeshArray);
             ecb.AddComponent(entity, materialMeshInfo);
-            ecb.AddComponent(entity, new RenderBounds{Value = new AABB(){Center = new float3(0.0f), Extents = boundsExtents}});
+            ecb.AddComponent(entity, new RenderBounds{Value = new AABB(){Center = boundsExtents, Extents = boundsExtents }});
             ecb.AddSharedComponentManaged(entity, RenderFilterSettings.Default);
             ecb.AddComponent(entity, new ComponentTypeSet(new []
             {
-                ComponentType.ReadWrite<Remesh>(),
+                
+                //ComponentType.ReadWrite<Remesh>(),
                 // Entities without these components will not match queries and will never be rendered.
                 ComponentType.ReadWrite<WorldRenderBounds>(),
                 ComponentType.ChunkComponent<ChunkWorldRenderBounds>(),

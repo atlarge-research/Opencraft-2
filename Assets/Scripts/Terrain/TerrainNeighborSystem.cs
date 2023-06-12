@@ -9,7 +9,7 @@ using UnityEngine;
 
 [BurstCompile]
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation | WorldSystemFilterFlags.ClientSimulation)]
-[UpdateInGroup(typeof(PredictedSimulationSystemGroup))]
+[UpdateInGroup(typeof(SimulationSystemGroup))]
 
 public partial class TerrainNeighborSystem : SystemBase
 {
@@ -33,7 +33,6 @@ public partial class TerrainNeighborSystem : SystemBase
     {
         if (_newSpawnQuery.IsEmpty)
             return;
-        Debug.Log($"Running neighbor in {World.Name}");
         NativeArray<Entity> terrainChunkEntities = _terrainChunkQuery.ToEntityArray(Allocator.TempJob);
         NativeArray<TerrainArea> terrainAreas= _terrainChunkQuery.ToComponentDataArray<TerrainArea>(Allocator.TempJob);
 

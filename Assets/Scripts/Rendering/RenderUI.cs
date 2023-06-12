@@ -11,7 +11,6 @@ public class RenderUI : MonoBehaviour
     private Text debugText;
     private Text tooltipText;
     private EntityQuery terrainQuery;
-    private EntityQuery terrainFacesQuery;
     private EntityQuery playerQuery;
     private void OnEnable()
     {
@@ -23,7 +22,6 @@ public class RenderUI : MonoBehaviour
             if (world.Name == "ClientWorld")
             {
                 terrainQuery = world.EntityManager.CreateEntityQuery(ComponentType.ReadOnly<TerrainArea>());
-                terrainFacesQuery = world.EntityManager.CreateEntityQuery(ComponentType.ReadOnly<TerrainFace>());
                 playerQuery = world.EntityManager.CreateEntityQuery(ComponentType.ReadOnly<PlayerInput>(), ComponentType.ReadOnly<GhostOwnerIsLocal>());
             }
         }
@@ -36,8 +34,7 @@ public class RenderUI : MonoBehaviour
             if (world.Name == "ClientWorld")
             {
                 int areas = terrainQuery.CalculateEntityCount();
-                int faces = terrainFacesQuery.CalculateEntityCount();
-                debugText.text = $"NumAreas {areas}\nNumFaces {faces}";
+                debugText.text = $"NumAreas {areas}\n";
                 tooltipText.enabled = playerQuery.CalculateEntityCount() == 0;
                 break;
             }

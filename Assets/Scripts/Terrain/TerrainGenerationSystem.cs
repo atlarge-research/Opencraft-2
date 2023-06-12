@@ -11,7 +11,7 @@ using UnityEngine;
 
 [assembly: RegisterGenericJobType(typeof(SortJob<int3, Int3Comparer>))]
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
-[UpdateInGroup(typeof(PredictedSimulationSystemGroup))]
+[UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateBefore(typeof(TerrainNeighborSystem))]
 [BurstCompile]
 public partial struct TerrainGenerationSystem : ISystem

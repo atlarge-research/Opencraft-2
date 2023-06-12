@@ -208,6 +208,11 @@ partial struct PlayerMovementSystem : ISystem
             int localy = (int)math.floor(pos.y - containingAreaLocation.y); 
             int localz = (int)math.floor(pos.z - containingAreaLocation.z);
             int index = localx + localy * blocksPerChunkSide + localz  * blocksPerChunkSide * blocksPerChunkSide;
+            if (index < 0 || index >= blocksPerChunkSide * blocksPerChunkSide * blocksPerChunkSide)
+            {
+                Debug.LogError($"Block position index {index} out of bounds for location {pos} in area {containingAreaLocation}");
+                return false;
+            }
             int block = terrainBuffer[index].Value; 
             if (block != -1)
             {

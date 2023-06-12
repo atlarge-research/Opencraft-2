@@ -21,6 +21,7 @@ public class TerrainAreaAuthoring : MonoBehaviour
             };
             AddComponent(entity, terrainArea);
             AddComponent<NewSpawn>(entity);
+            AddComponent<Remesh>(entity);
             AddBuffer<TerrainBlocks>(entity);
 
         }
@@ -44,6 +45,7 @@ public struct TerrainArea: IComponentData
 public struct NewSpawn: IComponentData, IEnableableComponent {}
 
 // Remesh component marks an entity as needing to be remeshed
+[GhostEnabledBit]
 public struct Remesh: IComponentData, IEnableableComponent {}
 
 [InternalBufferCapacity(512)]
