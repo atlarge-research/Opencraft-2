@@ -7,7 +7,7 @@ using Unity.NetCode;
 [BurstCompile]
 [RequireMatchingQueriesForUpdate]
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
-//[UpdateAfter(typeof(PlayerMovementSystem))]
+// Sync ghostConnection position to player position
 public partial struct ConnectionPositionSystem : ISystem
 {
     public void OnCreate(ref SystemState state)

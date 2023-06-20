@@ -16,6 +16,7 @@ partial struct CameraSystem : ISystem
     {
         state.RequireForUpdate<NetworkStreamInGame>();
         state.RequireForUpdate<Player>();
+        state.Enabled = false;
     }
 
     public void OnUpdate(ref SystemState state)

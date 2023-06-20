@@ -1,7 +1,6 @@
 ﻿using Unity.Collections;
 using Unity.Entities;
 using Unity.NetCode;
-using UnityEditor.MemoryProfiler;
 using UnityEngine;
 
 // This component is used to mark connections as initialized to avoid

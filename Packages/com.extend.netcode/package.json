@@ -1,0 +1,16 @@
+{
+  "name": "com.extend.netcode",
+  "displayName": "Netcode for Entities Extensions",
+  "version": "0.0.1",
+  "unity": "2022.2",
+  "unityRelease": "15f1",
+  "dependencies": {
+    "com.unity.netcode": "1.0.10"
+  },
+  "description": "Extensions to com.unity.netcode",
+  "keywords": [
+    "dots",
+    "netcode",
+    "extensions"
+  ]
+}

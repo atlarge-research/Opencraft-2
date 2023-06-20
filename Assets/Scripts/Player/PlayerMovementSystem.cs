@@ -72,16 +72,18 @@ partial struct PlayerMovementSystem : ISystem
                 return;
             }
 
-            var playerConfig = SystemAPI.GetComponent<PlayerConfig>(player.Player.PlayerConfig);
-            var playerCollider = SystemAPI.GetComponent<PhysicsCollider>(player.Player.PlayerConfig);
-            
+            //var playerConfig = SystemAPI.GetComponent<PlayerConfig>(player.Player.PlayerConfig);
+            //var playerCollider = SystemAPI.GetComponent<PhysicsCollider>(player.Player.PlayerConfig);
+            var gravity = 9.82f;
+            var jumpspeed = 5;
+            var speed = 5;
             // Character step input
             PlayerUtilities.PlayerStepInput stepInput = new PlayerUtilities.PlayerStepInput
             {
                 PhysicsWorldSingleton = physicsWorldSingleton,
                 DeltaTime = SystemAPI.Time.DeltaTime,
                 Up = new float3(0, 1, 0),
-                Gravity = new float3(0, -playerConfig.Gravity, 0),
+                Gravity = new float3(0, -gravity, 0),
                 MaxIterations = k_DefaultMaxIterations,
                 Tau = k_DefaultTau,
                 Damping = k_DefaultDamping,
@@ -116,7 +118,7 @@ partial struct PlayerMovementSystem : ISystem
             m_MarkerGroundCheck.End();
 
             float2 input = player.Input.Movement;
-            float3 wantedMove = new float3(input.x, 0, input.y) * playerConfig.Speed * SystemAPI.Time.DeltaTime;
+            float3 wantedMove = new float3(input.x, 0, input.y) * speed * SystemAPI.Time.DeltaTime;
 
             // Wanted movement is relative to camera
             wantedMove = math.rotate(quaternion.RotateY(player.Input.Yaw), wantedMove);
@@ -132,7 +134,7 @@ partial struct PlayerMovementSystem : ISystem
                 // Allow jump and stop falling when grounded
                 if (player.Input.Jump.IsSet)
                 {
-                    player.Player.Velocity.y = playerConfig.JumpSpeed;
+                    player.Player.Velocity.y = jumpspeed;
                     player.Player.JumpStart = networkTime.ServerTick;
                 }
                 else
@@ -142,7 +144,7 @@ partial struct PlayerMovementSystem : ISystem
             {
                 player.Player.OnGround = 0;
                 // Free fall
-                player.Player.Velocity.y -= playerConfig.Gravity * SystemAPI.Time.DeltaTime;
+                player.Player.Velocity.y -= gravity * SystemAPI.Time.DeltaTime;
             }
 
             m_MarkerStep.Begin();

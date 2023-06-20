@@ -1,3 +1,5 @@
+using System;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
@@ -15,7 +17,17 @@ public struct Player : IComponentData
     public byte OnGround;
     [GhostField]
     public NetworkTick JumpStart;
+    
+    [GhostField]
+    public int Username;
+
+    public BlobAssetReference<BlobString> multiplayConnectionID;
 }
+
+
+// Similar to NewSpawn, marks this player entity as freshly instantiated
+public struct NewPlayer : IComponentData, IEnableableComponent {}
+
 
 [GhostComponent(PrefabType=GhostPrefabType.AllPredicted, OwnerSendType = SendToOwnerType.SendToNonOwner)]
 public struct PlayerInput : IInputComponentData
@@ -61,6 +73,7 @@ public class PlayerAuthoring : MonoBehaviour
             {
                 PlayerConfig = GetEntity(authoring.playerConfig.gameObject, TransformUsageFlags.Dynamic)
             });
+            AddComponent(entity, new NewPlayer());
         }
     }
 }

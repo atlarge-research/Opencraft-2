@@ -1,24 +1,81 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Unity.Entities;
 using Unity.NetCode;
 using Unity.Networking.Transport;
 using Unity.Networking.Transport.Utilities;
 
-// Create a custom bootstrap, which enables auto-connect.
-// The bootstrap can also be used to configure other settings as well as to
-// manually decide which worlds (client and server) to create based on user input
+// Create a custom bootstrap, which sets the network driver and creates ECS worlds
 [UnityEngine.Scripting.Preserve]
 public class GameBootstrap : ClientServerBootstrap
 {
     public override bool Initialize(string defaultWorldName)
     {
-        AutoConnectPort = 7979; // Enabled auto connect
+        AutoConnectPort = 7979; // Enables auto connect
         CreateDefaultClientServerWorlds();
         NetworkStreamReceiveSystem.DriverConstructor = new DriverConstructor();
         return true;
     }
+    
+    
+    // Setup our worlds and specify what systems they run
+    protected override void CreateDefaultClientServerWorlds()
+    {
+        var requestedPlayType = RequestedPlayType;
+        if (requestedPlayType is PlayType.Server or PlayType.ClientAndServer)
+        {
+            CreateServerWorld("ServerWorld");
+        }
+
+        if (requestedPlayType is PlayType.Client or PlayType.ClientAndServer)
+        {
+            if (CmdArgs.ClientStreamingRole == CmdArgs.StreamingRole.Guest)
+            {
+                CreateStreamClientWorld("StreamClientWorld");
+            }
+            else
+            {
+                CreateClientWorld("ClientWorld"); 
+            }
+
+#if UNITY_EDITOR
+            var requestedNumThinClients = RequestedNumThinClients;
+            for (var i = 0; i < requestedNumThinClients; i++)
+            {
+                CreateThinClientWorld();
+            }
+#endif
+        }
+    }
+    
+    // Utility method for creating new stream clients worlds.
+    public static World CreateStreamClientWorld(string name)
+    {
+#if UNITY_SERVER && !UNITY_EDITOR
+            throw new NotImplementedException();
+#else
+        var world = new World(name, WorldFlags.Game);
+        // On thin clients we don't really utilize any ECS-specific systems, so we use MultiplayInitSystem to start
+        // the relevant MonoBehaviours
+        var systems = new List<Type> { typeof(MultiplayInitSystem) }; 
+        DefaultWorldInitialization.AddSystemsToRootLevelSystemGroups(world, systems);
+        
+#if UNITY_DOTSRUNTIME
+            AppendWorldToClientTickWorld(world);
+#else
+        ScriptBehaviourUpdateOrder.AppendWorldToCurrentPlayerLoop(world);
+#endif
+
+        if (World.DefaultGameObjectInjectionWorld == null)
+            World.DefaultGameObjectInjectionWorld = world;
+
+        return world;
+#endif
+    }
 }
 
+// Custom network settings and driver initialize to specify network parameters
 public class DriverConstructor : INetworkStreamDriverConstructor
 {
     // Custom timeout time
@@ -73,17 +130,4 @@ public class DriverConstructor : INetworkStreamDriverConstructor
     }
 }
 
-// Fix for net physics, see https://forum.unity.com/threads/1-0-0-pre-65-short-guide-for-creating-fully-working-builds.1419512/
-[WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation | WorldSystemFilterFlags.ServerSimulation | WorldSystemFilterFlags.ThinClientSimulation)]
-[UpdateInGroup(typeof(InitializationSystemGroup))]
-[CreateAfter(typeof(RpcSystem))]
-public partial class SetRpcSystemDynamicAssemblyListSystem : SystemBase
-{
-    protected override void OnCreate()
-    {
-        SystemAPI.GetSingletonRW<RpcCollection>().ValueRW.DynamicAssemblyList = true;
-        Enabled = false;
-    }
-    protected override void OnUpdate() { }
-}
 

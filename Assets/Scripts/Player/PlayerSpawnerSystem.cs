@@ -11,29 +11,26 @@ using UnityEngine.UIElements;
 
 public struct SpawnPlayerRequest : IRpcCommand
 {
+    public int Username;
 }
 
-public struct PlayerSpawned : IComponentData
+public struct DestroyPlayerRequest : IRpcCommand
 {
+    public Entity Player;
 }
 
 // When server receives spawner player request, check if its valid, spawn player, then delete request
+// If a player is marked for destruction, destroy it!
 [BurstCompile]
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
 public partial struct PlayerSpawnerSystem : ISystem
 {
     private ComponentLookup<NetworkId> networkIdFromEntity;
-    private ComponentLookup<PlayerSpawned> playerSpawnedFromEntity;
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
         state.RequireForUpdate<PlayerSpawner>();
-        var builder = new EntityQueryBuilder(Allocator.Temp)
-            .WithAll<SpawnPlayerRequest>()
-            .WithAll<ReceiveRpcCommandRequest>();
-        state.RequireForUpdate(state.GetEntityQuery(builder)); // Only run when there are RPCs to be processed
         networkIdFromEntity = state.GetComponentLookup<NetworkId>(true);
-        playerSpawnedFromEntity = state.GetComponentLookup<PlayerSpawned>(true);
     }
     
     [BurstCompile]
@@ -45,32 +42,17 @@ public partial struct PlayerSpawnerSystem : ISystem
 
         var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
         networkIdFromEntity.Update(ref state);
-        playerSpawnedFromEntity.Update(ref state);
-        
-        // Fixed size at 1024 could overflow if enough players send a request on the same tick
-        var connectionsSeen = CollectionHelper.CreateNativeArray<Entity>(1024, Allocator.Temp);
-        int index = 0;
 
-        foreach (var (reqSrc, reqEntity) in SystemAPI.Query<RefRO<ReceiveRpcCommandRequest>>()
-                     .WithAll<SpawnPlayerRequest>().WithEntityAccess())
+        foreach (var (reqSrc,reqSpawn, reqEntity) in SystemAPI.Query<RefRO<ReceiveRpcCommandRequest>, RefRO<SpawnPlayerRequest>>()
+                     .WithEntityAccess())
         {
-            index++;
-            if (!checkIfValid(reqSrc, connectionsSeen))
-            {
-                // This connection already has a player
-                commandBuffer.DestroyEntity(reqEntity);
-                continue;
-            }
-
-            connectionsSeen[index] = reqSrc.ValueRO.SourceConnection;
             NetworkId networkId = networkIdFromEntity[reqSrc.ValueRO.SourceConnection];
-            
-            commandBuffer.AddComponent<PlayerSpawned>(reqSrc.ValueRO.SourceConnection);
 
-            UnityEngine.Debug.Log($"'{worldName}' spawning a Ghost '{prefabName}' for connection '{networkId.Value}'!");
+            UnityEngine.Debug.Log($"'{worldName}' spawning a Ghost '{prefabName}' for user '{reqSpawn.ValueRO.Username}' on connection '{networkId.Value}'!");
             
             var player = commandBuffer.Instantiate(prefab);
             commandBuffer.SetComponent(player, new GhostOwner { NetworkId = networkId.Value});
+            commandBuffer.SetComponent(player, new Player { Username = reqSpawn.ValueRO.Username});
 
             // Add the player to the linked entity group so it is destroyed automatically on disconnect
             commandBuffer.AppendToBuffer(reqSrc.ValueRO.SourceConnection, new LinkedEntityGroup{Value = player});
@@ -84,32 +66,20 @@ public partial struct PlayerSpawnerSystem : ISystem
                 var preventZFighting = 2.5f + -0.01f * networkId.Value;
 
                 commandBuffer.SetComponent(player, LocalTransform.FromPosition(new float3(staggeredXPos, preventZFighting, 0)));
-
             }
+            commandBuffer.DestroyEntity(reqEntity);
+        }
+        
+        // Handle MultiPlay player destruction on server to propagate it to all other clients.
+        foreach (var (reqSrc,reqDestroy, reqEntity) in SystemAPI.Query<RefRO<ReceiveRpcCommandRequest>, RefRO<DestroyPlayerRequest>>()
+                     .WithEntityAccess())
+        {
+
+            UnityEngine.Debug.Log($"'{worldName}' destroying player entity '{reqDestroy.ValueRO.Player}''!");
+            commandBuffer.DestroyEntity(reqDestroy.ValueRO.Player);
             commandBuffer.DestroyEntity(reqEntity);
         }
         commandBuffer.Playback(state.EntityManager);
 
-    }
-
-    private bool checkIfValid(RefRO<ReceiveRpcCommandRequest> reqSrc, NativeArray<Entity> connectionsSeen)
-    {
-        bool flag = true;
-        foreach (var conn in connectionsSeen )
-        {
-            if (conn.Equals(reqSrc.ValueRO.SourceConnection))
-            {
-                // This connection has already had a request processed
-                flag = false;
-                break;
-            }
-        }
-        
-        if (playerSpawnedFromEntity.TryGetComponent(reqSrc.ValueRO.SourceConnection, out PlayerSpawned playerSpawned))
-        {
-            // This connection already has a player
-            flag = false;
-        }
-        return flag;
     }
 }
