@@ -16,4 +16,4 @@ MonoBehaviour:
     ExcludedBakingSystemAssemblies: []
   AdditionalScriptingDefines:
   - FRONTEND_PLAYER_BUILD
-  ClientTarget: 0
+  ClientTarget: 1
