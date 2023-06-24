@@ -1,16 +1,20 @@
 ﻿using UnityEngine;
 
-public class MultiplaySingleton : MonoBehaviour
+namespace Opencraft.Player.Multiplay
 {
-    public static Multiplay Instance;
-
-    void Awake()
+    // MonoBehaviour wrapper to make the Multiplay singleton available
+    public class MultiplaySingleton : MonoBehaviour
     {
-       Instance = GetComponent<Multiplay>();
-    }
+        public static Multiplay Instance;
 
-    public static void Destroy()
-    {
-        Destroy(Instance);
+        void Awake()
+        {
+            Instance = GetComponent<Multiplay>();
+        }
+
+        public static void Destroy()
+        {
+            Destroy(Instance);
+        }
     }
 }

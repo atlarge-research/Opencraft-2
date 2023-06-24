@@ -3,57 +3,66 @@ using Unity.Mathematics;
 using Unity.NetCode;
 using UnityEngine;
 
-public class TerrainAreaAuthoring : MonoBehaviour
+namespace Opencraft.Terrain
 {
-    public class TerrainBlockBaker : Baker<TerrainAreaAuthoring>
+    public class TerrainAreaAuthoring : MonoBehaviour
     {
-        public override void Bake(TerrainAreaAuthoring authoring)
+        public class TerrainBlockBaker : Baker<TerrainAreaAuthoring>
         {
-            var entity = GetEntity(TransformUsageFlags.Dynamic);
-            var terrainArea = new TerrainArea()
+            public override void Bake(TerrainAreaAuthoring authoring)
             {
-                neighborXP = Entity.Null,
-                neighborXN = Entity.Null,
-                neighborYP = Entity.Null,
-                neighborYN = Entity.Null,
-                neighborZP = Entity.Null,
-                neighborZN = Entity.Null,
-            };
-            AddComponent(entity, terrainArea);
-            AddComponent<NewSpawn>(entity);
-            AddComponent<Remesh>(entity);
-            AddBuffer<TerrainBlocks>(entity);
+                var entity = GetEntity(TransformUsageFlags.Dynamic);
+                // Initialize with no neighbors
+                var terrainArea = new TerrainArea()
+                {
+                    neighborXP = Entity.Null,
+                    neighborXN = Entity.Null,
+                    neighborYP = Entity.Null,
+                    neighborYN = Entity.Null,
+                    neighborZP = Entity.Null,
+                    neighborZN = Entity.Null,
+                };
+                AddComponent(entity, terrainArea);
+                AddComponent<NewSpawn>(entity);
+                AddComponent<Remesh>(entity);
+                AddBuffer<TerrainBlocks>(entity);
 
+            }
         }
     }
+
+    // Component representing a terrain area. On clients we set up references to neighbor areas
+    public struct TerrainArea : IComponentData
+    {
+        [GhostField] public int3 location;
+        public Entity neighborXP;
+        public Entity neighborXN;
+        public Entity neighborYP;
+        public Entity neighborYN;
+        public Entity neighborZP;
+        public Entity neighborZN;
+    }
+
+    // NewSpawn component marks an entity as freshly instantiated.
+    // todo - when to disable the newspawn component? End of same tick? Currently done at start of next tick by TerrainGenerationSystem on server
+    // todo - and by end of same tick by TerrainRenderInitSystem on client
+    public struct NewSpawn : IComponentData, IEnableableComponent
+    {
+    }
+
+    // Remesh component marks an entity as needing to be remeshed by the TerrainMeshingSystem
+    [GhostEnabledBit]
+    public struct Remesh : IComponentData, IEnableableComponent
+    {
+    }
+
+    [InternalBufferCapacity(512)]
+    // The buffer component to store terrain blocks
+    public struct TerrainBlocks : IBufferElementData
+    {
+        [GhostField] public int Value; //type if exists, -1 if not
+    }
 }
-
-public struct TerrainArea: IComponentData
-{
-    [GhostField] public int3 location;
-    public Entity neighborXP;
-    public Entity neighborXN;
-    public Entity neighborYP;
-    public Entity neighborYN;
-    public Entity neighborZP;
-    public Entity neighborZN;
-}
-
-// NewSpawn component marks an entity as freshly instantiated.
-// todo - when to disable the newspawn component? End of same tick? Currently done at start of next tick by TerrainGenerationSystem on server
-// todo - and by end of same tick by TerrainRenderInitSystem on client
-public struct NewSpawn: IComponentData, IEnableableComponent {}
-
-// Remesh component marks an entity as needing to be remeshed
-[GhostEnabledBit]
-public struct Remesh: IComponentData, IEnableableComponent {}
-
-[InternalBufferCapacity(512)]
-public struct TerrainBlocks : IBufferElementData
-{
-    [GhostField] public int Value; //type if exists, -1 if not
-}
-
 
 
 

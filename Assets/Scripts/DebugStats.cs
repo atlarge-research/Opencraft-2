@@ -1,5 +1,8 @@
-﻿
-public static class DebugStats
+﻿namespace Opencraft
 {
-    public static int numAreas = 0;
+    // Static global class for referencing debug statistics
+    public static class DebugStats
+    {
+        public static int numAreas = 0;
+    }
 }

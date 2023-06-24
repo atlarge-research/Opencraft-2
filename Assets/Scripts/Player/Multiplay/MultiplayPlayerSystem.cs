@@ -1,96 +1,127 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Opencraft.Player.Authoring;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
+using Unity.Rendering;
 using Unity.RenderStreaming;
 using Unity.VisualScripting;
 using UnityEngine;
 
-// ECS System wrapper around Multiplay class that handles render streaming connections
-[WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
-[UpdateAfter(typeof(MultiplayInitSystem))]
-public partial class MultiplayPlayerSystem: SystemBase
+namespace Opencraft.Player.Multiplay
 {
-    protected override void OnUpdate()
+    // Run on Multiplay hosts, handles sending player spawn/destroy RPCs for Multiplay guests and linking
+    // player GameObjects to player entities based on Multiplay connectionID
+    [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
+    [UpdateAfter(typeof(MultiplayInitSystem))]
+    [UpdateInGroup(typeof(InitializationSystemGroup))]
+    public partial class MultiplayPlayerSystem : SystemBase
     {
-        // Begin multiplay hosts in OnUpdate to ensure the GameObjects it references are properly initialized
-        Multiplay multiplay = MultiplaySingleton.Instance;
-        if (multiplay.IsUnityNull())
-            return;
-        var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
-        
-        // Send any necessary player spawn requests
-        foreach(var (connID,playerObj) in multiplay.connectionPlayerObjects)
+        private EntityQuery playerQuery;
+        protected override void OnCreate()
         {
-            var playerController = playerObj.GetComponent<MultiplayPlayerController>();
-            if (playerController.inputStart && !playerController.playerEntityExists && !playerController.playerEntityRequestSent)
-            {
-                // There is only one NetworkID component on clients.
-                foreach (var (id, entity) in SystemAPI.Query<RefRO<NetworkId>>().WithEntityAccess().WithAll<NetworkStreamInGame>())
-                {
-                    var req = commandBuffer.CreateEntity();
-                    SpawnPlayerRequest spawnPlayerRequest= new SpawnPlayerRequest { Username = playerController.Username };
-                    commandBuffer.AddComponent(req, spawnPlayerRequest);
-                    Debug.Log($"Sending spawn player RPC for user {playerController.Username}");
-                    commandBuffer.AddComponent(req, new SendRpcCommandRequest { TargetConnection = entity });
-                    playerController.playerEntityRequestSent = true;
-                }
-            }
+            playerQuery= new EntityQueryBuilder(Allocator.Temp)
+                .WithAllRW<Authoring.Player>()
+                .WithAll<NewPlayer>()
+                .Build(this);
         }
-        
-        // Handle any spawned new players
-        foreach (var (player, entity) in SystemAPI.Query<RefRW<Player>>().WithEntityAccess().WithAll<NewPlayer>())
+        protected override void OnUpdate()
         {
-            // Compare any new player's username to player object usernames
-            // todo: surely there is a better way of linking player entity and object...
+            Multiplay multiplay = MultiplaySingleton.Instance;
+            if (multiplay.IsUnityNull())
+                return;
+            var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
+            NativeArray<Authoring.Player> playerData = playerQuery.ToComponentDataArray<Authoring.Player>(Allocator.Temp);
+            NativeArray<Entity> newPlayerEntities = playerQuery.ToEntityArray(Allocator.Temp);
+
             foreach (var (connID, playerObj) in multiplay.connectionPlayerObjects)
             {
                 var playerController = playerObj.GetComponent<MultiplayPlayerController>();
+                
+                // Check if a newly spawned player is a response to this playerObject's request
                 if (playerController.playerEntityRequestSent)
                 {
-                    if (playerController.Username == player.ValueRO.Username)
+                    for (int i = 0; i < newPlayerEntities.Length; i++)
                     {
-                        playerController.playerEntityRequestSent = false;
-                        playerController.playerEntityExists = true;
-                        Debug.Log($"Linking player entity {entity} to {connID}");
-                        playerController.playerEntity = entity;
-                        
-                        // Store connectionID in components as a blob reference.
-                        var builder = new BlobBuilder(Allocator.Temp);
-                        ref BlobString blobString = ref builder.ConstructRoot<BlobString>();
-                        builder.AllocateString(ref blobString, connID);
-                        player.ValueRW.multiplayConnectionID = builder.CreateBlobAssetReference<BlobString>(Allocator.Persistent);
-                        builder.Dispose();
-                        commandBuffer.SetComponentEnabled<NewPlayer>(entity, false);
+                        var player = playerData[i];
+                        // todo: surely there is a better way of linking player entity and object...
+                        if (player.Username == playerController.Username)
+                        {
+                            
+                            var playerEntity = newPlayerEntities[i];
+                            playerController.playerEntityRequestSent = false;
+                            playerController.playerEntityExists = true;
+                            Debug.Log($"Linking player entity {playerEntity } to {connID}");
+                            playerController.playerEntity = playerEntity;
+
+                            // Store connectionID in components as a blob reference.
+                            var builder = new BlobBuilder(Allocator.Temp);
+                            ref BlobString blobString = ref builder.ConstructRoot<BlobString>();
+                            builder.AllocateString(ref blobString, connID);
+                            // Copy new player component
+                            commandBuffer.SetComponent(playerEntity, new Authoring.Player
+                            {
+                                PlayerConfig = player.PlayerConfig,
+                                Velocity = player.Velocity,
+                                OnGround = player.OnGround,
+                                JumpStart = player.JumpStart,
+                                Username = player.Username,
+                                multiplayConnectionID = builder.CreateBlobAssetReference<BlobString>(Allocator.Persistent)
+                            });
+                            builder.Dispose();
+                            commandBuffer.SetComponentEnabled<NewPlayer>(playerEntity, false);
+                            // Color the player red since it is locally controlled
+                            commandBuffer.SetComponent(playerEntity,
+                                new URPMaterialPropertyBaseColor() { Value = new float4(1, 0, 0, 1) });
+                        }
+                    }
+                }
+
+                // Send any necessary player spawn requests
+                if (playerController.inputStart && 
+                    !playerController.playerEntityExists &&
+                    !playerController.playerEntityRequestSent)
+                {
+                    // Create a spawn player rpc
+                    foreach (var (id, entity) in SystemAPI.Query<RefRO<NetworkId>>().WithEntityAccess()
+                                 .WithAll<NetworkStreamInGame>())
+                    {
+                        var req = commandBuffer.CreateEntity();
+                        SpawnPlayerRequest spawnPlayerRequest = new SpawnPlayerRequest
+                            { Username = playerController.Username };
+                        commandBuffer.AddComponent(req, spawnPlayerRequest);
+                        Debug.Log($"Sending spawn player RPC for user {playerController.Username}");
+                        commandBuffer.AddComponent(req, new SendRpcCommandRequest { TargetConnection = entity });
+                        playerController.playerEntityRequestSent = true;
                     }
                 }
             }
-        }
-        
-        // Handle disconnected Multiplay connections
-        foreach (var connectionId in multiplay.disconnectedIds)
-        {
-            var playerController = multiplay.connectionPlayerObjects[connectionId].GetComponent<MultiplayPlayerController>();
             
-            Debug.Log($"Creating DestroyPlayer RPC for entity {playerController.playerEntity} on {connectionId}");
-            foreach (var (id, entity) in SystemAPI.Query<RefRO<NetworkId>>().WithEntityAccess().WithAll<NetworkStreamInGame>())
+            // Handle disconnected Multiplay connections
+            foreach (var connectionId in multiplay.disconnectedIds)
             {
-                var req = commandBuffer.CreateEntity();
-                DestroyPlayerRequest destroyPlayerRequest= new DestroyPlayerRequest { Player = playerController.playerEntity};
-                commandBuffer.AddComponent(req, destroyPlayerRequest);
-                commandBuffer.AddComponent(req, new SendRpcCommandRequest { TargetConnection = entity });
-            }
-            // The connection ID is now invalid, dispose it.
-            var p = EntityManager.GetComponentData<Player>(playerController.playerEntity);
-            p.multiplayConnectionID.Dispose();
-            multiplay.DestroyMultiplayConnection(connectionId);
-        }
-        multiplay.disconnectedIds.Clear();
-        
-        commandBuffer.Playback(EntityManager);
+                var playerController = multiplay.connectionPlayerObjects[connectionId]
+                    .GetComponent<MultiplayPlayerController>();
 
+                Debug.Log($"Creating DestroyPlayer RPC for entity {playerController.playerEntity} on {connectionId}");
+                foreach (var (_, entity) in SystemAPI.Query<RefRO<NetworkId>>().WithAll<NetworkStreamInGame>().WithEntityAccess())
+                {
+                    var req = commandBuffer.CreateEntity();
+                    DestroyPlayerRequest destroyPlayerRequest = new DestroyPlayerRequest
+                        { Player = playerController.playerEntity };
+                    commandBuffer.AddComponent(req, destroyPlayerRequest);
+                    commandBuffer.AddComponent(req, new SendRpcCommandRequest { TargetConnection = entity });
+                }
+                multiplay.DestroyMultiplayConnection(connectionId);
+            }
+
+            multiplay.disconnectedIds.Clear();
+
+            commandBuffer.Playback(EntityManager);
+
+        }
     }
 }

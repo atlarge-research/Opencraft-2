@@ -9,57 +9,64 @@ using Unity.Collections;
 using Unity.Rendering;
 using UnityEngine;
 
-[WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
-[UpdateInGroup(typeof(SimulationSystemGroup))]
-[UpdateAfter(typeof(TerrainGenerationSystem))]
-[BurstCompile]
-public partial struct TerrainModificationSystem : ISystem
+namespace Opencraft.Terrain
 {
-    private double lastUpdate;
-    private bool updateAll;
-    public void OnCreate(ref SystemState state)
+    [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
+    [UpdateInGroup(typeof(SimulationSystemGroup))]
+    [UpdateAfter(typeof(TerrainGenerationSystem))]
+    [BurstCompile]
+    // System responsible for editing terrain area block buffers and marking those areas as needing to be remeshed
+    public partial struct TerrainModificationSystem : ISystem
     {
-        state.RequireForUpdate<TerrainSpawner>();
-        state.RequireForUpdate<TerrainArea>();
-        lastUpdate = -5.0;
-        updateAll = true;
-    }
-    
-    public void OnUpdate(ref SystemState state)
-    {
-        /*state.Enabled = false;
-        return;*/
-        if (state.World.Time.ElapsedTime - lastUpdate < 5.0)
-        {
-            return;
-        }
-        lastUpdate = state.World.Time.ElapsedTime;
-        //var terrainSpawner = SystemAPI.GetSingleton<TerrainSpawner>();
+        private double lastUpdate;
+        private bool updateAll;
 
-        foreach (var (terrainArea, entity) in SystemAPI.Query<RefRO<TerrainArea>>()
-                     .WithEntityAccess())
+        public void OnCreate(ref SystemState state)
         {
-            if (!terrainArea.ValueRO.location.Equals(new int3(0, 0, 0)))
+            state.RequireForUpdate<TerrainSpawner>();
+            state.RequireForUpdate<TerrainArea>();
+            lastUpdate = -5.0;
+            updateAll = true;
+        }
+
+        public void OnUpdate(ref SystemState state)
+        {
+
+            if (state.World.Time.ElapsedTime - lastUpdate < 5.0)
             {
-                continue;
+                return;
             }
-            DynamicBuffer<TerrainBlocks> blocksBuffer = state.EntityManager.GetBuffer<TerrainBlocks>(entity, isReadOnly: false);
-            DynamicBuffer<int> blocks = blocksBuffer.Reinterpret<int>();
-            if (updateAll)
+            lastUpdate = state.World.Time.ElapsedTime;
+            
+            // Stand-in system, currently just inverts the terrain area at 0,0,0 every 5 seconds
+            foreach (var (terrainArea, entity) in SystemAPI.Query<RefRO<TerrainArea>>()
+                         .WithEntityAccess())
             {
-                for (int i = 0; i < blocks.Length; i++)
+                if (!terrainArea.ValueRO.location.Equals(new int3(0, 0, 0)))
                 {
-                    blocks[i] = blocks[i] == 1 ? -1 : 1;
+                    continue;
                 }
-            }
-            else
-            {
-                blocks[0] = blocks[0] == 1 ? -1 : 1;
-            }
-            // Mark that these area need to be meshed
-            // TODO how does this interact with clients marking remesh as false? may be better to do using RPC
-            state.EntityManager.SetComponentEnabled<Remesh>(entity, true);
-        }
 
+                DynamicBuffer<TerrainBlocks> blocksBuffer =
+                    state.EntityManager.GetBuffer<TerrainBlocks>(entity, isReadOnly: false);
+                DynamicBuffer<int> blocks = blocksBuffer.Reinterpret<int>();
+                if (updateAll)
+                {
+                    for (int i = 0; i < blocks.Length; i++)
+                    {
+                        blocks[i] = blocks[i] == 1 ? -1 : 1;
+                    }
+                }
+                else
+                {
+                    blocks[0] = blocks[0] == 1 ? -1 : 1;
+                }
+
+                // Mark that these area need to be meshed
+                // TODO how does this interact with clients marking remesh as false? may be better to do using RPC
+                state.EntityManager.SetComponentEnabled<Remesh>(entity, true);
+            }
+
+        }
     }
 }

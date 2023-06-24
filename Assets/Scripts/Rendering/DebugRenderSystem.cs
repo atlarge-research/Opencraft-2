@@ -1,56 +1,62 @@
+using Opencraft.Terrain;
 using Unity.Burst;
-using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
 
-[RequireMatchingQueriesForUpdate]
-[UpdateInGroup(typeof(PresentationSystemGroup))]
-[WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
-[BurstCompile]
-public partial struct DebugRenderSystem : ISystem
+namespace Opencraft.Rendering
 {
-    private EntityQuery _terrainSpawnerQuery;
+    [RequireMatchingQueriesForUpdate]
+    [UpdateInGroup(typeof(PresentationSystemGroup))]
+    [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation, WorldSystemFilterFlags.Editor)]
     [BurstCompile]
-    public void OnCreate(ref SystemState state)
+    // Draws bounding boxing on terrain area borders, only in the editor.
+    public partial struct DebugRenderSystem : ISystem
     {
-        state.RequireForUpdate<TerrainSpawner>();
-        state.RequireForUpdate<TerrainArea>();
-        _terrainSpawnerQuery = state.GetEntityQuery(ComponentType.ReadOnly<TerrainSpawner>());
+        private EntityQuery _terrainSpawnerQuery;
+
+        [BurstCompile]
+        public void OnCreate(ref SystemState state)
+        {
+            state.RequireForUpdate<TerrainSpawner>();
+            state.RequireForUpdate<TerrainArea>();
+            _terrainSpawnerQuery = state.GetEntityQuery(ComponentType.ReadOnly<TerrainSpawner>());
+        }
+
+        [BurstCompile]
+        public void OnUpdate(ref SystemState state)
+        {
+            TerrainSpawner terrainSpawner = _terrainSpawnerQuery.GetSingleton<TerrainSpawner>();
+
+            new DebugDrawTerrain { blocksPerSide = terrainSpawner.blocksPerSide }.ScheduleParallel();
+        }
     }
 
     [BurstCompile]
-    public void OnUpdate(ref SystemState state)
+    public partial struct DebugDrawTerrain : IJobEntity
     {
-        TerrainSpawner terrainSpawner = _terrainSpawnerQuery.GetSingleton<TerrainSpawner>();
-        
-        new DebugDrawTerrain{blocksPerSide = terrainSpawner.blocksPerSide}.ScheduleParallel();
-    }
-}
+        public int blocksPerSide;
 
-[BurstCompile]
-public partial struct DebugDrawTerrain : IJobEntity
-{
-    public int blocksPerSide;
-    public void Execute(in TerrainArea terrainChunk, in LocalTransform t)
-    {
+        public void Execute(in TerrainArea terrainChunk, in LocalTransform t)
+        {
 
-        var baseLocation = t.Position;
-        var d = blocksPerSide;
-        // Draw a bounding box
-        Debug.DrawLine(baseLocation, baseLocation + new float3(d,0,0));
-        Debug.DrawLine(baseLocation, baseLocation + new float3(0,d,0));
-        Debug.DrawLine(baseLocation, baseLocation + new float3(0,0,d));
-        Debug.DrawLine(baseLocation + new float3(d,d,0), baseLocation + new float3(d,0,0));
-        Debug.DrawLine(baseLocation + new float3(d,d,0), baseLocation + new float3(0,d,0));
-        Debug.DrawLine(baseLocation + new float3(d,d,0), baseLocation + new float3(d,d,d));
-        Debug.DrawLine(baseLocation + new float3(0,d,d), baseLocation + new float3(0,d,0));
-        Debug.DrawLine(baseLocation + new float3(0,d,d), baseLocation + new float3(0,0,d));
-        Debug.DrawLine(baseLocation + new float3(0,d,d), baseLocation + new float3(d,d,d));
-        Debug.DrawLine(baseLocation + new float3(d,0,d), baseLocation + new float3(d,0,0));
-        Debug.DrawLine(baseLocation + new float3(d,0,d), baseLocation + new float3(d,d,d));
-        Debug.DrawLine(baseLocation + new float3(d,0,d), baseLocation + new float3(0,0,d));
+            var baseLocation = t.Position;
+            var d = blocksPerSide;
+            // Draw a bounding box
+            Debug.DrawLine(baseLocation, baseLocation + new float3(d, 0, 0));
+            Debug.DrawLine(baseLocation, baseLocation + new float3(0, d, 0));
+            Debug.DrawLine(baseLocation, baseLocation + new float3(0, 0, d));
+            Debug.DrawLine(baseLocation + new float3(d, d, 0), baseLocation + new float3(d, 0, 0));
+            Debug.DrawLine(baseLocation + new float3(d, d, 0), baseLocation + new float3(0, d, 0));
+            Debug.DrawLine(baseLocation + new float3(d, d, 0), baseLocation + new float3(d, d, d));
+            Debug.DrawLine(baseLocation + new float3(0, d, d), baseLocation + new float3(0, d, 0));
+            Debug.DrawLine(baseLocation + new float3(0, d, d), baseLocation + new float3(0, 0, d));
+            Debug.DrawLine(baseLocation + new float3(0, d, d), baseLocation + new float3(d, d, d));
+            Debug.DrawLine(baseLocation + new float3(d, 0, d), baseLocation + new float3(d, 0, 0));
+            Debug.DrawLine(baseLocation + new float3(d, 0, d), baseLocation + new float3(d, d, d));
+            Debug.DrawLine(baseLocation + new float3(d, 0, d), baseLocation + new float3(0, 0, d));
+        }
     }
 }
 

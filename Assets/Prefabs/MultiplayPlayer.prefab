@@ -210,7 +210,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8bcc82901c3f48a88d3408251afa3365, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_TextureSize: {x: 1280, y: 720}
+  m_TextureSize: {x: 1920, y: 1080}
   m_Source: 0
   m_Camera: {fileID: 3141172503242693401}
   m_Texture: {fileID: 0}
@@ -218,12 +218,12 @@ MonoBehaviour:
   m_Depth: 16
   m_AntiAliasing: 1
   m_Codec:
-    m_MimeType: 
-    m_SdpFmtpLine: 
-  m_FrameRate: 30
+    m_MimeType: video/H264
+    m_SdpFmtpLine: implementation_name=NvCodec;level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=640033
+  m_FrameRate: 60
   m_Bitrate:
     min: 0
-    max: 1000
+    max: 5268
   m_ScaleFactor: 1
   m_AutoRequestUserAuthorization: 1
 --- !u!114 &8979708566312876530

@@ -1,48 +1,53 @@
 ﻿using Unity.NetCode;
 using UnityEditor;
 using UnityEngine;
-public static class CmdArgs
+
+namespace Opencraft
 {
+    // Static global class holding the parsed command line arguments
+    public static class CmdArgs
+    {
 #if UNITY_SERVER
     private const StreamingRole DefaultStreamingRole = StreamingRole.Disabled;
 #elif UNITY_EDITOR
-    // Fetch the current play mode from the editor preferences. Has to be done at runtime or the value requires a recompilation
-    public static ClientServerBootstrap.PlayType getPlayType()
-    {
-        string s_PrefsKeyPrefix = $"MultiplayerPlayMode_{Application.productName}_";
-        string s_PlayModeTypeKey = s_PrefsKeyPrefix + "PlayMode_Type";
-        return (ClientServerBootstrap.PlayType) EditorPrefs.GetInt(s_PlayModeTypeKey, (int) ClientServerBootstrap.PlayType.ClientAndServer);
-    }
+        // Fetch the current play mode from the editor preferences. Has to be done at runtime or the value requires a recompilation
+        public static ClientServerBootstrap.PlayType getPlayType()
+        {
+            string s_PrefsKeyPrefix = $"MultiplayerPlayMode_{Application.productName}_";
+            string s_PlayModeTypeKey = s_PrefsKeyPrefix + "PlayMode_Type";
+            return (ClientServerBootstrap.PlayType) EditorPrefs.GetInt(s_PlayModeTypeKey, (int) ClientServerBootstrap.PlayType.ClientAndServer);
+        }
     
-    private static StreamingRole DefaultStreamingRole = StreamingRole.Disabled;
+        private static StreamingRole DefaultStreamingRole = StreamingRole.Disabled;
 #else
     // All clients are assumed hosts, a command line argument is necessary to start as a streaming Guest
     private const StreamingRole DefaultStreamingRole = StreamingRole.Host;
     
 #endif
 #if UNITY_EDITOR
-    public static StreamingRole ClientStreamingRole
-    {
-        get
+        public static StreamingRole ClientStreamingRole
         {
-            if (DefaultStreamingRole != StreamingRole.Disabled)
+            get
             {
-                return DefaultStreamingRole;
+                if (DefaultStreamingRole != StreamingRole.Disabled)
+                {
+                    return DefaultStreamingRole;
+                }
+                return getPlayType() == ClientServerBootstrap.PlayType.Server ? StreamingRole.Disabled : StreamingRole.Host;
             }
-            return getPlayType() == ClientServerBootstrap.PlayType.Server ? StreamingRole.Disabled : StreamingRole.Host;
+            set => DefaultStreamingRole = value;
         }
-        set => DefaultStreamingRole = value;
-    }
 #else
     public static StreamingRole ClientStreamingRole { get; set; } = DefaultStreamingRole;
 #endif
 
 
-    /// <summary>Client's streaming role for RenderStreaming.</summary>
-    public enum StreamingRole
-    {
-        Disabled,
-        Host,
-        Guest
+        // Client's streaming role for Multiplay
+        public enum StreamingRole
+        {
+            Disabled,
+            Host,
+            Guest
+        }
     }
 }

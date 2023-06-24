@@ -76,7 +76,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Codec:
-    m_MimeType: 
-    m_SdpFmtpLine: 
+    m_MimeType: video/H264
+    m_SdpFmtpLine: implementation_name=NvCodec;level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=640033
   m_RenderMode: 1
   m_TargetTexture: {fileID: 0}
