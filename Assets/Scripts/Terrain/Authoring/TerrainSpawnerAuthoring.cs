@@ -1,9 +1,10 @@
+using Opencraft.Terrain.Utilities;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.VisualScripting;
 using UnityEngine;
 
-namespace Opencraft.Terrain
+namespace Opencraft.Terrain.Authoring
 {
     [InternalBufferCapacity(64)]
     // Buffer of terrain areas we need to spawn but haven't yet
@@ -76,6 +77,7 @@ namespace Opencraft.Terrain
                 AddComponent(entity, terrainSpawner);
                 AddComponentObject(entity, materialBank);
 
+                BlocksPerAreaSide.BlocksPerSide.Data = authoring.blocksPerAreaSide;
             }
         }
     }

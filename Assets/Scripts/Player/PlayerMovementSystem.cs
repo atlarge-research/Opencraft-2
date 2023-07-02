@@ -1,6 +1,7 @@
 ﻿using Opencraft.Player.Authoring;
 using Opencraft.Player.Utilities;
-using Opencraft.Terrain;
+using Opencraft.Terrain.Authoring;
+using Opencraft.Terrain.Utilities;
 using Unity.Entities;
 using Unity.Burst;
 using Unity.Physics;
@@ -202,81 +203,20 @@ namespace Opencraft.Player
                 transform.pos.z + offset));
 
             foreach (var pos in set)
-                if (IsBlockAtPosition(pos))
+            {
+                if (TerrainUtilities.GetBlockAtPosition(pos,
+                        ref terrainAreasEntities,
+                        ref terrainAreaTransforms,
+                        ref _terrainBlockLookup,
+                        out int _))
+                {
                     return PlayerUtilities.PlayerSupportState.Supported;
-
+                }
+            }
 
             return PlayerUtilities.PlayerSupportState.Unsupported;
         }
 
-        [BurstCompile]
-        private bool IsBlockAtPosition(float3 pos)
-        {
-            if (GetTerrainAreaByPosition(pos, out Entity containingArea, out float3 containingAreaLocation))
-            {
-                var terrainBuffer = _terrainBlockLookup[containingArea];
-                int localx = (int)math.floor(pos.x - containingAreaLocation.x);
-                int localy = (int)math.floor(pos.y - containingAreaLocation.y);
-                int localz = (int)math.floor(pos.z - containingAreaLocation.z);
-                int index = localx + localy * blocksPerChunkSide + localz * blocksPerChunkSide * blocksPerChunkSide;
-                if (index < 0 || index >= blocksPerChunkSide * blocksPerChunkSide * blocksPerChunkSide)
-                {
-                    Debug.LogError(
-                        $"Block position index {index} out of bounds for location {pos} in area {containingAreaLocation}");
-                    return false;
-                }
-
-                int block = terrainBuffer[index].Value;
-                if (block != -1)
-                {
-#if UNITY_EDITOR
-                    int d = 1;
-                    float3 baseLocation = new float3(
-                        containingAreaLocation.x + localx,
-                        containingAreaLocation.y + localy,
-                        containingAreaLocation.z + localz);
-                    Debug.DrawLine(baseLocation, baseLocation + new float3(d, 0, 0), Color.green);
-                    Debug.DrawLine(baseLocation, baseLocation + new float3(0, d, 0), Color.green);
-                    Debug.DrawLine(baseLocation, baseLocation + new float3(0, 0, d), Color.green);
-                    Debug.DrawLine(baseLocation + new float3(d, d, 0), baseLocation + new float3(d, 0, 0), Color.green);
-                    Debug.DrawLine(baseLocation + new float3(d, d, 0), baseLocation + new float3(0, d, 0), Color.green);
-                    Debug.DrawLine(baseLocation + new float3(d, d, 0), baseLocation + new float3(d, d, d), Color.green);
-                    Debug.DrawLine(baseLocation + new float3(0, d, d), baseLocation + new float3(0, d, 0), Color.green);
-                    Debug.DrawLine(baseLocation + new float3(0, d, d), baseLocation + new float3(0, 0, d), Color.green);
-                    Debug.DrawLine(baseLocation + new float3(0, d, d), baseLocation + new float3(d, d, d), Color.green);
-                    Debug.DrawLine(baseLocation + new float3(d, 0, d), baseLocation + new float3(d, 0, 0), Color.green);
-                    Debug.DrawLine(baseLocation + new float3(d, 0, d), baseLocation + new float3(d, d, d), Color.green);
-                    Debug.DrawLine(baseLocation + new float3(d, 0, d), baseLocation + new float3(0, 0, d), Color.green);
-#endif
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        [BurstCompile]
-        // Returns the terrain area that contains a float3 position
-        private bool GetTerrainAreaByPosition(float3 pos, out Entity containingArea, out float3 containingAreaLocation)
-        {
-            for (int i = 0; i < terrainAreaTransforms.Length; i++)
-            {
-                var terrainArea = terrainAreaTransforms[i];
-                float3 loc = terrainArea.Position;
-                if (pos.x >= loc.x && pos.x < loc.x + blocksPerChunkSide &&
-                    pos.y >= loc.y && pos.y < loc.y + blocksPerChunkSide &&
-                    pos.z >= loc.z && pos.z < loc.z + blocksPerChunkSide)
-                {
-                    containingArea = terrainAreasEntities[i];
-                    containingAreaLocation = loc;
-                    return true;
-                }
-            }
-
-            containingArea = Entity.Null;
-            containingAreaLocation = new int3(-1);
-            return false;
-        }
 
         [BurstCompile]
         // Checks if there are blocks in the way of the player's movement
@@ -310,7 +250,11 @@ namespace Opencraft.Player
                 newPosition.z + offset));
 
             foreach (var pos in set)
-                if (IsBlockAtPosition(pos))
+                if (TerrainUtilities.GetBlockAtPosition(pos,
+                        ref terrainAreasEntities,
+                        ref terrainAreaTransforms,
+                        ref _terrainBlockLookup,
+                        out int _))
                 {
                     linearVelocity = new float3(0, 0, 0);
                     return;

@@ -42,8 +42,10 @@ namespace Opencraft.Player
 
                 input.ValueRW.Movement = default;
                 input.ValueRW.Jump = default;
+                input.ValueRW.PrimaryAction= default;
+                input.ValueRW.SecondaryAction= default;
 
-
+                // Movement
                 input.ValueRW.Movement.x = playerController.inputMovement.x;
                 input.ValueRW.Movement.y = playerController.inputMovement.y;
                 if (playerController.inputJump)
@@ -52,15 +54,28 @@ namespace Opencraft.Player
                     playerController.inputJump = false;
                 }
                 
+                // Look
                 input.ValueRW.Pitch = math.clamp(input.ValueRW.Pitch + playerController.inputLook.y, -math.PI / 2,
                     math.PI / 2);
                 input.ValueRW.Yaw = math.fmod(input.ValueRW.Yaw + playerController.inputLook.x, 2 * math.PI);
 
-
+                // Sync camera to look
                 playerObj.transform.rotation = math.mul(quaternion.RotateY(input.ValueRO.Yaw),
                     quaternion.RotateX(-input.ValueRO.Pitch));
                 var offset = math.rotate(playerObj.transform.rotation, _cameraOffset);
                 playerObj.transform.position = localToWorld.ValueRO.Position + offset;
+                
+                // Action buttons
+                if (playerController.inputPrimaryAction)
+                {
+                    input.ValueRW.PrimaryAction.Set();
+                    playerController.inputPrimaryAction= false;
+                }
+                if (playerController.inputSecondaryAction)
+                {
+                    input.ValueRW.SecondaryAction.Set();
+                    playerController.inputSecondaryAction= false;
+                }
             }
         }
     }

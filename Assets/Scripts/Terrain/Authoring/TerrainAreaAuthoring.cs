@@ -3,7 +3,7 @@ using Unity.Mathematics;
 using Unity.NetCode;
 using UnityEngine;
 
-namespace Opencraft.Terrain
+namespace Opencraft.Terrain.Authoring
 {
     public class TerrainAreaAuthoring : MonoBehaviour
     {
@@ -51,7 +51,6 @@ namespace Opencraft.Terrain
     }
 
     // Remesh component marks an entity as needing to be remeshed by the TerrainMeshingSystem
-    [GhostEnabledBit]
     public struct Remesh : IComponentData, IEnableableComponent
     {
     }

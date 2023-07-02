@@ -1,4 +1,5 @@
-using Opencraft.Terrain;
+using Opencraft.Terrain.Authoring;
+using Opencraft.Terrain.Utilities;
 using Unity.Burst;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -42,20 +43,7 @@ namespace Opencraft.Rendering
         {
 
             var baseLocation = t.Position;
-            var d = blocksPerSide;
-            // Draw a bounding box
-            Debug.DrawLine(baseLocation, baseLocation + new float3(d, 0, 0));
-            Debug.DrawLine(baseLocation, baseLocation + new float3(0, d, 0));
-            Debug.DrawLine(baseLocation, baseLocation + new float3(0, 0, d));
-            Debug.DrawLine(baseLocation + new float3(d, d, 0), baseLocation + new float3(d, 0, 0));
-            Debug.DrawLine(baseLocation + new float3(d, d, 0), baseLocation + new float3(0, d, 0));
-            Debug.DrawLine(baseLocation + new float3(d, d, 0), baseLocation + new float3(d, d, d));
-            Debug.DrawLine(baseLocation + new float3(0, d, d), baseLocation + new float3(0, d, 0));
-            Debug.DrawLine(baseLocation + new float3(0, d, d), baseLocation + new float3(0, 0, d));
-            Debug.DrawLine(baseLocation + new float3(0, d, d), baseLocation + new float3(d, d, d));
-            Debug.DrawLine(baseLocation + new float3(d, 0, d), baseLocation + new float3(d, 0, 0));
-            Debug.DrawLine(baseLocation + new float3(d, 0, d), baseLocation + new float3(d, d, d));
-            Debug.DrawLine(baseLocation + new float3(d, 0, d), baseLocation + new float3(0, 0, d));
+            TerrainUtilities.DebugDrawTerrainArea(ref baseLocation, Color.white);
         }
     }
 }

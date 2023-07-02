@@ -1,4 +1,5 @@
 using System;
+using Opencraft.Terrain.Utilities;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -21,6 +22,16 @@ namespace Opencraft.Player.Authoring
         // Connection related variables
         [GhostField] public int Username;
         public BlobAssetReference<BlobString> multiplayConnectionID;
+    }
+    
+    // Component marking this entity as having a specific block selected.
+    // Neighbor block refers to the block neighbor of the selected block closest to this entity
+    public struct SelectedBlock : IComponentData
+    {
+        public int terrainAreaIndex;
+        public int3 blockLoc;
+        public int neighborTerrainAreaIndex;
+        public int3 neighborBlockLoc;
     }
 
 
@@ -52,12 +63,14 @@ namespace Opencraft.Player.Authoring
         readonly RefRW<PhysicsVelocity> m_Velocity;
         readonly RefRO<PlayerInput> m_Input;
         readonly RefRO<GhostOwner> m_Owner;
+        readonly RefRW<SelectedBlock> m_SelectedBlock;
 
         public AutoCommandTarget AutoCommandTarget => m_AutoCommandTarget.ValueRO;
         public PlayerInput Input => m_Input.ValueRO;
         public int OwnerNetworkId => m_Owner.ValueRO.NetworkId;
         public ref Player Player => ref m_Character.ValueRW;
         public ref PhysicsVelocity Velocity => ref m_Velocity.ValueRW;
+        public ref SelectedBlock SelectedBlock => ref m_SelectedBlock.ValueRW;
     }
 
     [DisallowMultipleComponent]
@@ -76,6 +89,7 @@ namespace Opencraft.Player.Authoring
                     PlayerConfig = GetEntity(authoring.playerConfig.gameObject, TransformUsageFlags.Dynamic)
                 });
                 AddComponent(entity, new NewPlayer());
+                AddComponent(entity, new SelectedBlock());
             }
         }
     }

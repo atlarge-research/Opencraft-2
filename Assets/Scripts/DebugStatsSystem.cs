@@ -1,4 +1,4 @@
-using Opencraft.Terrain;
+using Opencraft.Terrain.Authoring;
 using Unity.Entities;
 
 namespace Opencraft

@@ -1,9 +1,9 @@
 ﻿using Opencraft.Terrain;
+using Opencraft.Terrain.Authoring;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Entities.Graphics;
 using Unity.Mathematics;
-using Unity.NetCode;
 using Unity.Rendering;
 using UnityEngine;
 
@@ -12,6 +12,7 @@ namespace Opencraft.Rendering
     // Adds components to TerrainArea entities on client side for meshing and rendering purposes
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(InitializationSystemGroup))]
+    [UpdateAfter(typeof(TerrainNeighborSystem))]
     public partial class TerrainRenderInitSystem : SystemBase
     {
         private EntityQuery _terrainSpawnerQuery;
@@ -52,7 +53,6 @@ namespace Opencraft.Rendering
                 ecb.AddSharedComponentManaged(entity, RenderFilterSettings.Default);
                 ecb.AddComponent(entity, new ComponentTypeSet(new[]
                 {
-                    
                     // Entities without these components will not match queries and will never be rendered.
                     ComponentType.ReadWrite<WorldRenderBounds>(),
                     ComponentType.ChunkComponent<ChunkWorldRenderBounds>(),
@@ -64,18 +64,17 @@ namespace Opencraft.Rendering
 
                 // Remesh neighbors of the new area to eliminate shared faces
                 if (EntityManager.HasComponent<Remesh>(terrainArea.ValueRO.neighborXN))
-                    EntityManager.SetComponentEnabled<Remesh>(terrainArea.ValueRO.neighborXN, true);
+                    ecb.SetComponentEnabled<Remesh>(terrainArea.ValueRO.neighborXN, true);
                 if (EntityManager.HasComponent<Remesh>(terrainArea.ValueRO.neighborXP))
-                    EntityManager.SetComponentEnabled<Remesh>(terrainArea.ValueRO.neighborXP, true);
+                    ecb.SetComponentEnabled<Remesh>(terrainArea.ValueRO.neighborXP, true);
                 if (EntityManager.HasComponent<Remesh>(terrainArea.ValueRO.neighborYN))
-                    EntityManager.SetComponentEnabled<Remesh>(terrainArea.ValueRO.neighborYN, true);
+                    ecb.SetComponentEnabled<Remesh>(terrainArea.ValueRO.neighborYN, true);
                 if (EntityManager.HasComponent<Remesh>(terrainArea.ValueRO.neighborYP))
-                    EntityManager.SetComponentEnabled<Remesh>(terrainArea.ValueRO.neighborYP, true);
+                    ecb.SetComponentEnabled<Remesh>(terrainArea.ValueRO.neighborYP, true);
                 if (EntityManager.HasComponent<Remesh>(terrainArea.ValueRO.neighborZN))
-                    EntityManager.SetComponentEnabled<Remesh>(terrainArea.ValueRO.neighborZN, true);
+                    ecb.SetComponentEnabled<Remesh>(terrainArea.ValueRO.neighborZN, true);
                 if (EntityManager.HasComponent<Remesh>(terrainArea.ValueRO.neighborZP))
-                    EntityManager.SetComponentEnabled<Remesh>(terrainArea.ValueRO.neighborZP, true);
-
+                    ecb.SetComponentEnabled<Remesh>(terrainArea.ValueRO.neighborZP, true);
                 ecb.SetComponentEnabled<NewSpawn>(entity, false);
             }
 

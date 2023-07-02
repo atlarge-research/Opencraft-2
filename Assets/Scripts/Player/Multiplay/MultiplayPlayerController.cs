@@ -17,7 +17,8 @@ namespace Opencraft.Player.Multiplay
         public Vector2 inputLook;
         public bool inputJump;
         public bool inputStart;
-
+        public bool inputPrimaryAction;
+        public bool inputSecondaryAction;
         public bool playerEntityExists;
         public bool playerEntityRequestSent;
         public Entity playerEntity;
@@ -102,6 +103,22 @@ namespace Opencraft.Player.Multiplay
             if (value.performed)
             {
                 inputStart = true;
+            }
+        }
+        
+        public void OnPrimaryAction(InputAction.CallbackContext value)
+        {
+            if (value.performed)
+            {
+                inputPrimaryAction = true;
+            }
+        }
+        
+        public void OnSecondaryAction(InputAction.CallbackContext value)
+        {
+            if (value.performed)
+            {
+                inputSecondaryAction = true;
             }
         }
     }

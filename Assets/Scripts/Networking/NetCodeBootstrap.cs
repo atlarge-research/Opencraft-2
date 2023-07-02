@@ -63,12 +63,8 @@ namespace Opencraft.Networking
             // so we use MultiplayInitSystem to start the relevant MonoBehaviours
             var systems = new List<Type> { typeof(MultiplayInitSystem) };
             DefaultWorldInitialization.AddSystemsToRootLevelSystemGroups(world, systems);
-
-#if UNITY_DOTSRUNTIME
-            AppendWorldToClientTickWorld(world);
-#else
+            
             ScriptBehaviourUpdateOrder.AppendWorldToCurrentPlayerLoop(world);
-#endif
 
             if (World.DefaultGameObjectInjectionWorld == null)
                 World.DefaultGameObjectInjectionWorld = world;

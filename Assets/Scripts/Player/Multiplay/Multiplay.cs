@@ -169,7 +169,10 @@ namespace Opencraft.Player.Multiplay
             
             if (settings != null)
                 receiveVideoViewer.SetCodec(settings.ReceiverVideoCodec);
-
+            
+            //todo hacky wait for the signalling server to connect 
+            yield return new WaitForSeconds(1f);
+             
             handler.CreateConnection(connectionId);
             yield return new WaitUntil(() => handler.IsConnected(connectionId));
         }

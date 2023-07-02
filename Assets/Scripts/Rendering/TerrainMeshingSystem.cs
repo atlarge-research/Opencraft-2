@@ -1,10 +1,10 @@
-using Opencraft.Terrain;
+using Opencraft.Terrain.Authoring;
+using Opencraft.Terrain.Utilities;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
-using Unity.NetCode;
 using Unity.Rendering;
 using Unity.Transforms;
 using UnityEngine;
@@ -14,6 +14,7 @@ namespace Opencraft.Rendering
 {
     [UpdateInGroup(typeof(PresentationSystemGroup))]
     [WorldSystemFilter(WorldSystemFilterFlags.Presentation)]
+    [UpdateAfter(typeof(TerrainChangeMonitoringSystem))]
     [BurstCompile]
     // Creates a mesh for each terrain area using a basic greedy meshing technique
     public partial class TerrainMeshingSystem : SystemBase
@@ -53,12 +54,11 @@ namespace Opencraft.Rendering
 
             TerrainSpawner terrainSpawner = _terrainSpawnerQuery.GetSingleton<TerrainSpawner>();
             NativeArray<Entity> chunksToUpdate = _terrainAreaQuery.ToEntityArray(Allocator.TempJob);
-            NativeArray<TerrainArea> terrainChunks =
+            NativeArray<TerrainArea> terrainAreas =
                 _terrainAreaQuery.ToComponentDataArray<TerrainArea>(Allocator.TempJob);
             _terrainBufferLookup = GetBufferLookup<TerrainBlocks>(true);
             // Construct our unmanaged mesh array that can be passed to the job 
             Mesh.MeshDataArray meshDataArray = Mesh.AllocateWritableMeshData(chunksToUpdate.Length);
-
             MeshTerrainChunkJob meshJob = new MeshTerrainChunkJob
             {
                 vertexLayout = _vertexLayout,
@@ -68,7 +68,7 @@ namespace Opencraft.Rendering
                                      terrainSpawner.blocksPerSide,
                 meshDataArray = meshDataArray,
                 areasToUpdate = chunksToUpdate,
-                terrainAreas = terrainChunks,
+                terrainAreas = terrainAreas,
                 terrainBufferLookup = _terrainBufferLookup
             };
             // todo we can potentially have the handling of meshJob output happen on later frames to reduce
@@ -89,7 +89,7 @@ namespace Opencraft.Rendering
             // Update the terrain area meshes
             Mesh.ApplyAndDisposeWritableMeshData(meshDataArray, meshes, MeshUpdateFlags.DontValidateIndices);
             chunksToUpdate.Dispose();
-            terrainChunks.Dispose();
+            terrainAreas.Dispose();
 
             // Mark that these areas have been (re)meshed
             EntityManager.SetComponentEnabled<Remesh>(_terrainAreaQuery, false);
@@ -117,6 +117,10 @@ namespace Opencraft.Rendering
         {
             Entity entity = areasToUpdate[index];
             TerrainArea terrainArea = terrainAreas[index];
+            // When area is remeshed, outline it in red
+            float3 loc = terrainArea.location * blocksPerSide;
+            TerrainUtilities.DebugDrawTerrainArea(ref loc, Color.red, 0.5f);
+            
             // Mesh object vertex data
             Mesh.MeshData meshData = meshDataArray[index];
             // The blocks in this chunk
@@ -184,7 +188,7 @@ namespace Opencraft.Rendering
                         int chunkAccess = 0;
 
                         // Left face (XN)
-                        if (!visitedXN[access] && VisibleFaceXN(i - 1, j, k, ref blocks, ref neighborXN))
+                        if (!visitedXN[access] && TerrainUtilities.VisibleFaceXN(i - 1, j, k, ref blocks, ref neighborXN))
                         {
                             length = 0;
                             // Search upwards to determine run length
@@ -217,7 +221,7 @@ namespace Opencraft.Rendering
                         }
 
                         // Right face (XP)
-                        if (!visitedXP[access] && VisibleFaceXP(i1, j, k, ref blocks, ref neighborXP))
+                        if (!visitedXP[access] && TerrainUtilities.VisibleFaceXP(i1, j, k, ref blocks, ref neighborXP))
                         {
                             length = 0;
                             for (int q = j; q < blocksPerSide; q++)
@@ -245,7 +249,7 @@ namespace Opencraft.Rendering
                         }
 
                         // Back face (ZN)
-                        if (!visitedZN[access] && VisibleFaceZN(i, j, k - 1, ref blocks, ref neighborZN))
+                        if (!visitedZN[access] && TerrainUtilities.VisibleFaceZN(i, j, k - 1, ref blocks, ref neighborZN))
                         {
                             length = 0;
                             for (int q = j; q < blocksPerSide; q++)
@@ -273,7 +277,7 @@ namespace Opencraft.Rendering
                         }
 
                         // Front face (ZP)
-                        if (!visitedZP[access] && VisibleFaceZP(i, j, k1, ref blocks, ref neighborZP))
+                        if (!visitedZP[access] && TerrainUtilities.VisibleFaceZP(i, j, k1, ref blocks, ref neighborZP))
                         {
                             length = 0;
                             for (int q = j; q < blocksPerSide; q++)
@@ -301,7 +305,7 @@ namespace Opencraft.Rendering
                         }
 
                         // Bottom face (YN)
-                        if (!visitedYN[access] && VisibleFaceYN(i, j - 1, k, ref blocks, ref neighborYN))
+                        if (!visitedYN[access] && TerrainUtilities.VisibleFaceYN(i, j - 1, k, ref blocks, ref neighborYN))
                         {
                             length = 0;
                             // extend in X axis
@@ -330,7 +334,7 @@ namespace Opencraft.Rendering
                         }
 
                         // Top face (YP)
-                        if (!visitedYP[access] && VisibleFaceYP(i, j1, k, ref blocks, ref neighborYP))
+                        if (!visitedYP[access] && TerrainUtilities.VisibleFaceYP(i, j1, k, ref blocks, ref neighborYP))
                         {
                             length = 0;
                             // extend in X axis
@@ -381,87 +385,7 @@ namespace Opencraft.Rendering
             meshData.SetSubMesh(0, new SubMeshDescriptor(0, numFaces * 6));
         }
         
-        // The VisibleFace functions check if there is a block directly in front of a terrain block face in the given direction
-        private bool VisibleFaceXN(int i, int j, int k, ref DynamicBuffer<TerrainBlocks> blocks,
-            ref DynamicBuffer<TerrainBlocks> neighborXN)
-        {
-            // Access from a neighbouring chunk
-            if (i < 0)
-            {
-                if (neighborXN.IsEmpty)
-                    return true;
-                return neighborXN[(blocksPerSide - 1) + j * blocksPerSide + k * blocksPerSideSquared].Value == -1;
-            }
 
-            // Access from this chunk
-            return blocks[i + j * blocksPerSide + k * blocksPerSideSquared].Value == -1;
-        }
-
-        private bool VisibleFaceXP(int i, int j, int k, ref DynamicBuffer<TerrainBlocks> blocks,
-            ref DynamicBuffer<TerrainBlocks> neighborXP)
-        {
-            if (i >= blocksPerSide)
-            {
-                if (neighborXP.IsEmpty)
-                    return true;
-
-                return neighborXP[0 + j * blocksPerSide + k * blocksPerSideSquared].Value == -1;
-            }
-
-            return blocks[i + j * blocksPerSide + k * blocksPerSideSquared].Value == -1;
-        }
-
-        private bool VisibleFaceZN(int i, int j, int k, ref DynamicBuffer<TerrainBlocks> blocks,
-            ref DynamicBuffer<TerrainBlocks> neighborZN)
-        {
-            if (k < 0)
-            {
-                if (neighborZN.IsEmpty)
-                    return true;
-                return neighborZN[i + j * blocksPerSide + (blocksPerSide - 1) * blocksPerSideSquared].Value == -1;
-            }
-
-            return blocks[i + j * blocksPerSide + k * blocksPerSideSquared].Value == -1;
-        }
-
-        private bool VisibleFaceZP(int i, int j, int k, ref DynamicBuffer<TerrainBlocks> blocks,
-            ref DynamicBuffer<TerrainBlocks> neighborZP)
-        {
-            if (k >= blocksPerSide)
-            {
-                if (neighborZP.IsEmpty)
-                    return true;
-                return neighborZP[i + j * blocksPerSide].Value == -1;
-            }
-
-            return blocks[i + j * blocksPerSide + k * blocksPerSideSquared].Value == -1;
-        }
-
-        private bool VisibleFaceYN(int i, int j, int k, ref DynamicBuffer<TerrainBlocks> blocks,
-            ref DynamicBuffer<TerrainBlocks> neighborYN)
-        {
-            if (j < 0)
-            {
-                if (neighborYN.IsEmpty)
-                    return true;
-                return neighborYN[i + (blocksPerSide - 1) * blocksPerSide + k * blocksPerSideSquared].Value == -1;
-            }
-
-            return blocks[i + j * blocksPerSide + k * blocksPerSideSquared].Value == -1;
-        }
-
-        private bool VisibleFaceYP(int i, int j, int k, ref DynamicBuffer<TerrainBlocks> blocks,
-            ref DynamicBuffer<TerrainBlocks> neighborYP)
-        {
-            if (j >= blocksPerSide)
-            {
-                if (neighborYP.IsEmpty)
-                    return true;
-                return neighborYP[i + k * blocksPerSideSquared].Value == -1;
-            }
-
-            return blocks[i + j * blocksPerSide + k * blocksPerSideSquared].Value == -1;
-        }
 
         /*
          todo- this can be aggressively optimized, right now we are using float vertices instead of int and float3 normals instead

@@ -1,16 +1,17 @@
-﻿using Unity.Burst;
+﻿using Opencraft.Rendering;
+using Opencraft.Terrain.Authoring;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
-using Unity.NetCode;
-using UnityEngine;
 
 namespace Opencraft.Terrain
 {
     [BurstCompile]
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation | WorldSystemFilterFlags.ClientSimulation)]
-    [UpdateInGroup(typeof(SimulationSystemGroup))]
+    [UpdateInGroup(typeof(InitializationSystemGroup))]
+    [UpdateBefore(typeof(TerrainRenderInitSystem))]
     // Calculates terrain neighbors and sets up links between them for easy access by terrain modification and meshing systems
     public partial class TerrainNeighborSystem : SystemBase
     {

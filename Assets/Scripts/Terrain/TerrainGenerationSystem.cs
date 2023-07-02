@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Opencraft.Terrain;
+using Opencraft.Terrain.Authoring;
 using Opencraft.ThirdParty;
 using Unity.Entities;
 using Unity.Jobs;
@@ -8,6 +9,8 @@ using Unity.NetCode;
 using Unity.Transforms;
 using Unity.Burst;
 using Unity.Collections;
+using Unity.Physics;
+using Unity.Profiling;
 using Unity.Rendering;
 using UnityEngine;
 
@@ -23,17 +26,19 @@ namespace Opencraft.Terrain
     public partial struct TerrainGenerationSystem : ISystem
     {
         private EntityQuery _newSpawnQuery;
+        private ProfilerMarker markerTerrainGen;
 
         public void OnCreate(ref SystemState state)
         {
             // Wait for scene load/baking to occur before updates. 
             state.RequireForUpdate<TerrainSpawner>();
             _newSpawnQuery = SystemAPI.QueryBuilder().WithAll<NewSpawn>().Build();
-
+            markerTerrainGen = new ProfilerMarker("TerrainGeneration");
         }
 
         public void OnUpdate(ref SystemState state)
         {
+            
             // Disable the NewSpawn tag component from the areas we populated in the previous tick
             state.EntityManager.SetComponentEnabled<NewSpawn>(_newSpawnQuery, false);
 
@@ -49,7 +54,7 @@ namespace Opencraft.Terrain
             {
                 return;
             }
-
+            markerTerrainGen.Begin();
             NativeArray<int3> chunksToSpawn = chunksToSpawnBuffer.AsNativeArray();
             // Sort the chunks to spawn so ones closer to 0,0 are first
             SortJob<int3, Int3DistanceComparer> sortJob = chunksToSpawn.SortJob<int3, Int3DistanceComparer>(new Int3DistanceComparer { });
@@ -76,6 +81,7 @@ namespace Opencraft.Terrain
                 chunksToSpawnBuffer.RemoveRange(0, terrainSpawner.maxChunkSpawnsPerTick);
             else
                 chunksToSpawnBuffer.Clear();
+            markerTerrainGen.End();
         }
     }
 
