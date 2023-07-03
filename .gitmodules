@@ -1,0 +1,3 @@
+[submodule "com.misharigot.procgen"]
+	path = Packages/com.misharigot.procgen
+	url = git@github.com:misharigot/procgen.git
