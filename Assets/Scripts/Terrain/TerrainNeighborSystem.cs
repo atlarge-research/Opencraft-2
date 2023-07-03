@@ -18,7 +18,7 @@ namespace Opencraft.Terrain
         private EntityQuery _terrainChunkQuery;
 
         private EntityQuery _newSpawnQuery;
-        private BufferLookup<TerrainBlocks> _terrainBufferLookup;
+        private ComponentLookup<TerrainNeighbors> _terrainNeighborsLookup;
 
         protected override void OnCreate()
         {
@@ -28,6 +28,7 @@ namespace Opencraft.Terrain
                 .WithAll<TerrainArea>()
                 .Build(EntityManager);
             _newSpawnQuery = SystemAPI.QueryBuilder().WithAll<NewSpawn>().Build();
+            _terrainNeighborsLookup = GetComponentLookup<TerrainNeighbors>(false);
         }
 
 
@@ -36,19 +37,22 @@ namespace Opencraft.Terrain
         {
             if (_newSpawnQuery.IsEmpty)
                 return;
-            NativeArray<Entity> terrainChunkEntities = _terrainChunkQuery.ToEntityArray(Allocator.TempJob);
+            CompleteDependency();
+            _terrainNeighborsLookup.Update(ref CheckedStateRef);
+            NativeArray<Entity> terrainAreaEntities = _terrainChunkQuery.ToEntityArray(Allocator.TempJob);
             NativeArray<TerrainArea> terrainAreas =
                 _terrainChunkQuery.ToComponentDataArray<TerrainArea>(Allocator.TempJob);
 
-            JobHandle handle = new SetChunkNeighborsJob()
+            JobHandle handle = new SetAreaNeighborsJob()
             {
-                terrainChunks = terrainAreas,
-                terrainChunkEntities = terrainChunkEntities
+                terrainAreas = terrainAreas,
+                terrainAreaEntities = terrainAreaEntities,
+                terrainNeighborsLookup = _terrainNeighborsLookup
             }.ScheduleParallel(Dependency);
             handle.Complete();
 
             terrainAreas.Dispose();
-            terrainChunkEntities.Dispose();
+            terrainAreaEntities.Dispose();
 
         }
     }
@@ -57,52 +61,56 @@ namespace Opencraft.Terrain
     // When a new terrain area has been spawned, set it's neighbors, and update it's neighbors neighbors.
     [BurstCompile]
     [WithAll(typeof(NewSpawn))]
-    public partial struct SetChunkNeighborsJob : IJobEntity
+    public partial struct SetAreaNeighborsJob : IJobEntity
     {
         // thread safe as long as no terrain areas have the same location!
-        [NativeDisableParallelForRestriction] public NativeArray<Entity> terrainChunkEntities;
-        [NativeDisableParallelForRestriction] public NativeArray<TerrainArea> terrainChunks;
+        [NativeDisableParallelForRestriction] public NativeArray<Entity> terrainAreaEntities;
+        [NativeDisableParallelForRestriction] public NativeArray<TerrainArea> terrainAreas;
+        [NativeDisableParallelForRestriction] public ComponentLookup<TerrainNeighbors> terrainNeighborsLookup;
 
-        public void Execute(Entity entity, ref TerrainArea terrainChunk)
+        public void Execute(Entity entity, ref TerrainArea terrainArea)
         {
-            for (int i = 0; i < terrainChunks.Length; i++)
+            var terrainNeighbors = terrainNeighborsLookup.GetRefRW(entity);
+            for (int i = 0; i < terrainAreaEntities.Length; i++)
             {
-                var otherTerrainChunk = terrainChunks[i];
-                int3 otherLoc = otherTerrainChunk.location;
-                if (otherLoc.Equals(terrainChunk.location + new int3(1, 0, 0)))
+                var otherTerrainEntity = terrainAreaEntities[i];
+                var otherTerrainArea = terrainAreas[i];
+                var otherTerrainNeighbors = terrainNeighborsLookup.GetRefRW(otherTerrainEntity);
+                int3 otherLoc = otherTerrainArea.location;
+                if (otherLoc.Equals(terrainArea.location + new int3(1, 0, 0)))
                 {
-                    terrainChunk.neighborXP = terrainChunkEntities[i];
-                    otherTerrainChunk.neighborXN = entity;
+                    terrainNeighbors.ValueRW.neighborXP = otherTerrainEntity;
+                    otherTerrainNeighbors.ValueRW.neighborXN = entity;
                 }
 
-                if (otherLoc.Equals(terrainChunk.location + new int3(-1, 0, 0)))
+                if (otherLoc.Equals(terrainArea.location + new int3(-1, 0, 0)))
                 {
-                    terrainChunk.neighborXN = terrainChunkEntities[i];
-                    otherTerrainChunk.neighborXP = entity;
+                    terrainNeighbors.ValueRW.neighborXN = otherTerrainEntity;
+                    otherTerrainNeighbors.ValueRW.neighborXP = entity;
                 }
 
-                if (otherLoc.Equals(terrainChunk.location + new int3(0, 1, 0)))
+                if (otherLoc.Equals(terrainArea.location + new int3(0, 1, 0)))
                 {
-                    terrainChunk.neighborYP = terrainChunkEntities[i];
-                    otherTerrainChunk.neighborYN = entity;
+                    terrainNeighbors.ValueRW.neighborYP = otherTerrainEntity;
+                    otherTerrainNeighbors.ValueRW.neighborYN = entity;
                 }
 
-                if (otherLoc.Equals(terrainChunk.location + new int3(0, -1, 0)))
+                if (otherLoc.Equals(terrainArea.location + new int3(0, -1, 0)))
                 {
-                    terrainChunk.neighborYN = terrainChunkEntities[i];
-                    otherTerrainChunk.neighborYP = entity;
+                    terrainNeighbors.ValueRW.neighborYN = otherTerrainEntity;
+                    otherTerrainNeighbors.ValueRW.neighborYP = entity;
                 }
 
-                if (otherLoc.Equals(terrainChunk.location + new int3(0, 0, 1)))
+                if (otherLoc.Equals(terrainArea.location + new int3(0, 0, 1)))
                 {
-                    terrainChunk.neighborZP = terrainChunkEntities[i];
-                    otherTerrainChunk.neighborZN = entity;
+                    terrainNeighbors.ValueRW.neighborZP = otherTerrainEntity;
+                    otherTerrainNeighbors.ValueRW.neighborZN = entity;
                 }
 
-                if (otherLoc.Equals(terrainChunk.location + new int3(0, 0, -1)))
+                if (otherLoc.Equals(terrainArea.location + new int3(0, 0, -1)))
                 {
-                    terrainChunk.neighborZN = terrainChunkEntities[i];
-                    otherTerrainChunk.neighborZP = entity;
+                    terrainNeighbors.ValueRW.neighborZN = otherTerrainEntity;
+                    otherTerrainNeighbors.ValueRW.neighborZP = entity;
                 }
             }
         }

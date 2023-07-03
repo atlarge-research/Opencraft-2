@@ -31,7 +31,7 @@ namespace Opencraft.Rendering
             _terrainSpawnerQuery = GetEntityQuery(ComponentType.ReadOnly<TerrainSpawner>());
             // Fetch terrain that needs to be remeshed
             _terrainAreaQuery = new EntityQueryBuilder(Allocator.Temp)
-                .WithAll<TerrainBlocks, TerrainArea, LocalTransform, RenderMeshArray, Remesh>()
+                .WithAll<TerrainBlocks, TerrainArea, TerrainNeighbors, LocalTransform, RenderMeshArray, Remesh>()
                 .Build(EntityManager);
             // Set layout object for creating VBO
             _vertexLayout = new NativeArray<VertexAttributeDescriptor>(2, Allocator.Persistent);
@@ -56,6 +56,8 @@ namespace Opencraft.Rendering
             NativeArray<Entity> chunksToUpdate = _terrainAreaQuery.ToEntityArray(Allocator.TempJob);
             NativeArray<TerrainArea> terrainAreas =
                 _terrainAreaQuery.ToComponentDataArray<TerrainArea>(Allocator.TempJob);
+            NativeArray<TerrainNeighbors> terrainNeighbors =
+                _terrainAreaQuery.ToComponentDataArray<TerrainNeighbors>(Allocator.TempJob);
             _terrainBufferLookup = GetBufferLookup<TerrainBlocks>(true);
             // Construct our unmanaged mesh array that can be passed to the job 
             Mesh.MeshDataArray meshDataArray = Mesh.AllocateWritableMeshData(chunksToUpdate.Length);
@@ -69,6 +71,7 @@ namespace Opencraft.Rendering
                 meshDataArray = meshDataArray,
                 areasToUpdate = chunksToUpdate,
                 terrainAreas = terrainAreas,
+                terrainNeighbors= terrainNeighbors,
                 terrainBufferLookup = _terrainBufferLookup
             };
             // todo we can potentially have the handling of meshJob output happen on later frames to reduce
@@ -90,6 +93,7 @@ namespace Opencraft.Rendering
             Mesh.ApplyAndDisposeWritableMeshData(meshDataArray, meshes, MeshUpdateFlags.DontValidateIndices);
             chunksToUpdate.Dispose();
             terrainAreas.Dispose();
+            terrainNeighbors.Dispose();
 
             // Mark that these areas have been (re)meshed
             EntityManager.SetComponentEnabled<Remesh>(_terrainAreaQuery, false);
@@ -110,12 +114,14 @@ namespace Opencraft.Rendering
         public Mesh.MeshDataArray meshDataArray;
         public NativeArray<Entity> areasToUpdate;
         public NativeArray<TerrainArea> terrainAreas;
+        public NativeArray<TerrainNeighbors> terrainNeighbors;
 
         [ReadOnly] public BufferLookup<TerrainBlocks> terrainBufferLookup;
 
         public void Execute(int index)
         {
             Entity entity = areasToUpdate[index];
+            TerrainNeighbors terrainNeighbor = terrainNeighbors[index];
             TerrainArea terrainArea = terrainAreas[index];
             // When area is remeshed, outline it in red
             float3 loc = terrainArea.location * blocksPerSide;
@@ -129,23 +135,23 @@ namespace Opencraft.Rendering
 
             // References to neighbor areas
             DynamicBuffer<TerrainBlocks> neighborXP = default;
-            if (terrainArea.neighborXP != Entity.Null)
-                neighborXP = terrainBufferLookup[terrainArea.neighborXP];
+            if (terrainNeighbor.neighborXP != Entity.Null)
+                neighborXP = terrainBufferLookup[terrainNeighbor.neighborXP];
             DynamicBuffer<TerrainBlocks> neighborXN = default;
-            if (terrainArea.neighborXN != Entity.Null)
-                neighborXN = terrainBufferLookup[terrainArea.neighborXN];
+            if (terrainNeighbor.neighborXN != Entity.Null)
+                neighborXN = terrainBufferLookup[terrainNeighbor.neighborXN];
             DynamicBuffer<TerrainBlocks> neighborYP = default;
-            if (terrainArea.neighborYP != Entity.Null)
-                neighborYP = terrainBufferLookup[terrainArea.neighborYP];
+            if (terrainNeighbor.neighborYP != Entity.Null)
+                neighborYP = terrainBufferLookup[terrainNeighbor.neighborYP];
             DynamicBuffer<TerrainBlocks> neighborYN = default;
-            if (terrainArea.neighborYN != Entity.Null)
-                neighborYN = terrainBufferLookup[terrainArea.neighborYN];
+            if (terrainNeighbor.neighborYN != Entity.Null)
+                neighborYN = terrainBufferLookup[terrainNeighbor.neighborYN];
             DynamicBuffer<TerrainBlocks> neighborZP = default;
-            if (terrainArea.neighborZP != Entity.Null)
-                neighborZP = terrainBufferLookup[terrainArea.neighborZP];
+            if (terrainNeighbor.neighborZP != Entity.Null)
+                neighborZP = terrainBufferLookup[terrainNeighbor.neighborZP];
             DynamicBuffer<TerrainBlocks> neighborZN = default;
-            if (terrainArea.neighborZN != Entity.Null)
-                neighborZN = terrainBufferLookup[terrainArea.neighborZN];
+            if (terrainNeighbor.neighborZN != Entity.Null)
+                neighborZN = terrainBufferLookup[terrainNeighbor.neighborZN];
             
             // Bitmasks that mark a terrain block as visited
             NativeArray<bool> visitedXN = new NativeArray<bool>(blocksPerSideCubed, Allocator.Temp);

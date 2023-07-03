@@ -37,7 +37,7 @@ namespace Opencraft.Rendering
             EntityCommandBuffer ecb = new EntityCommandBuffer(Allocator.Temp);
             float3 boundsExtents = new float3(0.5 * terrainSpawner.blocksPerSide);
             MaterialBank materialBank = _terrainSpawnerQuery.GetSingleton<MaterialBank>();
-            foreach (var (terrainArea, entity) in SystemAPI.Query<RefRO<TerrainArea>>().WithAll<NewSpawn>()
+            foreach (var (terrainArea, terrainNeighbors, entity) in SystemAPI.Query<RefRO<TerrainArea>,RefRO<TerrainNeighbors>>().WithAll<NewSpawn>()
                          .WithEntityAccess())
             {
                 int3 loc = terrainArea.ValueRO.location;
@@ -63,18 +63,18 @@ namespace Opencraft.Rendering
                 }));
 
                 // Remesh neighbors of the new area to eliminate shared faces
-                if (EntityManager.HasComponent<Remesh>(terrainArea.ValueRO.neighborXN))
-                    ecb.SetComponentEnabled<Remesh>(terrainArea.ValueRO.neighborXN, true);
-                if (EntityManager.HasComponent<Remesh>(terrainArea.ValueRO.neighborXP))
-                    ecb.SetComponentEnabled<Remesh>(terrainArea.ValueRO.neighborXP, true);
-                if (EntityManager.HasComponent<Remesh>(terrainArea.ValueRO.neighborYN))
-                    ecb.SetComponentEnabled<Remesh>(terrainArea.ValueRO.neighborYN, true);
-                if (EntityManager.HasComponent<Remesh>(terrainArea.ValueRO.neighborYP))
-                    ecb.SetComponentEnabled<Remesh>(terrainArea.ValueRO.neighborYP, true);
-                if (EntityManager.HasComponent<Remesh>(terrainArea.ValueRO.neighborZN))
-                    ecb.SetComponentEnabled<Remesh>(terrainArea.ValueRO.neighborZN, true);
-                if (EntityManager.HasComponent<Remesh>(terrainArea.ValueRO.neighborZP))
-                    ecb.SetComponentEnabled<Remesh>(terrainArea.ValueRO.neighborZP, true);
+                if (EntityManager.HasComponent<Remesh>(terrainNeighbors.ValueRO.neighborXN))
+                    ecb.SetComponentEnabled<Remesh>(terrainNeighbors.ValueRO.neighborXN, true);
+                if (EntityManager.HasComponent<Remesh>(terrainNeighbors.ValueRO.neighborXP))
+                    ecb.SetComponentEnabled<Remesh>(terrainNeighbors.ValueRO.neighborXP, true);
+                if (EntityManager.HasComponent<Remesh>(terrainNeighbors.ValueRO.neighborYN))
+                    ecb.SetComponentEnabled<Remesh>(terrainNeighbors.ValueRO.neighborYN, true);
+                if (EntityManager.HasComponent<Remesh>(terrainNeighbors.ValueRO.neighborYP))
+                    ecb.SetComponentEnabled<Remesh>(terrainNeighbors.ValueRO.neighborYP, true);
+                if (EntityManager.HasComponent<Remesh>(terrainNeighbors.ValueRO.neighborZN))
+                    ecb.SetComponentEnabled<Remesh>(terrainNeighbors.ValueRO.neighborZN, true);
+                if (EntityManager.HasComponent<Remesh>(terrainNeighbors.ValueRO.neighborZP))
+                    ecb.SetComponentEnabled<Remesh>(terrainNeighbors.ValueRO.neighborZP, true);
                 ecb.SetComponentEnabled<NewSpawn>(entity, false);
             }
 

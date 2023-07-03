@@ -176,7 +176,7 @@ MonoBehaviour:
     x: 10
     y: 1
     z: 10
-  maxChunkSpawnsPerTick: 25
+  maxChunkSpawnsPerTick: 1
   blocksPerAreaSide: 4
   YBounds:
     x: 0

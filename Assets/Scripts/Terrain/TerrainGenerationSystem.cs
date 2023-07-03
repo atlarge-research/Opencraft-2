@@ -27,6 +27,7 @@ namespace Opencraft.Terrain
     {
         private EntityQuery _newSpawnQuery;
         private ProfilerMarker markerTerrainGen;
+        //private double lastUpdate;
 
         public void OnCreate(ref SystemState state)
         {
@@ -34,10 +35,16 @@ namespace Opencraft.Terrain
             state.RequireForUpdate<TerrainSpawner>();
             _newSpawnQuery = SystemAPI.QueryBuilder().WithAll<NewSpawn>().Build();
             markerTerrainGen = new ProfilerMarker("TerrainGeneration");
+            //lastUpdate = -1.0;
         }
 
         public void OnUpdate(ref SystemState state)
         {
+            /*if (state.World.Time.ElapsedTime - lastUpdate < 1.0)
+            {
+                return;
+            }
+            lastUpdate = state.World.Time.ElapsedTime;*/
             
             // Disable the NewSpawn tag component from the areas we populated in the previous tick
             state.EntityManager.SetComponentEnabled<NewSpawn>(_newSpawnQuery, false);

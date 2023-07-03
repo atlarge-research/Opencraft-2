@@ -13,7 +13,7 @@ namespace Opencraft.Terrain.Authoring
             {
                 var entity = GetEntity(TransformUsageFlags.Dynamic);
                 // Initialize with no neighbors
-                var terrainArea = new TerrainArea()
+                var terrainNeighbors = new TerrainNeighbors()
                 {
                     neighborXP = Entity.Null,
                     neighborXN = Entity.Null,
@@ -22,7 +22,8 @@ namespace Opencraft.Terrain.Authoring
                     neighborZP = Entity.Null,
                     neighborZN = Entity.Null,
                 };
-                AddComponent(entity, terrainArea);
+                AddComponent(entity, terrainNeighbors);
+                AddComponent<TerrainArea>(entity);
                 AddComponent<NewSpawn>(entity);
                 AddComponent<Remesh>(entity);
                 AddBuffer<TerrainBlocks>(entity);
@@ -35,6 +36,10 @@ namespace Opencraft.Terrain.Authoring
     public struct TerrainArea : IComponentData
     {
         [GhostField] public int3 location;
+    }
+
+    public struct TerrainNeighbors : IComponentData
+    {
         public Entity neighborXP;
         public Entity neighborXN;
         public Entity neighborYP;
