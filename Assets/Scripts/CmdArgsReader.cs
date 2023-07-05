@@ -31,6 +31,10 @@ namespace Opencraft
 #if UNITY_EDITOR
             Debug.Log($"Client streaming role is {CmdArgs.ClientStreamingRole} {CmdArgs.getPlayType()}");
 #endif
+            if (args.TryGetValue("-debug", out string _))
+            {
+                CmdArgs.DebugEnabled = true;
+            }
         }
 
         private Dictionary<string, string> GetCommandlineArgs()

@@ -17,12 +17,16 @@ namespace Opencraft.Rendering
     {
         private EntityQuery _terrainSpawnerQuery;
 
-        [BurstCompile]
+        //[BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<TerrainSpawner>();
             state.RequireForUpdate<TerrainArea>();
             _terrainSpawnerQuery = state.GetEntityQuery(ComponentType.ReadOnly<TerrainSpawner>());
+            if (!CmdArgs.DebugEnabled)
+            {
+                state.Enabled = false;
+            }
         }
 
         [BurstCompile]

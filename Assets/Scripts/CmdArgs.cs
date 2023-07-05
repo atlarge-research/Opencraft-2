@@ -1,4 +1,5 @@
-﻿using Unity.NetCode;
+﻿using Unity.Logging;
+using Unity.NetCode;
 using UnityEditor;
 using UnityEngine;
 
@@ -8,7 +9,7 @@ namespace Opencraft
     public static class CmdArgs
     {
 #if UNITY_SERVER
-    private const StreamingRole DefaultStreamingRole = StreamingRole.Disabled;
+        private const StreamingRole DefaultStreamingRole = StreamingRole.Disabled;
 #elif UNITY_EDITOR
         // Fetch the current play mode from the editor preferences. Has to be done at runtime or the value requires a recompilation
         public static ClientServerBootstrap.PlayType getPlayType()
@@ -17,11 +18,11 @@ namespace Opencraft
             string s_PlayModeTypeKey = s_PrefsKeyPrefix + "PlayMode_Type";
             return (ClientServerBootstrap.PlayType) EditorPrefs.GetInt(s_PlayModeTypeKey, (int) ClientServerBootstrap.PlayType.ClientAndServer);
         }
-    
+
         private static StreamingRole DefaultStreamingRole = StreamingRole.Disabled;
 #else
-    // All clients are assumed hosts, a command line argument is necessary to start as a streaming Guest
-    private const StreamingRole DefaultStreamingRole = StreamingRole.Host;
+        // All clients are assumed hosts, a command line argument is necessary to start as a streaming Guest
+        private const StreamingRole DefaultStreamingRole = StreamingRole.Host;
     
 #endif
 #if UNITY_EDITOR
@@ -38,10 +39,11 @@ namespace Opencraft
             set => DefaultStreamingRole = value;
         }
 #else
-    public static StreamingRole ClientStreamingRole { get; set; } = DefaultStreamingRole;
+        public static StreamingRole ClientStreamingRole { get; set; } = DefaultStreamingRole;
 #endif
-
-
+        public static bool DebugEnabled =  false;
+        
+        
         // Client's streaming role for Multiplay
         public enum StreamingRole
         {
