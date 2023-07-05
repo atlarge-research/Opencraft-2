@@ -640,6 +640,92 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &955198405
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 955198408}
+  - component: {fileID: 955198407}
+  - component: {fileID: 955198406}
+  - component: {fileID: 955198409}
+  m_Layer: 0
+  m_Name: PlayerEmulation
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &955198406
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 955198405}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d8c509f1d3f4dcaab72eb2f27f779b7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  inputFile: recordedInputs.csv
+  inputRecorder: {fileID: 955198409}
+  emulationType: 2
+--- !u!114 &955198407
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 955198405}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c488ceaf592f44a9ad4be1e5dbf650bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!4 &955198408
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 955198405}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 7.3372736, y: 0.32767057, z: 12.821487}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 7
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &955198409
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 955198405}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 947bbf6d07a849f88ae34e79d6fb2f2e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_StartRecordingWhenEnabled: 0
+  m_RecordFrames: 1
+  m_ReplayOnNewDevices: 0
+  m_SimulateOriginalTimingOnReplay: 1
+  m_RecordStateEventsOnly: 0
+  m_CaptureMemoryDefaultSize: 8388608
+  m_CaptureMemoryMaxSize: 41943040
+  m_DevicePath: 
+  m_RecordButtonPath: 
+  m_PlayButtonPath: 
+  m_ChangeEvent:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &989023403
 GameObject:
   m_ObjectHideFlags: 0
@@ -766,7 +852,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 7
+  m_RootOrder: 8
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1577125370
 GameObject:
@@ -812,6 +898,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8bf58c69bf424fe194d229f05ce07072, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  editorArgs: -streaming_type host
 --- !u!1 &2101193216
 GameObject:
   m_ObjectHideFlags: 0

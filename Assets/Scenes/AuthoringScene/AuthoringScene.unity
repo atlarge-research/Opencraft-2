@@ -174,10 +174,10 @@ MonoBehaviour:
   seed: 43
   initialAreas:
     x: 10
-    y: 5
+    y: 2
     z: 10
   playerViewRange: 2
-  maxChunkSpawnsPerTick: 25
+  maxChunkSpawnsPerTick: 50
   blocksPerAreaSide: 16
   YBounds:
     x: 0

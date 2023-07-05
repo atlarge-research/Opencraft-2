@@ -1,4 +1,5 @@
-﻿using Unity.Logging;
+﻿using Opencraft.Player.Emulated;
+using Unity.Logging;
 using Unity.NetCode;
 using UnityEditor;
 using UnityEngine;
@@ -42,8 +43,11 @@ namespace Opencraft
         public static StreamingRole ClientStreamingRole { get; set; } = DefaultStreamingRole;
 #endif
         public static bool DebugEnabled =  false;
-        
-        
+        public static bool EmulationEnabled =  false;
+        public static EmulationType emulationType = EmulationType.None;
+        public static int seed = -1;
+
+
         // Client's streaming role for Multiplay
         public enum StreamingRole
         {

@@ -48,7 +48,7 @@ namespace Opencraft.Player.Multiplay
                     {
                         var player = playerData[i];
                         // todo: surely there is a better way of linking player entity and object...
-                        if (player.Username == playerController.Username)
+                        if (player.Username == playerController.username)
                         {
                             
                             var playerEntity = newPlayerEntities[i];
@@ -91,9 +91,9 @@ namespace Opencraft.Player.Multiplay
                     {
                         var req = commandBuffer.CreateEntity();
                         SpawnPlayerRequest spawnPlayerRequest = new SpawnPlayerRequest
-                            { Username = playerController.Username };
+                            { Username = playerController.username };
                         commandBuffer.AddComponent(req, spawnPlayerRequest);
-                        Debug.Log($"Sending spawn player RPC for user {playerController.Username}");
+                        Debug.Log($"Sending spawn player RPC for user {playerController.username}");
                         commandBuffer.AddComponent(req, new SendRpcCommandRequest { TargetConnection = entity });
                         playerController.playerEntityRequestSent = true;
                     }

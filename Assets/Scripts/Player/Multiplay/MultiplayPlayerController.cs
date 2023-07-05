@@ -11,7 +11,7 @@ namespace Opencraft.Player.Multiplay
     public class MultiplayPlayerController : MonoBehaviour
     {
         [SerializeField] InputReceiver playerInput;
-        public int Username;
+        public int username;
 
         public Vector2 inputMovement;
         public Vector2 inputLook;
@@ -29,7 +29,7 @@ namespace Opencraft.Player.Multiplay
         protected void Awake()
         {
             playerInput.onDeviceChange += OnDeviceChange;
-            Username = Random.Range(0, 99999);
+            username = Random.Range(0, 99999);
         }
 
         void OnDeviceChange(InputDevice device, InputDeviceChange change)

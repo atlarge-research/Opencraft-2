@@ -56,7 +56,7 @@ namespace Opencraft.Terrain.Authoring
                     blocksPerSide = authoring.blocksPerAreaSide,
                     YBounds = authoring.YBounds,
                     maxChunkSpawnsPerTick = authoring.maxChunkSpawnsPerTick,
-                    seed = authoring.seed,
+                    seed = CmdArgs.seed != -1 ? CmdArgs.seed : authoring.seed,
                     playerViewRange = authoring.playerViewRange
                 };
                 MaterialBank materialBank = new MaterialBank() { material1 = authoring.TerrainMaterial };
