@@ -11,7 +11,7 @@ namespace Opencraft.Terrain.Authoring
         {
             public override void Bake(TerrainAreaAuthoring authoring)
             {
-                var entity = GetEntity(TransformUsageFlags.Dynamic);
+                var entity = GetEntity(TransformUsageFlags.Renderable);
                 // Initialize with no neighbors
                 var terrainNeighbors = new TerrainNeighbors()
                 {

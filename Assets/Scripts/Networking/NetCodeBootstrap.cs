@@ -99,19 +99,19 @@ namespace Opencraft.Networking
             {
                 var driverInstance = new NetworkDriverStore.NetworkDriverInstance();
 #if UNITY_EDITOR || NETCODE_DEBUG
-        var settings = CreateNetworkSettings(100);
-        driverInstance.simulatorEnabled = NetworkSimulatorSettings.Enabled;
-        if (NetworkSimulatorSettings.Enabled)
-        {
-            NetworkSimulatorSettings.SetSimulatorSettings(ref settings);
-            driverInstance.driver = NetworkDriver.Create(new UDPNetworkInterface(), settings);
-            DefaultDriverBuilder.CreateClientSimulatorPipelines(ref driverInstance);
-        }
-        else
-        {
-            driverInstance.driver = NetworkDriver.Create(new UDPNetworkInterface(), settings);
-            DefaultDriverBuilder.CreateClientPipelines(ref driverInstance);
-        }
+                var settings = CreateNetworkSettings(100);
+                driverInstance.simulatorEnabled = NetworkSimulatorSettings.Enabled;
+                if (NetworkSimulatorSettings.Enabled)
+                {
+                    NetworkSimulatorSettings.SetSimulatorSettings(ref settings);
+                    driverInstance.driver = NetworkDriver.Create(new UDPNetworkInterface(), settings);
+                    DefaultDriverBuilder.CreateClientSimulatorPipelines(ref driverInstance);
+                }
+                else
+                {
+                    driverInstance.driver = NetworkDriver.Create(new UDPNetworkInterface(), settings);
+                    DefaultDriverBuilder.CreateClientPipelines(ref driverInstance);
+                }
 #else
                 var settings = CreateNetworkSettings();
                 driverInstance.driver = NetworkDriver.Create(new UDPNetworkInterface(), settings);

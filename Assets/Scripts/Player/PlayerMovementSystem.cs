@@ -48,7 +48,7 @@ namespace Opencraft.Player
             state.RequireForUpdate<Authoring.Player>();
 
             m_MarkerGroundCheck = new ProfilerMarker("GroundCheck");
-            m_MarkerStep = new ProfilerMarker("Step");
+            m_MarkerStep = new ProfilerMarker("CollisionStep");
             _terrainBlockLookup = state.GetBufferLookup<TerrainBlocks>(true);
         }
 
