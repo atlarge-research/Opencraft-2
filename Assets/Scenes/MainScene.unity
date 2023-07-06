@@ -898,7 +898,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8bf58c69bf424fe194d229f05ce07072, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  editorArgs: -streaming_type host
+  editorArgs: -streaming_type host -emulation disabled
 --- !u!1 &2101193216
 GameObject:
   m_ObjectHideFlags: 0
