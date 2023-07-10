@@ -43,7 +43,7 @@ namespace Opencraft.Rendering
                 int3 loc = terrainArea.ValueRO.location;
                 Mesh mesh = new Mesh { name = $"mesh_{loc.x},{loc.y},{loc.z}" };
 
-                RenderMeshArray renderMeshArray = new RenderMeshArray(new[] { materialBank.material1 }, new[] { mesh });
+                RenderMeshArray renderMeshArray = new RenderMeshArray(new[] { materialBank.TerrainMaterial }, new[] { mesh });
                 var materialMeshInfo = MaterialMeshInfo.FromRenderMeshArrayIndices(0, 0);
 
                 ecb.AddSharedComponentManaged(entity, renderMeshArray);

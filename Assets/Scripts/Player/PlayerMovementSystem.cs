@@ -1,6 +1,7 @@
 ﻿using Opencraft.Player.Authoring;
 using Opencraft.Player.Utilities;
 using Opencraft.Terrain.Authoring;
+using Opencraft.Terrain.Blocks;
 using Opencraft.Terrain.Utilities;
 using Unity.Entities;
 using Unity.Burst;
@@ -208,7 +209,7 @@ namespace Opencraft.Player
                         ref terrainAreasEntities,
                         ref terrainAreaTransforms,
                         ref _terrainBlockLookup,
-                        out int _))
+                        out BlockType _))
                 {
                     return PlayerUtilities.PlayerSupportState.Supported;
                 }
@@ -254,7 +255,7 @@ namespace Opencraft.Player
                         ref terrainAreasEntities,
                         ref terrainAreaTransforms,
                         ref _terrainBlockLookup,
-                        out int _))
+                        out BlockType _))
                 {
                     linearVelocity = new float3(0, 0, 0);
                     return;

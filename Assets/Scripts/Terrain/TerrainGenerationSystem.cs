@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using Opencraft.Terrain;
 using Opencraft.Terrain.Authoring;
+using Opencraft.Terrain.Blocks;
 using Opencraft.Terrain.Utilities;
 using Opencraft.ThirdParty;
 using Unity.Entities;
@@ -134,7 +135,7 @@ namespace Opencraft.Terrain
             var perLayer = blocksPerSide * blocksPerSide;
             var perArea = perLayer * blocksPerSide;
             terrainBlocksBuffer.Resize(perArea, NativeArrayOptions.UninitializedMemory);
-            DynamicBuffer<int> terrainBlocks = terrainBlocksBuffer.Reinterpret<int>();
+            DynamicBuffer<BlockType> terrainBlocks = terrainBlocksBuffer.Reinterpret<BlockType>();
             for (int block = 0; block < perArea; block++)
             {
                 var blockX = (block % blocksPerSide);
@@ -149,12 +150,19 @@ namespace Opencraft.Terrain
                     var cutoff = YBounds.x + noise * (YBounds.y - YBounds.x);
                     if (globalY > cutoff)
                     {
-                        terrainBlocks[block] = -1;
+                        terrainBlocks[block] = BlockType.Air;
                         continue;
                     }
                 }
 
-                terrainBlocks[block] = 1;
+                if (blockX <= 8)
+                {
+                    terrainBlocks[block] = BlockType.Stone;
+                }
+                else
+                {
+                    terrainBlocks[block] = BlockType.Dirt;
+                }
             }
         }
     }

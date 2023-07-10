@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Opencraft.Terrain.Authoring;
+using Opencraft.Terrain.Blocks;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -159,7 +160,7 @@ namespace Opencraft.Terrain.Utilities
             ref NativeArray<Entity> terrainAreasEntities,
             ref NativeArray<LocalTransform> terrainAreaTransforms,
             ref BufferLookup<TerrainBlocks> terrainBlockLookup,
-            out int blockType)
+            out BlockType blockType)
         {
             //Debug.Log($"Checking block type {pos}");
             if (GetBlockLocationAtPosition(ref pos, ref terrainAreaTransforms,
@@ -167,17 +168,14 @@ namespace Opencraft.Terrain.Utilities
             {
                 var terrainBuffer = terrainBlockLookup[terrainAreasEntities[containingAreaIndex]];
 
-                int block = terrainBuffer[BlockLocationToIndex(ref blockLocation)].Value;
-                if (block != -1)
+                BlockType block = terrainBuffer[BlockLocationToIndex(ref blockLocation)].Value;
+                if (block != BlockType.Air)
                 {
                     blockType = block;
                     return true;
                 }
-                //Debug.Log($"Block type exists but is empty for {pos}");
             }
-
-            //Debug.Log($"{pos} doesn't exist or has no type");
-            blockType = -1;
+            blockType = BlockType.Air;
             return false;
         }
 
@@ -193,11 +191,11 @@ namespace Opencraft.Terrain.Utilities
             {
                 if (neighborXN.IsEmpty)
                     return true;
-                return neighborXN[(blocksPerSide - 1) + j * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == -1;
+                return neighborXN[(blocksPerSide - 1) + j * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == BlockType.Air;
             }
 
             // Access from this chunk
-            return blocks[i + j * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == -1;
+            return blocks[i + j * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == BlockType.Air;
         }
 
         public static bool VisibleFaceXP(int i, int j, int k, ref DynamicBuffer<TerrainBlocks> blocks,
@@ -209,10 +207,10 @@ namespace Opencraft.Terrain.Utilities
                 if (neighborXP.IsEmpty)
                     return true;
 
-                return neighborXP[0 + j * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == -1;
+                return neighborXP[0 + j * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == BlockType.Air;
             }
 
-            return blocks[i + j * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == -1;
+            return blocks[i + j * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == BlockType.Air;
         }
 
         public static bool VisibleFaceZN(int i, int j, int k, ref DynamicBuffer<TerrainBlocks> blocks,
@@ -223,10 +221,10 @@ namespace Opencraft.Terrain.Utilities
             {
                 if (neighborZN.IsEmpty)
                     return true;
-                return neighborZN[i + j * blocksPerSide + (blocksPerSide - 1) * (blocksPerSide * blocksPerSide)].Value == -1;
+                return neighborZN[i + j * blocksPerSide + (blocksPerSide - 1) * (blocksPerSide * blocksPerSide)].Value == BlockType.Air;
             }
 
-            return blocks[i + j * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == -1;
+            return blocks[i + j * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == BlockType.Air;
         }
 
         public static bool VisibleFaceZP(int i, int j, int k, ref DynamicBuffer<TerrainBlocks> blocks,
@@ -237,10 +235,10 @@ namespace Opencraft.Terrain.Utilities
             {
                 if (neighborZP.IsEmpty)
                     return true;
-                return neighborZP[i + j * blocksPerSide].Value == -1;
+                return neighborZP[i + j * blocksPerSide].Value == BlockType.Air;
             }
 
-            return blocks[i + j * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == -1;
+            return blocks[i + j * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == BlockType.Air;
         }
 
         public static bool VisibleFaceYN(int i, int j, int k, ref DynamicBuffer<TerrainBlocks> blocks,
@@ -251,10 +249,10 @@ namespace Opencraft.Terrain.Utilities
             {
                 if (neighborYN.IsEmpty)
                     return true;
-                return neighborYN[i + (blocksPerSide - 1) * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == -1;
+                return neighborYN[i + (blocksPerSide - 1) * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == BlockType.Air;
             }
 
-            return blocks[i + j * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == -1;
+            return blocks[i + j * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == BlockType.Air;
         }
 
         public static bool VisibleFaceYP(int i, int j, int k, ref DynamicBuffer<TerrainBlocks> blocks,
@@ -265,10 +263,10 @@ namespace Opencraft.Terrain.Utilities
             {
                 if (neighborYP.IsEmpty)
                     return true;
-                return neighborYP[i + k * (blocksPerSide * blocksPerSide)].Value == -1;
+                return neighborYP[i + k * (blocksPerSide * blocksPerSide)].Value == BlockType.Air;
             }
 
-            return blocks[i + j * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == -1;
+            return blocks[i + j * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == BlockType.Air;
         }
     }
 }

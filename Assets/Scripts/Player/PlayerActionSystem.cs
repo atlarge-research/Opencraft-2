@@ -1,5 +1,6 @@
 ﻿using Opencraft.Player.Authoring;
 using Opencraft.Terrain.Authoring;
+using Opencraft.Terrain.Blocks;
 using Opencraft.Terrain.Utilities;
 using Unity.Burst;
 using Unity.Collections;
@@ -46,10 +47,10 @@ namespace Opencraft.Player
                     if(_terrainBlockLookup.TryGetBuffer(terrainAreaEntity, out DynamicBuffer<TerrainBlocks> terrainBlocks))
                     {
                         int blockIndex = TerrainUtilities.BlockLocationToIndex(ref player.SelectedBlock.blockLoc);
-                        DynamicBuffer<int> blocks = terrainBlocks.Reinterpret<int>();
-                        if (blocks[blockIndex] != -1)
+                        DynamicBuffer<BlockType> blocks = terrainBlocks.Reinterpret<BlockType>();
+                        if (blocks[blockIndex] != BlockType.Air)
                         {
-                            blocks[blockIndex] = -1;
+                            blocks[blockIndex] = BlockType.Air;
                         }
                     }
                     
@@ -61,10 +62,10 @@ namespace Opencraft.Player
                     if(_terrainBlockLookup.TryGetBuffer(terrainAreaEntity, out DynamicBuffer<TerrainBlocks> terrainBlocks))
                     {
                         int blockIndex = TerrainUtilities.BlockLocationToIndex(ref player.SelectedBlock.neighborBlockLoc);
-                        DynamicBuffer<int> blocks = terrainBlocks.Reinterpret<int>();
-                        if (blocks[blockIndex] == -1)
+                        DynamicBuffer<BlockType> blocks = terrainBlocks.Reinterpret<BlockType>();
+                        if (blocks[blockIndex] == BlockType.Air)
                         {
-                            blocks[blockIndex] = 1;
+                            blocks[blockIndex] = BlockType.Stone;
                         }
                     }
                 }

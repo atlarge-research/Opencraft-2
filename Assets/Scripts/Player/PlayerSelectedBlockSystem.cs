@@ -1,5 +1,6 @@
 ﻿using Opencraft.Player.Authoring;
 using Opencraft.Terrain.Authoring;
+using Opencraft.Terrain.Blocks;
 using Opencraft.Terrain.Utilities;
 using Unity.Burst;
 using Unity.Collections;
@@ -72,7 +73,7 @@ namespace Opencraft.Player
                                 out DynamicBuffer<TerrainBlocks> terrainBlocks))
                         {
                             int blockIndex = TerrainUtilities.BlockLocationToIndex(ref blockLoc);
-                            if (terrainBlocks[blockIndex].Value != -1)
+                            if (terrainBlocks[blockIndex].Value != BlockType.Air)
                             {
                                 // found selected block
                                 player.SelectedBlock.blockLoc = blockLoc;

@@ -1,4 +1,6 @@
+using System;
 using Opencraft.Terrain.Authoring;
+using Opencraft.Terrain.Blocks;
 using Opencraft.Terrain.Utilities;
 using Unity.Burst;
 using Unity.Collections;
@@ -34,9 +36,11 @@ namespace Opencraft.Rendering
                 .WithAll<TerrainBlocks, TerrainArea, TerrainNeighbors, LocalTransform, RenderMeshArray, Remesh>()
                 .Build(EntityManager);
             // Set layout object for creating VBO
-            _vertexLayout = new NativeArray<VertexAttributeDescriptor>(2, Allocator.Persistent);
-            _vertexLayout[0] = new VertexAttributeDescriptor(VertexAttribute.Position);
-            _vertexLayout[1] = new VertexAttributeDescriptor(VertexAttribute.Normal, stream: 1);
+            _vertexLayout = new NativeArray<VertexAttributeDescriptor>(1, Allocator.Persistent);
+            // Block locations are on a discrete, limited grid within a terrain area
+            // Max size of a terrain area is thus 255!
+            // 24 coord, TexCoord as 5 bits, normals as 3 bits
+            _vertexLayout[0] = new VertexAttributeDescriptor(attribute: VertexAttribute.Position, format: VertexAttributeFormat.UInt32, dimension: 1, stream: 0);
         }
 
         protected override void OnDestroy()
@@ -90,7 +94,7 @@ namespace Opencraft.Rendering
                 //Debug.Log($"Found mesh {meshes[i].name}");
             }
             // Update the terrain area meshes
-            Mesh.ApplyAndDisposeWritableMeshData(meshDataArray, meshes, MeshUpdateFlags.DontValidateIndices);
+            Mesh.ApplyAndDisposeWritableMeshData(meshDataArray, meshes, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontRecalculateBounds);
             chunksToUpdate.Dispose();
             terrainAreas.Dispose();
             terrainNeighbors.Dispose();
@@ -166,42 +170,41 @@ namespace Opencraft.Rendering
             meshData.SetVertexBufferParams(currentVertexBufferSize, vertexLayout);
             int currentIndexBufferSize = 6144;
             meshData.SetIndexBufferParams(currentIndexBufferSize, IndexFormat.UInt16);
-            NativeArray<Vector3> verts = meshData.GetVertexData<Vector3>();
-            NativeArray<Vector3> norms = meshData.GetVertexData<Vector3>(stream: 1);
+            NativeArray<uint> vertexBuffer = meshData.GetVertexData<uint>();
             NativeArray<ushort> indices = meshData.GetIndexData<ushort>();
 
             int access;
             int numFaces = 0;
             //i, j and k refer to chunk-relative positions (range 0 to blocksPerSide-1)
             // Y axis - start from the bottom and search up
-            for (int j = 0; j < blocksPerSide; j++)
+            for (uint j = 0; j < blocksPerSide; j++)
             {
-                int j1 = j + 1;
+                uint j1 = j + 1;
                 // Z axis
-                for (int k = 0; k < blocksPerSide; k++)
+                for (uint k = 0; k < blocksPerSide; k++)
                 {
-                    int k1 = k + 1;
+                    uint k1 = k + 1;
                     // X axis
-                    for (int i = 0; i < blocksPerSide; i++)
+                    for (uint i = 0; i < blocksPerSide; i++)
                     {
-                        access = i + j * blocksPerSide + k * blocksPerSideSquared;
-                        int b = blocks[access].Value;
+                        access = (int)(i + j * blocksPerSide + k * blocksPerSideSquared);
+                        BlockType b = blocks[access].Value;
 
-                        if (b == -1)
+                        if (b == BlockType.Air)
                             continue;
-                        int i1 = i + 1;
-                        int length;
+                        uint i1 = i + 1;
+                        uint length;
                         int chunkAccess = 0;
 
                         // Left face (XN)
-                        if (!visitedXN[access] && TerrainUtilities.VisibleFaceXN(i - 1, j, k, ref blocks, ref neighborXN))
+                        if (!visitedXN[access] && TerrainUtilities.VisibleFaceXN((int)(i - 1), (int)j, (int)k, ref blocks, ref neighborXN))
                         {
                             length = 0;
                             // Search upwards to determine run length
-                            for (int q = j; q < blocksPerSide; q++)
+                            for (uint q = j; q < blocksPerSide; q++)
                             {
                                 // Pre-calculate the array lookup as it is used twice
-                                chunkAccess = i + q * blocksPerSide + k * blocksPerSideSquared;
+                                chunkAccess = (int)(i + q * blocksPerSide + k * blocksPerSideSquared);
 
                                 // If we reach a different block or an empty block, end the run
                                 if (b != blocks[chunkAccess].Value)
@@ -216,23 +219,23 @@ namespace Opencraft.Rendering
                             if (length > 0)
                             {
                                 // Create a quad and write it directly to the buffer
-                                AppendQuad(ref verts, ref norms, ref indices, numFaces,
-                                    new int3(i, j, k),
-                                    new int3(i, length + j, k),
-                                    new int3(i, length + j, k1),
-                                    new int3(i, j, k1),
-                                    new float3(-1, 0, 0), b);
+                                AppendQuad(ref vertexBuffer, ref indices, numFaces,
+                                    new uint3(i, j, k),
+                                    new uint3(i, length + j, k),
+                                    new uint3(i, length + j, k1),
+                                    new uint3(i, j, k1),
+                                    (int)FaceTypeShifted.xn, b);
                                 numFaces++;
                             }
                         }
 
                         // Right face (XP)
-                        if (!visitedXP[access] && TerrainUtilities.VisibleFaceXP(i1, j, k, ref blocks, ref neighborXP))
+                        if (!visitedXP[access] && TerrainUtilities.VisibleFaceXP((int)i1, (int)j, (int)k, ref blocks, ref neighborXP))
                         {
                             length = 0;
-                            for (int q = j; q < blocksPerSide; q++)
+                            for (uint q = j; q < blocksPerSide; q++)
                             {
-                                chunkAccess = i + q * blocksPerSide + k * blocksPerSideSquared;
+                                chunkAccess = (int)(i + q * blocksPerSide + k * blocksPerSideSquared);
 
                                 if (b != blocks[chunkAccess].Value)
                                     break;
@@ -244,23 +247,23 @@ namespace Opencraft.Rendering
 
                             if (length > 0)
                             {
-                                AppendQuad(ref verts, ref norms, ref indices, numFaces,
-                                    new int3(i1, j, k1),
-                                    new int3(i1, length + j, k1),
-                                    new int3(i1, length + j, k),
-                                    new int3(i1, j, k),
-                                    new float3(1, 0, 0), b);
+                                AppendQuad(ref vertexBuffer, ref indices, numFaces,
+                                    new uint3(i1, j, k1),
+                                    new uint3(i1, length + j, k1),
+                                    new uint3(i1, length + j, k),
+                                    new uint3(i1, j, k),
+                                    (int)FaceTypeShifted.xp, b);
                                 numFaces++;
                             }
                         }
 
                         // Back face (ZN)
-                        if (!visitedZN[access] && TerrainUtilities.VisibleFaceZN(i, j, k - 1, ref blocks, ref neighborZN))
+                        if (!visitedZN[access] && TerrainUtilities.VisibleFaceZN((int)i, (int)j, (int)k - 1, ref blocks, ref neighborZN))
                         {
                             length = 0;
-                            for (int q = j; q < blocksPerSide; q++)
+                            for (uint q = j; q < blocksPerSide; q++)
                             {
-                                chunkAccess = i + q * blocksPerSide + k * blocksPerSideSquared;
+                                chunkAccess = (int)(i + q * blocksPerSide + k * blocksPerSideSquared);
 
                                 if (b != blocks[chunkAccess].Value)
                                     break;
@@ -272,23 +275,23 @@ namespace Opencraft.Rendering
 
                             if (length > 0)
                             {
-                                AppendQuad(ref verts, ref norms, ref indices, numFaces,
-                                    new int3(i1, j, k),
-                                    new int3(i1, length + j, k),
-                                    new int3(i, length + j, k),
-                                    new int3(i, j, k),
-                                    new float3(0, 0, -1), b);
+                                AppendQuad(ref vertexBuffer, ref indices, numFaces,
+                                    new uint3(i1, j, k),
+                                    new uint3(i1, length + j, k),
+                                    new uint3(i, length + j, k),
+                                    new uint3(i, j, k),
+                                    (int)FaceTypeShifted.zn, b);
                                 numFaces++;
                             }
                         }
 
                         // Front face (ZP)
-                        if (!visitedZP[access] && TerrainUtilities.VisibleFaceZP(i, j, k1, ref blocks, ref neighborZP))
+                        if (!visitedZP[access] && TerrainUtilities.VisibleFaceZP((int)i, (int)j, (int)k1, ref blocks, ref neighborZP))
                         {
                             length = 0;
-                            for (int q = j; q < blocksPerSide; q++)
+                            for (uint q = j; q < blocksPerSide; q++)
                             {
-                                chunkAccess = i + q * blocksPerSide + k * blocksPerSideSquared;
+                                chunkAccess = (int)(i + q * blocksPerSide + k * blocksPerSideSquared);
 
                                 if (b != blocks[chunkAccess].Value)
                                     break;
@@ -300,24 +303,24 @@ namespace Opencraft.Rendering
 
                             if (length > 0)
                             {
-                                AppendQuad(ref verts, ref norms, ref indices, numFaces,
-                                    new int3(i, j, k1),
-                                    new int3(i, length + j, k1),
-                                    new int3(i1, length + j, k1),
-                                    new int3(i1, j, k1),
-                                    new float3(0, 0, 1), b);
+                                AppendQuad(ref vertexBuffer, ref indices, numFaces,
+                                    new uint3(i, j, k1),
+                                    new uint3(i, length + j, k1),
+                                    new uint3(i1, length + j, k1),
+                                    new uint3(i1, j, k1),
+                                    (int)FaceTypeShifted.zp, b);
                                 numFaces++;
                             }
                         }
 
                         // Bottom face (YN)
-                        if (!visitedYN[access] && TerrainUtilities.VisibleFaceYN(i, j - 1, k, ref blocks, ref neighborYN))
+                        if (!visitedYN[access] && TerrainUtilities.VisibleFaceYN((int)i, (int)j - 1, (int)k, ref blocks, ref neighborYN))
                         {
                             length = 0;
                             // extend in X axis
-                            for (int q = i; q < blocksPerSide; q++)
+                            for (uint q = i; q < blocksPerSide; q++)
                             {
-                                chunkAccess = q + j * blocksPerSide + k * blocksPerSideSquared;
+                                chunkAccess = (int)(q + j * blocksPerSide + k * blocksPerSideSquared);
 
                                 if (b != blocks[chunkAccess].Value)
                                     break;
@@ -329,24 +332,24 @@ namespace Opencraft.Rendering
 
                             if (length > 0)
                             {
-                                AppendQuad(ref verts, ref norms, ref indices, numFaces,
-                                    new int3(i, j, k1),
-                                    new int3(length + i, j, k1),
-                                    new int3(length + i, j, k),
-                                    new int3(i, j, k),
-                                    new float3(0, -1, 0), b);
+                                AppendQuad(ref vertexBuffer, ref indices, numFaces,
+                                    new uint3(i, j, k1),
+                                    new uint3(length + i, j, k1),
+                                    new uint3(length + i, j, k),
+                                    new uint3(i, j, k),
+                                    (int)FaceTypeShifted.yn, b);
                                 numFaces++;
                             }
                         }
 
                         // Top face (YP)
-                        if (!visitedYP[access] && TerrainUtilities.VisibleFaceYP(i, j1, k, ref blocks, ref neighborYP))
+                        if (!visitedYP[access] && TerrainUtilities.VisibleFaceYP((int)i, (int)j1, (int)k, ref blocks, ref neighborYP))
                         {
                             length = 0;
                             // extend in X axis
-                            for (int q = i; q < blocksPerSide; q++)
+                            for (uint q = i; q < blocksPerSide; q++)
                             {
-                                chunkAccess = q + j * blocksPerSide + k * blocksPerSideSquared;
+                                chunkAccess = (int)(q + j * blocksPerSide + k * blocksPerSideSquared);
 
                                 if (b != blocks[chunkAccess].Value)
                                     break;
@@ -358,12 +361,12 @@ namespace Opencraft.Rendering
 
                             if (length > 0)
                             {
-                                AppendQuad(ref verts, ref norms, ref indices, numFaces,
-                                    new int3(i, j1, k),
-                                    new int3(length + i, j1, k),
-                                    new int3(length + i, j1, k1),
-                                    new int3(i, j1, k1),
-                                    new float3(0, 1, 0), b);
+                                AppendQuad(ref vertexBuffer, ref indices, numFaces,
+                                    new uint3(i, j1, k),
+                                    new uint3(length + i, j1, k),
+                                    new uint3(length + i, j1, k1),
+                                    new uint3(i, j1, k1),
+                                    (int)FaceTypeShifted.yp, b);
                                 numFaces++;
                             }
                         }
@@ -388,37 +391,68 @@ namespace Opencraft.Rendering
             meshData.SetIndexBufferParams(numFaces * 6, IndexFormat.UInt16);
             // Finalize the mesh
             meshData.subMeshCount = 1;
-            meshData.SetSubMesh(0, new SubMeshDescriptor(0, numFaces * 6));
+            meshData.SetSubMesh(0, new SubMeshDescriptor(0, numFaces * 6), MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontRecalculateBounds);
         }
         
 
-
-        /*
-         todo- this can be aggressively optimized, right now we are using float vertices instead of int and float3 normals instead
-         todo- of 3 bits. The many assignments are already vectorized by burst though
-         */
-        private void AppendQuad(ref NativeArray<Vector3> verts, ref NativeArray<Vector3> norms,
-            ref NativeArray<ushort> indices,
-            int numFaces, float3 bl, float3 tl, float3 tr, float3 br, float3 normal, int blockType)
+        private enum FaceTypeShifted : int
+        {
+            yp = 0 << 29,
+            yn = 1 << 29,
+            xp = 2 << 29,
+            xn = 3 << 29,
+            zp = 4 << 29,
+            zn = 5 << 29,
+        }
+    
+        private void AppendQuad(ref NativeArray<uint> verts, ref NativeArray<ushort> indices,
+            int numFaces, uint3 bl, uint3 tl, uint3 tr, uint3 br, int normal, BlockType blockType)
         {
             int vb = numFaces * 4;
-            // Winding order is bottom left, bottom right, top right, top left.
-            verts[vb] = bl;
-            verts[vb + 1] = br;
-            verts[vb + 2] = tr;
-            verts[vb + 3] = tl;
-            norms[vb] = normal;
-            norms[vb + 1] = normal;
-            norms[vb + 2] = normal;
-            norms[vb + 3] = normal;
+            // Pre bit-shifted texture ID map
+            int texture = BlockData.BlockToTexture[(int)blockType];
+            // 32 bit vertex layout:
+            // byte: x pos
+            // byte: y pos
+            // byte: z pos
+            // 5 bits: texture unit
+            // 3 bits: normal
+            uint shared = (uint)(texture | normal);
+            // Top left vertex
+            uint tlv = CombinePosition(tl, shared);
+
+            // Top right vertex
+            uint trv = CombinePosition(tr, shared);
+
+            // Bottom left vertex
+            uint blv = CombinePosition(bl, shared);
+
+            // Bottom right vertex
+            uint brv = CombinePosition(br, shared);
+        
+            // Store each vertex directly into the buffer
+            verts[vb] = blv;
+            verts[vb + 1] = brv;
+            verts[vb + 2] = trv;
+            verts[vb + 3] = tlv;
+        
+            // Set indices
             int ib = numFaces * 6;
-            // We use triangle meshes and ignore tangent and UV for now
             indices[ib] = (ushort)vb;
             indices[ib + 1] = (ushort)(vb + 1);
             indices[ib + 2] = (ushort)(vb + 2);
             indices[ib + 3] = (ushort)(vb + 2);
             indices[ib + 4] = (ushort)(vb + 3);
             indices[ib + 5] = (ushort)(vb + 0);
+        }
+
+        // Combine position data with the shared uint
+        private uint CombinePosition(uint3 pos, uint shared)
+        {
+            return (uint)(shared | 
+                          ((uint)pos.x & 255) |
+                          ((uint)pos.y & 255) << 8 |
+                          ((uint)pos.z & 255) << 16);
         }
 
     }

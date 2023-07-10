@@ -1,3 +1,4 @@
+using Opencraft.Terrain.Blocks;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
@@ -64,7 +65,7 @@ namespace Opencraft.Terrain.Authoring
     // The buffer component to store terrain blocks
     public struct TerrainBlocks : IBufferElementData
     {
-        [GhostField] public int Value; //type if exists, -1 if not
+        [GhostField] public BlockType Value;
     }
 }
 

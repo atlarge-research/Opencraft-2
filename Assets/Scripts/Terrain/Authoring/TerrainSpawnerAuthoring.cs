@@ -27,7 +27,7 @@ namespace Opencraft.Terrain.Authoring
     // Manage component of materials used on terrain area meshes
     public class MaterialBank : IComponentData, ISingleton
     {
-        public Material material1;
+        public Material TerrainMaterial;
     }
 
     [DisallowMultipleComponent]
@@ -35,6 +35,7 @@ namespace Opencraft.Terrain.Authoring
     {
         public GameObject TerrainArea;
         public Material TerrainMaterial;
+        public float[] TerrainMaterialUVSizing= new float[] { 1.0f,1.0f, 1.0f,1.0f, 1.0f,1.0f, 1.0f,1.0f,1.0f,1.0f};
         public int seed = 42;
         public int3 initialAreas = new int3(3, 3, 3);
         public int playerViewRange = 5;
@@ -59,7 +60,8 @@ namespace Opencraft.Terrain.Authoring
                     seed = CmdArgs.seed != -1 ? CmdArgs.seed : authoring.seed,
                     playerViewRange = authoring.playerViewRange
                 };
-                MaterialBank materialBank = new MaterialBank() { material1 = authoring.TerrainMaterial };
+                authoring.TerrainMaterial.SetFloatArray("_uvSizes", authoring.TerrainMaterialUVSizing);
+                MaterialBank materialBank = new MaterialBank() { TerrainMaterial = authoring.TerrainMaterial };
 
                 // Add to the TerrainSpawner entity a buffer of terrain areas to spawn
                 var toSpawnBuffer = AddBuffer<TerrainAreasToSpawn>(entity);
