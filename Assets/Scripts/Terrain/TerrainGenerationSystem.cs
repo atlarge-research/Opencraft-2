@@ -35,6 +35,7 @@ namespace Opencraft.Terrain
         {
             // Wait for scene load/baking to occur before updates. 
             state.RequireForUpdate<TerrainSpawner>();
+            state.RequireForUpdate<TerrainAreasToSpawn>();
             _newSpawnQuery = SystemAPI.QueryBuilder().WithAll<NewSpawn>().Build();
             markerTerrainGen = new ProfilerMarker("TerrainGeneration");
             //lastUpdate = -1.0;
@@ -123,7 +124,7 @@ namespace Opencraft.Terrain
         public int2 YBounds; // x is sea level, y is sky level
 
         public void Execute([EntityIndexInQuery] int index, ref DynamicBuffer<TerrainBlocks> terrainBlocksBuffer,
-            ref LocalTransform localTransform, ref TerrainArea terrainArea)
+            ref DynamicBuffer<TerrainColMinY> colMinBuffer,ref DynamicBuffer<TerrainColMaxY> colMaxBuffer,  ref LocalTransform localTransform, ref TerrainArea terrainArea)
         {
             int3 chunk = chunksToSpawn[index];
             terrainArea.location = chunk; // terrain area grid position
@@ -135,33 +136,47 @@ namespace Opencraft.Terrain
             var perLayer = blocksPerSide * blocksPerSide;
             var perArea = perLayer * blocksPerSide;
             terrainBlocksBuffer.Resize(perArea, NativeArrayOptions.UninitializedMemory);
+            colMinBuffer.Resize(perLayer, NativeArrayOptions.UninitializedMemory);
+            colMaxBuffer.Resize(perLayer, NativeArrayOptions.UninitializedMemory);
             DynamicBuffer<BlockType> terrainBlocks = terrainBlocksBuffer.Reinterpret<BlockType>();
-            for (int block = 0; block < perArea; block++)
+            DynamicBuffer<byte> colMin = colMinBuffer.Reinterpret<byte>();
+            DynamicBuffer<byte> colMax = colMaxBuffer.Reinterpret<byte>();
+            int globalX, globalY, globalZ, block, column;
+            float noise, cutoff;
+            for (int z = 0; z < blocksPerSide; z++)
             {
-                var blockX = (block % blocksPerSide);
-                var blockY = (block % perLayer) / blocksPerSide;
-                var blockZ = (block / perLayer);
-                var globalX = areaX + blockX;
-                var globalY = areaY + blockY;
-                var globalZ = areaZ + blockZ;
-                if (globalY > YBounds.x) // Everything beneath sea level exists, so only check if above that
+                globalZ = areaZ + z; 
+                for (int x = 0; x < blocksPerSide; x++)
                 {
-                    float noise = FastPerlin.PerlinGetNoise(globalX, globalZ, noiseSeed);
-                    var cutoff = YBounds.x + noise * (YBounds.y - YBounds.x);
-                    if (globalY > cutoff)
+                    globalX = areaX + x;
+                    int minY = blocksPerSide;
+                    int maxY = 0;
+                    column = x + z * blocksPerSide;
+                    for (int y = 0; y < blocksPerSide; y++)
                     {
-                        terrainBlocks[block] = BlockType.Air;
-                        continue;
-                    }
-                }
+                        globalY = areaY + y;
+                        noise = FastPerlin.PerlinGetNoise(globalX, globalZ, noiseSeed);
+                        cutoff = YBounds.x + noise * (YBounds.y - YBounds.x);
+                        block = y + x * blocksPerSide + z * perLayer;
+                        if (globalY > cutoff)
+                        {
+                            terrainBlocks[block] = BlockType.Air;
+                            continue;
+                        }
 
-                if (blockX <= 8)
-                {
-                    terrainBlocks[block] = BlockType.Stone;
-                }
-                else
-                {
-                    terrainBlocks[block] = BlockType.Dirt;
+                        if (y < minY)
+                            minY = y;
+                        if (y + 1 > maxY)
+                            maxY = y + 1;
+                        
+                        // todo generate biomes, trees, etc
+                        terrainBlocks[block] = (BlockType) ((math.abs(globalX) % 4) + 1);
+
+                    }
+                    // Set column heights in heightmap buffers
+                    colMin[column] = (byte)minY;
+                    colMax[column] = (byte)maxY;
+                    
                 }
             }
         }

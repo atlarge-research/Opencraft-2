@@ -180,12 +180,13 @@ MonoBehaviour:
   - 1
   - 1
   - 1
-  seed: 43
+  seed: 44
   initialAreas:
     x: 4
     y: 2
     z: 4
   playerViewRange: 2
+  terrainSpawnRange: 2
   maxChunkSpawnsPerTick: 50
   blocksPerAreaSide: 16
   YBounds:

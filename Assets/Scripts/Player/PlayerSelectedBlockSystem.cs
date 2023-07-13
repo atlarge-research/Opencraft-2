@@ -73,7 +73,7 @@ namespace Opencraft.Player
                                 out DynamicBuffer<TerrainBlocks> terrainBlocks))
                         {
                             int blockIndex = TerrainUtilities.BlockLocationToIndex(ref blockLoc);
-                            if (terrainBlocks[blockIndex].Value != BlockType.Air)
+                            if (terrainBlocks[blockIndex].type != BlockType.Air)
                             {
                                 // found selected block
                                 player.SelectedBlock.blockLoc = blockLoc;

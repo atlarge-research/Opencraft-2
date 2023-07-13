@@ -19,30 +19,25 @@ namespace Opencraft.Terrain
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateBefore(typeof(TerrainGenerationSystem))]
     [BurstCompile]
-    // System that generates new terrain areas based on basic perlin noise
+    // System that determines what new terrain areas to spawn based on player location
     public partial struct TerrainToSpawn : ISystem
     {
         private EntityQuery _terrainAreasQuery;
         private NativeArray<TerrainArea> terrainAreas;
         private ProfilerMarker markerPlayerTerrainGenCheck;
-        //private double lastUpdate;
 
         public void OnCreate(ref SystemState state)
         {
             // Wait for scene load/baking to occur before updates. 
             state.RequireForUpdate<TerrainSpawner>();
+            state.RequireForUpdate<TerrainAreasToSpawn>();
             _terrainAreasQuery = SystemAPI.QueryBuilder().WithAll<TerrainArea>().Build();
             markerPlayerTerrainGenCheck = new ProfilerMarker("PlayerTerrainGenCheck");
         }
 
         public void OnUpdate(ref SystemState state)
         {
-            /*if (state.World.Time.ElapsedTime - lastUpdate < 1.0)
-            {
-                return;
-            }
-            lastUpdate = state.World.Time.ElapsedTime;*/
-            
+
 
             // Fetch the terrain spawner entity and component
             var terrainSpawner = SystemAPI.GetSingleton<TerrainSpawner>();
@@ -56,7 +51,7 @@ namespace Opencraft.Terrain
             // todo - make this parallel
             var areasPlayersCloseTo = new NativeHashSet<int3>(32, Allocator.TempJob);
             int blocksPerSide = terrainSpawner.blocksPerSide;
-            int viewRange = terrainSpawner.playerViewRange;
+            int viewRange = terrainSpawner.terrainSpawnRange;
             foreach (var transform in SystemAPI.Query<LocalTransform>().WithAll<Player.Authoring.Player, Simulate>())
             {
                 var pos = transform.Position;

@@ -28,6 +28,8 @@ namespace Opencraft.Terrain.Authoring
                 AddComponent<NewSpawn>(entity);
                 AddComponent<Remesh>(entity);
                 AddBuffer<TerrainBlocks>(entity);
+                AddBuffer<TerrainColMinY>(entity);
+                AddBuffer<TerrainColMaxY>(entity);
 
             }
         }
@@ -61,12 +63,28 @@ namespace Opencraft.Terrain.Authoring
     {
     }
 
-    [InternalBufferCapacity(512)]
+    [InternalBufferCapacity(4096)]
     // The buffer component to store terrain blocks
     public struct TerrainBlocks : IBufferElementData
     {
-        [GhostField] public BlockType Value;
+        [GhostField] public BlockType type;
     }
+    
+    [InternalBufferCapacity(512)]
+    // The buffer component to store heightmap column min
+    public struct TerrainColMinY : IBufferElementData
+    {
+        [GhostField] public byte minY;
+    }
+    
+    [InternalBufferCapacity(512)]
+    // The buffer component to store heightmap column max
+    public struct TerrainColMaxY : IBufferElementData
+    {
+        [GhostField] public byte maxY;
+    }
+    
+    
 }
 
 

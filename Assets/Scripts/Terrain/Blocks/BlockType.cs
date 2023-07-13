@@ -1,6 +1,7 @@
 ﻿namespace Opencraft.Terrain.Blocks
 {
-    public enum BlockType : int
+    // The enum of all supported types
+    public enum BlockType : byte
     {
         Air,
         Stone,
@@ -8,9 +9,9 @@
         Tin,
         Gem
     }
-
     public static class BlockData
     {
+        // Maps BlockType to texture array index, currently 1 to 1
         public static readonly int[] BlockToTexture =
         {
             0,

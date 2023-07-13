@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using Opencraft.Terrain.Authoring;
 using Opencraft.Terrain.Blocks;
 using Opencraft.Terrain.Utilities;
@@ -23,7 +24,9 @@ namespace Opencraft.Rendering
     {
         private EntityQuery _terrainSpawnerQuery;
         private EntityQuery _terrainAreaQuery;
-        private BufferLookup<TerrainBlocks> _terrainBufferLookup;
+        private BufferLookup<TerrainBlocks> _terrainBlocksBufferLookup;
+        private BufferLookup<TerrainColMinY> _terrainColumnMinBufferLookup;
+        private BufferLookup<TerrainColMaxY> _terrainColumnMaxBufferLookup;
         private NativeArray<VertexAttributeDescriptor> _vertexLayout;
 
         protected override void OnCreate()
@@ -40,7 +43,7 @@ namespace Opencraft.Rendering
             // Block locations are on a discrete, limited grid within a terrain area
             // Max size of a terrain area is thus 255!
             // 24 coord, TexCoord as 5 bits, normals as 3 bits
-            _vertexLayout[0] = new VertexAttributeDescriptor(attribute: VertexAttribute.Position, format: VertexAttributeFormat.UInt32, dimension: 1, stream: 0);
+            _vertexLayout[0] = new VertexAttributeDescriptor(attribute: VertexAttribute.Position, format: VertexAttributeFormat.SInt32, dimension: 1, stream: 0);
         }
 
         protected override void OnDestroy()
@@ -62,7 +65,10 @@ namespace Opencraft.Rendering
                 _terrainAreaQuery.ToComponentDataArray<TerrainArea>(Allocator.TempJob);
             NativeArray<TerrainNeighbors> terrainNeighbors =
                 _terrainAreaQuery.ToComponentDataArray<TerrainNeighbors>(Allocator.TempJob);
-            _terrainBufferLookup = GetBufferLookup<TerrainBlocks>(true);
+            // Get block types and column heightmaps
+            _terrainBlocksBufferLookup = GetBufferLookup<TerrainBlocks>(true);
+            _terrainColumnMinBufferLookup = GetBufferLookup<TerrainColMinY>(true);
+            _terrainColumnMaxBufferLookup = GetBufferLookup<TerrainColMaxY>(true);
             // Construct our unmanaged mesh array that can be passed to the job 
             Mesh.MeshDataArray meshDataArray = Mesh.AllocateWritableMeshData(chunksToUpdate.Length);
             MeshTerrainChunkJob meshJob = new MeshTerrainChunkJob
@@ -72,11 +78,15 @@ namespace Opencraft.Rendering
                 blocksPerSideSquared = terrainSpawner.blocksPerSide * terrainSpawner.blocksPerSide,
                 blocksPerSideCubed = terrainSpawner.blocksPerSide * terrainSpawner.blocksPerSide *
                                      terrainSpawner.blocksPerSide,
+                blocksPerSideMinusOne =  terrainSpawner.blocksPerSide - 1,
+                blocksPerSideShifted = (terrainSpawner.blocksPerSide& 255) << 8,
                 meshDataArray = meshDataArray,
                 areasToUpdate = chunksToUpdate,
                 terrainAreas = terrainAreas,
                 terrainNeighbors= terrainNeighbors,
-                terrainBufferLookup = _terrainBufferLookup
+                terrainBufferLookup = _terrainBlocksBufferLookup,
+                terrainColumnMinBufferLookup = _terrainColumnMinBufferLookup,
+                terrainColumnMaxBufferLookup = _terrainColumnMaxBufferLookup
             };
             // todo we can potentially have the handling of meshJob output happen on later frames to reduce
             // todo stuttering caused by large remesh jobs
@@ -111,30 +121,36 @@ namespace Opencraft.Rendering
     [BurstCompile]
     public partial struct MeshTerrainChunkJob : IJobParallelFor
     {
-        public NativeArray<VertexAttributeDescriptor> vertexLayout;
+        [ReadOnly] public NativeArray<VertexAttributeDescriptor> vertexLayout;
         public int blocksPerSide;
         public int blocksPerSideSquared;
         public int blocksPerSideCubed;
+        public int blocksPerSideMinusOne;
+        public int blocksPerSideShifted;
         public Mesh.MeshDataArray meshDataArray;
-        public NativeArray<Entity> areasToUpdate;
-        public NativeArray<TerrainArea> terrainAreas;
-        public NativeArray<TerrainNeighbors> terrainNeighbors;
+        [ReadOnly] public NativeArray<Entity> areasToUpdate;
+        [ReadOnly] public NativeArray<TerrainArea> terrainAreas;
+        [ReadOnly] public NativeArray<TerrainNeighbors> terrainNeighbors;
 
         [ReadOnly] public BufferLookup<TerrainBlocks> terrainBufferLookup;
-
+        [ReadOnly] public BufferLookup<TerrainColMinY> terrainColumnMinBufferLookup;
+        [ReadOnly] public BufferLookup<TerrainColMaxY> terrainColumnMaxBufferLookup;
         public void Execute(int index)
         {
             Entity entity = areasToUpdate[index];
             TerrainNeighbors terrainNeighbor = terrainNeighbors[index];
             TerrainArea terrainArea = terrainAreas[index];
             // When area is remeshed, outline it in red
-            float3 loc = terrainArea.location * blocksPerSide;
-            TerrainUtilities.DebugDrawTerrainArea(ref loc, Color.red, 0.5f);
+            float3 terrainAreaLocation = terrainArea.location * blocksPerSide;
+            TerrainUtilities.DebugDrawTerrainArea(ref terrainAreaLocation, Color.red, 0.5f);
             
             // Mesh object vertex data
             Mesh.MeshData meshData = meshDataArray[index];
             // The blocks in this chunk
             DynamicBuffer<TerrainBlocks> blocks = terrainBufferLookup[entity];
+            // The min and max y of blocks in a given column in the chunk
+            DynamicBuffer<byte> colMin = terrainColumnMinBufferLookup[entity].Reinterpret<byte>();
+            DynamicBuffer<byte> colMax = terrainColumnMaxBufferLookup[entity].Reinterpret<byte>();
 
 
             // References to neighbor areas
@@ -166,226 +182,183 @@ namespace Opencraft.Rendering
             NativeArray<bool> visitedYP = new NativeArray<bool>(blocksPerSideCubed, Allocator.Temp);
             
             // Setup mesh data arrays
-            int currentVertexBufferSize = 4096;
+            int currentVertexBufferSize = 6144;
             meshData.SetVertexBufferParams(currentVertexBufferSize, vertexLayout);
-            int currentIndexBufferSize = 6144;
+            int currentIndexBufferSize = 9216;
             meshData.SetIndexBufferParams(currentIndexBufferSize, IndexFormat.UInt16);
-            NativeArray<uint> vertexBuffer = meshData.GetVertexData<uint>();
+            NativeArray<int> vertexBuffer = meshData.GetVertexData<int>();
             NativeArray<ushort> indices = meshData.GetIndexData<ushort>();
-
-            int access;
+            
+            // Precalculate the map-relative Y position of the chunk in the map
+            int chunkY = (int)terrainAreaLocation.y * blocksPerSide;
+            // Allocate variables on the stack
+            // iBPS is i * bps, kBPS2 is k*bps*bps. S means shifted, x1 means x + 1
+            int access, heightMapAccess, iBPS, kBPS2, i1, k1, j, j1, jS, jS1, topJ,
+                kS, kS1, y, texture, accessIncremented, chunkAccess, length;
+            bool minX, maxX, minY, maxY, minZ, maxZ;
+            k1 = 1;
             int numFaces = 0;
-            //i, j and k refer to chunk-relative positions (range 0 to blocksPerSide-1)
-            // Y axis - start from the bottom and search up
-            for (uint j = 0; j < blocksPerSide; j++)
+
+            // Z axis
+            for (int k = 0; k < blocksPerSide;  k++, k1++)
             {
-                uint j1 = j + 1;
-                // Z axis
-                for (uint k = 0; k < blocksPerSide; k++)
+                kBPS2 = k * blocksPerSideSquared;
+                i1 = 1;
+                heightMapAccess = k * blocksPerSide;
+                // Is the current run on the Z- or Z+ edge of the chunk
+                minZ = k == 0;
+                maxZ = k == blocksPerSideMinusOne;
+                
+                // X axis
+                for (int i = 0; i < blocksPerSide; i++, i1++)
                 {
-                    uint k1 = k + 1;
-                    // X axis
-                    for (uint i = 0; i < blocksPerSide; i++)
+                    j = colMin[heightMapAccess];
+                    topJ = colMax[heightMapAccess];
+                    heightMapAccess++;
+                    // Calculate this once, rather than multiple times in the inner loop
+                    iBPS = i * blocksPerSide;
+                    // Calculate access here and increment it each time in the innermost loop
+                    access = kBPS2 + iBPS + j;
+                    minX = i == 0;
+                    maxX = i == blocksPerSideMinusOne;
+                    // Y axis
+                    for (; j < topJ; j++, access++)
                     {
-                        access = (int)(i + j * blocksPerSide + k * blocksPerSideSquared);
-                        BlockType b = blocks[access].Value;
+                        BlockType b = blocks[access].type;
 
                         if (b == BlockType.Air)
                             continue;
-                        uint i1 = i + 1;
-                        uint length;
-                        int chunkAccess = 0;
-
-                        // Left face (XN)
-                        if (!visitedXN[access] && TerrainUtilities.VisibleFaceXN((int)(i - 1), (int)j, (int)k, ref blocks, ref neighborXN))
+                        // Calculate length of run and make quads accordingly
+                        minY = j == 0;
+                        maxY = j== blocksPerSideMinusOne;
+                        kS = (k&255) << 16; // pre bit shift for packing in AppendQuad functions
+                        kS1 = (k1&255)  << 16;
+                        y = j + chunkY;
+                        texture = BlockData.BlockToTexture[(int)b];
+                        accessIncremented = access + 1;
+                        j1 = j + 1;
+                        jS = (j&255) << 8;
+                        jS1 = (j1&255) << 8;
+                        // Left (X-)
+                        if (!visitedXN[access] && TerrainUtilities.VisibleFaceXN(j, access, minX, kBPS2, ref blocks, ref neighborXN))
                         {
-                            length = 0;
-                            // Search upwards to determine run length
-                            for (uint q = j; q < blocksPerSide; q++)
+                            visitedXN[access] = true;
+                            chunkAccess = accessIncremented;
+            
+                            for (length = jS1; length < blocksPerSideShifted; length += (1 << 8))
                             {
-                                // Pre-calculate the array lookup as it is used twice
-                                chunkAccess = (int)(i + q * blocksPerSide + k * blocksPerSideSquared);
-
-                                // If we reach a different block or an empty block, end the run
-                                if (b != blocks[chunkAccess].Value)
+                                if (blocks[chunkAccess].type != b)
                                     break;
 
-                                // Store that we have visited this block
-                                visitedXN[chunkAccess] = true;
-
-                                length++;
+                                visitedXN[chunkAccess++] = true;
                             }
-
-                            if (length > 0)
-                            {
-                                // Create a quad and write it directly to the buffer
-                                AppendQuad(ref vertexBuffer, ref indices, numFaces,
-                                    new uint3(i, j, k),
-                                    new uint3(i, length + j, k),
-                                    new uint3(i, length + j, k1),
-                                    new uint3(i, j, k1),
-                                    (int)FaceTypeShifted.xn, b);
-                                numFaces++;
-                            }
+                            
+                            AppendQuadX(ref vertexBuffer, ref indices, ref numFaces, i, jS, length, kS, kS1, (int)FaceDirectionShifted.xn, texture);
                         }
-
-                        // Right face (XP)
-                        if (!visitedXP[access] && TerrainUtilities.VisibleFaceXP((int)i1, (int)j, (int)k, ref blocks, ref neighborXP))
+            
+                        // Right (X+)
+                        if (!visitedXP[access] && TerrainUtilities.VisibleFaceXP(j, access, maxX, kBPS2,ref blocks, ref neighborXP))
                         {
-                            length = 0;
-                            for (uint q = j; q < blocksPerSide; q++)
-                            {
-                                chunkAccess = (int)(i + q * blocksPerSide + k * blocksPerSideSquared);
+                            visitedXP[access] = true;
 
-                                if (b != blocks[chunkAccess].Value)
+                            chunkAccess = accessIncremented;
+
+                            for (length = jS1; length < blocksPerSideShifted; length += (1 << 8))
+                            {
+                                if (blocks[chunkAccess].type != b)
                                     break;
 
-                                visitedXP[chunkAccess] = true;
-
-                                length++;
+                                visitedXP[chunkAccess++] = true;
                             }
 
-                            if (length > 0)
-                            {
-                                AppendQuad(ref vertexBuffer, ref indices, numFaces,
-                                    new uint3(i1, j, k1),
-                                    new uint3(i1, length + j, k1),
-                                    new uint3(i1, length + j, k),
-                                    new uint3(i1, j, k),
-                                    (int)FaceTypeShifted.xp, b);
-                                numFaces++;
-                            }
+                            AppendQuadX(ref vertexBuffer, ref indices, ref numFaces, i1, jS, length, kS1, kS, (int)FaceDirectionShifted.xp, texture);
                         }
-
-                        // Back face (ZN)
-                        if (!visitedZN[access] && TerrainUtilities.VisibleFaceZN((int)i, (int)j, (int)k - 1, ref blocks, ref neighborZN))
+                        // Back (Z-)
+                        if (!visitedZN[access] && TerrainUtilities.VisibleFaceZN(j, access, minZ, iBPS,ref blocks, ref neighborZN))
                         {
-                            length = 0;
-                            for (uint q = j; q < blocksPerSide; q++)
-                            {
-                                chunkAccess = (int)(i + q * blocksPerSide + k * blocksPerSideSquared);
+                            visitedZN[access] = true;
 
-                                if (b != blocks[chunkAccess].Value)
+                            chunkAccess = accessIncremented;
+
+                            for (length = jS1; length < blocksPerSideShifted; length += (1 << 8))
+                            {
+                                if (blocks[chunkAccess].type != b)
                                     break;
 
-                                visitedZN[chunkAccess] = true;
-
-                                length++;
+                                visitedZN[chunkAccess++] = true;
                             }
 
-                            if (length > 0)
-                            {
-                                AppendQuad(ref vertexBuffer, ref indices, numFaces,
-                                    new uint3(i1, j, k),
-                                    new uint3(i1, length + j, k),
-                                    new uint3(i, length + j, k),
-                                    new uint3(i, j, k),
-                                    (int)FaceTypeShifted.zn, b);
-                                numFaces++;
-                            }
+                            AppendQuadZ(ref vertexBuffer, ref indices, ref numFaces, i, i1, jS, length, kS, (int)FaceDirectionShifted.zn, texture);
                         }
 
-                        // Front face (ZP)
-                        if (!visitedZP[access] && TerrainUtilities.VisibleFaceZP((int)i, (int)j, (int)k1, ref blocks, ref neighborZP))
+                        // Front (Z+)
+                        if (!visitedZP[access] && TerrainUtilities.VisibleFaceZP(j, access, maxZ, iBPS,ref blocks, ref neighborZP))
                         {
-                            length = 0;
-                            for (uint q = j; q < blocksPerSide; q++)
-                            {
-                                chunkAccess = (int)(i + q * blocksPerSide + k * blocksPerSideSquared);
+                            visitedZP[access] = true;
 
-                                if (b != blocks[chunkAccess].Value)
+                            chunkAccess = accessIncremented;
+
+                            for (length = jS1; length < blocksPerSideShifted; length += (1 << 8))
+                            {
+                                if (blocks[chunkAccess].type != b)
                                     break;
 
-                                visitedZP[chunkAccess] = true;
-
-                                length++;
+                                visitedZP[chunkAccess++] = true;
                             }
 
-                            if (length > 0)
-                            {
-                                AppendQuad(ref vertexBuffer, ref indices, numFaces,
-                                    new uint3(i, j, k1),
-                                    new uint3(i, length + j, k1),
-                                    new uint3(i1, length + j, k1),
-                                    new uint3(i1, j, k1),
-                                    (int)FaceTypeShifted.zp, b);
-                                numFaces++;
-                            }
+                            AppendQuadZ(ref vertexBuffer, ref indices, ref numFaces, i1, i, jS, length, kS1, (int)FaceDirectionShifted.zp, texture);
                         }
-
-                        // Bottom face (YN)
-                        if (!visitedYN[access] && TerrainUtilities.VisibleFaceYN((int)i, (int)j - 1, (int)k, ref blocks, ref neighborYN))
+                        // Bottom (Y-)
+                        if (!visitedYN[access] && TerrainUtilities.VisibleFaceYN(access, minY, iBPS, kBPS2,ref blocks, ref neighborYN))
                         {
-                            length = 0;
-                            // extend in X axis
-                            for (uint q = i; q < blocksPerSide; q++)
-                            {
-                                chunkAccess = (int)(q + j * blocksPerSide + k * blocksPerSideSquared);
+                            visitedYN[access] = true;
 
-                                if (b != blocks[chunkAccess].Value)
+                            chunkAccess = access + blocksPerSide;
+
+                            for (length = i1; length < blocksPerSide; length++)
+                            {
+                                if (blocks[chunkAccess].type != b)
                                     break;
 
                                 visitedYN[chunkAccess] = true;
 
-                                length++;
+                                chunkAccess += blocksPerSide;
                             }
-
-                            if (length > 0)
-                            {
-                                AppendQuad(ref vertexBuffer, ref indices, numFaces,
-                                    new uint3(i, j, k1),
-                                    new uint3(length + i, j, k1),
-                                    new uint3(length + i, j, k),
-                                    new uint3(i, j, k),
-                                    (int)FaceTypeShifted.yn, b);
-                                numFaces++;
-                            }
+                            AppendQuadY(ref vertexBuffer, ref indices, ref numFaces, i, length, jS, kS1, kS, (int)FaceDirectionShifted.yn, texture);
                         }
 
-                        // Top face (YP)
-                        if (!visitedYP[access] && TerrainUtilities.VisibleFaceYP((int)i, (int)j1, (int)k, ref blocks, ref neighborYP))
+                        // Top (Y+)
+                        if (!visitedYP[access] && TerrainUtilities.VisibleFaceYP(access, maxY, iBPS, kBPS2,ref blocks, ref neighborYP))
                         {
-                            length = 0;
-                            // extend in X axis
-                            for (uint q = i; q < blocksPerSide; q++)
-                            {
-                                chunkAccess = (int)(q + j * blocksPerSide + k * blocksPerSideSquared);
+                            visitedYP[access] = true;
 
-                                if (b != blocks[chunkAccess].Value)
+                            chunkAccess = access + blocksPerSide;
+
+                            for (length = i1; length < blocksPerSide; length++)
+                            {
+                                if (blocks[chunkAccess].type != b)
                                     break;
 
                                 visitedYP[chunkAccess] = true;
 
-                                length++;
+                                chunkAccess += blocksPerSide;
                             }
-
-                            if (length > 0)
-                            {
-                                AppendQuad(ref vertexBuffer, ref indices, numFaces,
-                                    new uint3(i, j1, k),
-                                    new uint3(length + i, j1, k),
-                                    new uint3(length + i, j1, k1),
-                                    new uint3(i, j1, k1),
-                                    (int)FaceTypeShifted.yp, b);
-                                numFaces++;
-                            }
+                            AppendQuadY(ref vertexBuffer, ref indices, ref numFaces, i, length, jS1, kS, kS1, (int)FaceDirectionShifted.yp, texture);
                         }
+                        
                     }
-
-                    //Extend the mesh arrays if nearly full
-                    // todo test this, not sure if it has ever happened yet
+                    // Extend if necessary
                     if (numFaces * 4 > currentVertexBufferSize - 2048)
                     {
                         currentVertexBufferSize += 2048;
                         meshData.SetVertexBufferParams(currentVertexBufferSize, vertexLayout);
                         currentIndexBufferSize += 3072;
                         meshData.SetIndexBufferParams(currentIndexBufferSize, IndexFormat.UInt16);
-                        //Debug.Log($"Terrain area {terrainArea.location} vertex buffer extended to {currentVertexBufferSize}!");
+                        Debug.Log($"Terrain area {terrainArea.location} vertex buffer extended to {currentVertexBufferSize}!");
                     }
-
                 }
             }
-
+            
             //Debug.Log($"Terrain area {terrainArea.location} now has {numFaces} faces");
             meshData.SetVertexBufferParams(numFaces * 4, vertexLayout);
             meshData.SetIndexBufferParams(numFaces * 6, IndexFormat.UInt16);
@@ -393,9 +366,10 @@ namespace Opencraft.Rendering
             meshData.subMeshCount = 1;
             meshData.SetSubMesh(0, new SubMeshDescriptor(0, numFaces * 6), MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontRecalculateBounds);
         }
-        
 
-        private enum FaceTypeShifted : int
+
+        // Specifies what direction a face is pointing, shifted for packing in AppendQuad functions
+        private enum FaceDirectionShifted
         {
             yp = 0 << 29,
             yn = 1 << 29,
@@ -404,55 +378,72 @@ namespace Opencraft.Rendering
             zp = 4 << 29,
             zn = 5 << 29,
         }
-    
-        private void AppendQuad(ref NativeArray<uint> verts, ref NativeArray<ushort> indices,
-            int numFaces, uint3 bl, uint3 tl, uint3 tr, uint3 br, int normal, BlockType blockType)
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AppendQuadX(ref NativeArray<int> vertexBuffer, ref NativeArray<ushort> indices, ref int numFaces, int x, int jBottom, int jTop, int kLeft, int kRight, int normal, int texture)
         {
+            var shared = x    |
+                         texture |
+                         normal;
             int vb = numFaces * 4;
-            // Pre bit-shifted texture ID map
-            int texture = BlockData.BlockToTexture[(int)blockType];
-            // 32 bit vertex layout:
-            // byte: x pos
-            // byte: y pos
-            // byte: z pos
-            // 5 bits: texture unit
-            // 3 bits: normal
-            uint shared = (uint)(texture | normal);
-            // Top left vertex
-            uint tlv = CombinePosition(tl, shared);
+            vertexBuffer[vb] = jBottom | kLeft | shared; // bl
+            vertexBuffer[vb + 1] = jBottom | kRight| shared; // br
+            vertexBuffer[vb + 2] = jTop | kRight | shared; // tr
+            vertexBuffer[vb + 3] = jTop | kLeft | shared; // tl
 
-            // Top right vertex
-            uint trv = CombinePosition(tr, shared);
-
-            // Bottom left vertex
-            uint blv = CombinePosition(bl, shared);
-
-            // Bottom right vertex
-            uint brv = CombinePosition(br, shared);
-        
-            // Store each vertex directly into the buffer
-            verts[vb] = blv;
-            verts[vb + 1] = brv;
-            verts[vb + 2] = trv;
-            verts[vb + 3] = tlv;
-        
-            // Set indices
             int ib = numFaces * 6;
-            indices[ib] = (ushort)vb;
+            indices[ib] = indices[ib + 5] = (ushort)vb;
             indices[ib + 1] = (ushort)(vb + 1);
-            indices[ib + 2] = (ushort)(vb + 2);
-            indices[ib + 3] = (ushort)(vb + 2);
+            indices[ib + 2] = indices[ib + 3] = (ushort)(vb + 2);
             indices[ib + 4] = (ushort)(vb + 3);
-            indices[ib + 5] = (ushort)(vb + 0);
-        }
 
-        // Combine position data with the shared uint
-        private uint CombinePosition(uint3 pos, uint shared)
+            numFaces++;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AppendQuadY(ref NativeArray<int> vertexBuffer, ref NativeArray<ushort> indices, ref int numFaces, int xBottom, int xTop, int y, int zLeft, int zRight, int normal, int texture)
         {
-            return (uint)(shared | 
-                          ((uint)pos.x & 255) |
-                          ((uint)pos.y & 255) << 8 |
-                          ((uint)pos.z & 255) << 16);
+            var shared = y    | // x is not shifted, y is shifted by 8, z by 16
+                         texture | // texture by 24
+                         normal;   // normal by 29
+
+            int vb = numFaces * 4;
+            vertexBuffer[vb] = xBottom | zLeft | shared; // bl
+            vertexBuffer[vb + 1] = xBottom | zRight | shared; // br
+            vertexBuffer[vb + 2] = xTop | zRight | shared; // tr
+            vertexBuffer[vb + 3] = xTop | zLeft | shared; // tl
+            
+            int ib = numFaces * 6;
+            indices[ib] = indices[ib + 5] = (ushort)vb;
+            indices[ib + 1] = (ushort)(vb + 1);
+            indices[ib + 2] = indices[ib + 3] = (ushort)(vb + 2);
+            indices[ib + 4] = (ushort)(vb + 3);
+
+
+            numFaces++;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AppendQuadZ(ref NativeArray<int> vertexBuffer, ref NativeArray<ushort> indices, ref int numFaces, int xBottom, int xTop, int yLeft, int yRight, int z, int normal, int texture)
+        {
+            var shared = z    |
+                         texture |
+                         normal;
+
+
+            int vb = numFaces * 4;
+            vertexBuffer[vb] = xBottom | yLeft | shared; // bl
+            vertexBuffer[vb + 1] = xBottom | yRight | shared; // br
+            vertexBuffer[vb + 2] = xTop | yRight | shared; //tr
+            vertexBuffer[vb + 3] = xTop | yLeft | shared; //tl
+
+            int ib = numFaces * 6;
+            indices[ib] = indices[ib + 5] = (ushort)vb;
+            indices[ib + 1] = (ushort)(vb + 1);
+            indices[ib + 2] = indices[ib + 3] = (ushort)(vb + 2);
+            indices[ib + 4] = (ushort)(vb + 3);
+
+            numFaces++;
         }
 
     }

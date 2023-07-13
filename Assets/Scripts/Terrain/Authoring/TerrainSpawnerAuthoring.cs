@@ -22,6 +22,7 @@ namespace Opencraft.Terrain.Authoring
         public int maxChunkSpawnsPerTick;
         public int2 YBounds;
         public int playerViewRange;
+        public int terrainSpawnRange;
     }
 
     // Manage component of materials used on terrain area meshes
@@ -39,6 +40,7 @@ namespace Opencraft.Terrain.Authoring
         public int seed = 42;
         public int3 initialAreas = new int3(3, 3, 3);
         public int playerViewRange = 5;
+        public int terrainSpawnRange = 5;
         public int maxChunkSpawnsPerTick = 25;
         public int blocksPerAreaSide = 4;
 
@@ -58,7 +60,8 @@ namespace Opencraft.Terrain.Authoring
                     YBounds = authoring.YBounds,
                     maxChunkSpawnsPerTick = authoring.maxChunkSpawnsPerTick,
                     seed = CmdArgs.seed != -1 ? CmdArgs.seed : authoring.seed,
-                    playerViewRange = authoring.playerViewRange
+                    playerViewRange = authoring.playerViewRange,
+                    terrainSpawnRange = authoring.terrainSpawnRange
                 };
                 authoring.TerrainMaterial.SetFloatArray("_uvSizes", authoring.TerrainMaterialUVSizing);
                 MaterialBank materialBank = new MaterialBank() { TerrainMaterial = authoring.TerrainMaterial };
@@ -79,8 +82,10 @@ namespace Opencraft.Terrain.Authoring
 
                 AddComponent(entity, terrainSpawner);
                 AddComponentObject(entity, materialBank);
-
-                BlocksPerAreaSide.BlocksPerSide.Data = authoring.blocksPerAreaSide;
+                int bps = authoring.blocksPerAreaSide;
+                Constants.BlocksPerSide.Data = bps;
+                Constants.BlocksPerLayer.Data = bps*bps;
+                Constants.BlocksPerArea.Data = bps*bps*bps;
             }
         }
     }

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Opencraft.Terrain.Authoring;
 using Opencraft.Terrain.Blocks;
 using Unity.Burst;
@@ -12,11 +13,15 @@ using UnityEngine;
 namespace Opencraft.Terrain.Utilities
 {
     // Helper class for shared static BlocksPerAreaSide parameter, initialized in TerrainSpawnerAuthoring
-    public abstract class BlocksPerAreaSide
+    public abstract class Constants
     {
-        public static readonly SharedStatic<int> BlocksPerSide = SharedStatic<int>.GetOrCreate<BlocksPerAreaSide, BlocksPerSideKey>();
+        public static readonly SharedStatic<int> BlocksPerSide = SharedStatic<int>.GetOrCreate<Constants, BlocksPerSideKey>();
+        public static readonly SharedStatic<int> BlocksPerLayer = SharedStatic<int>.GetOrCreate<Constants, BlocksPerLayerKey>();
+        public static readonly SharedStatic<int> BlocksPerArea = SharedStatic<int>.GetOrCreate<Constants, BlocksPerAreaKey>();
         
         private class BlocksPerSideKey {}
+        private class BlocksPerLayerKey {}
+        private class BlocksPerAreaKey {}
     }
 
     [BurstCompile]
@@ -25,7 +30,7 @@ namespace Opencraft.Terrain.Utilities
         // Draws outline of an area
         public static void DebugDrawTerrainArea(ref float3 terrainAreaPos, Color color, float duration = 0.0f)
         {
-            var d = BlocksPerAreaSide.BlocksPerSide.Data;
+            var d = Constants.BlocksPerSide.Data;
             // Draw a bounding box
             Debug.DrawLine(terrainAreaPos, terrainAreaPos + new float3(d, 0, 0),color,duration );
             Debug.DrawLine(terrainAreaPos, terrainAreaPos + new float3(0, d, 0),color,duration );
@@ -63,7 +68,7 @@ namespace Opencraft.Terrain.Utilities
         // Converts a continuous world location to a discrete area location
         public static int3 GetContainingAreaLocation(ref float3 pos)
         {
-            int bps = BlocksPerAreaSide.BlocksPerSide.Data;
+            int bps = Constants.BlocksPerSide.Data;
             // Terrain Areas are placed in cube grid with intervals of blocksPerAreaSide
             //Debug.Log($"before{pos}");
             return new int3(
@@ -85,8 +90,14 @@ namespace Opencraft.Terrain.Utilities
         // Converts a block position in an area to that block's index
         public static int BlockLocationToIndex(ref int3 blockPos)
         {
-            int bps = BlocksPerAreaSide.BlocksPerSide.Data;
-            return blockPos.x + blockPos.y * bps  + blockPos.z * bps  * bps ;
+            int bps = Constants.BlocksPerSide.Data;
+            return blockPos.y + blockPos.x * bps  + blockPos.z * bps  * bps ;
+        }
+        // Converts a block position in an area to it's column index
+        public static int BlockLocationToColIndex(ref int3 blockPos)
+        {
+            int bps = Constants.BlocksPerSide.Data;
+            return blockPos.x  + blockPos.z * bps ;
         }
 
 
@@ -96,7 +107,7 @@ namespace Opencraft.Terrain.Utilities
             ref NativeArray<LocalTransform> terrainAreaTransforms,
             out int containingAreaIndex)
         {
-            int bps = BlocksPerAreaSide.BlocksPerSide.Data;
+            int bps = Constants.BlocksPerSide.Data;
             for (int i = 0; i < terrainAreaTransforms.Length; i++)
             {
                 if (terrainAreaTransforms[i].Position.Equals(pos))
@@ -123,7 +134,7 @@ namespace Opencraft.Terrain.Utilities
             if (GetTerrainAreaByPosition(ref containingAreaLocation, ref terrainAreaTransforms,
                     out int containingAreaIndex))
             {
-                int bps = BlocksPerAreaSide.BlocksPerSide.Data;
+                int bps = Constants.BlocksPerSide.Data;
                 int3 localPos = GetBlockLocationInArea(ref pos, ref containingAreaLocation);
                 int index = BlockLocationToIndex(ref localPos);
                 if (index < 0 || index >= bps * bps  * bps )
@@ -168,7 +179,7 @@ namespace Opencraft.Terrain.Utilities
             {
                 var terrainBuffer = terrainBlockLookup[terrainAreasEntities[containingAreaIndex]];
 
-                BlockType block = terrainBuffer[BlockLocationToIndex(ref blockLocation)].Value;
+                BlockType block = terrainBuffer[BlockLocationToIndex(ref blockLocation)].type;
                 if (block != BlockType.Air)
                 {
                     blockType = block;
@@ -182,91 +193,112 @@ namespace Opencraft.Terrain.Utilities
 
 
         // The VisibleFace functions check if there is a block directly in front of a terrain block face in the given direction
-        public static bool VisibleFaceXN(int i, int j, int k, ref DynamicBuffer<TerrainBlocks> blocks,
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool VisibleFaceXN(int j, int access, bool min, int kBPS2, ref DynamicBuffer<TerrainBlocks> blocks,
             ref DynamicBuffer<TerrainBlocks> neighborXN)
         {
-            int blocksPerSide = BlocksPerAreaSide.BlocksPerSide.Data;
-            // Access from a neighbouring chunk
-            if (i < 0)
+            int bps = Constants.BlocksPerSide.Data;
+            if (min)
             {
+                //if (chunkPosX == 0)
+                //    return false;
+
                 if (neighborXN.IsEmpty)
                     return true;
-                return neighborXN[(blocksPerSide - 1) + j * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == BlockType.Air;
+
+                // If it is outside this chunk, get the block from the neighbouring chunk
+                return neighborXN[(bps - 1) * bps  + j + kBPS2].type == BlockType.Air;
             }
 
-            // Access from this chunk
-            return blocks[i + j * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == BlockType.Air;
+            return blocks[access - bps].type == BlockType.Air;
         }
-
-        public static bool VisibleFaceXP(int i, int j, int k, ref DynamicBuffer<TerrainBlocks> blocks,
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool VisibleFaceXP(int j, int access, bool max, int kBPS2, ref DynamicBuffer<TerrainBlocks> blocks,
             ref DynamicBuffer<TerrainBlocks> neighborXP)
         {
-            int blocksPerSide = BlocksPerAreaSide.BlocksPerSide.Data;
-            if (i >= blocksPerSide)
+            int bps = Constants.BlocksPerSide.Data;
+            if (max)
             {
+                //if (chunkPosX == Constants.ChunkXAmount - 1)
+                //    return false;
+
                 if (neighborXP.IsEmpty)
                     return true;
 
-                return neighborXP[0 + j * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == BlockType.Air;
+                // If it is outside this chunk, get the block from the neighbouring chunk
+                return neighborXP[j + kBPS2].type == BlockType.Air;
             }
 
-            return blocks[i + j * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == BlockType.Air;
+            return blocks[access +  bps].type == BlockType.Air;
         }
-
-        public static bool VisibleFaceZN(int i, int j, int k, ref DynamicBuffer<TerrainBlocks> blocks,
-            ref DynamicBuffer<TerrainBlocks> neighborZN)
-        {
-            int blocksPerSide = BlocksPerAreaSide.BlocksPerSide.Data;
-            if (k < 0)
-            {
-                if (neighborZN.IsEmpty)
-                    return true;
-                return neighborZN[i + j * blocksPerSide + (blocksPerSide - 1) * (blocksPerSide * blocksPerSide)].Value == BlockType.Air;
-            }
-
-            return blocks[i + j * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == BlockType.Air;
-        }
-
-        public static bool VisibleFaceZP(int i, int j, int k, ref DynamicBuffer<TerrainBlocks> blocks,
-            ref DynamicBuffer<TerrainBlocks> neighborZP)
-        {
-            int blocksPerSide = BlocksPerAreaSide.BlocksPerSide.Data;
-            if (k >= blocksPerSide)
-            {
-                if (neighborZP.IsEmpty)
-                    return true;
-                return neighborZP[i + j * blocksPerSide].Value == BlockType.Air;
-            }
-
-            return blocks[i + j * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == BlockType.Air;
-        }
-
-        public static bool VisibleFaceYN(int i, int j, int k, ref DynamicBuffer<TerrainBlocks> blocks,
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool VisibleFaceYN(int access, bool min, int iBPS, int kBPS2, ref DynamicBuffer<TerrainBlocks> blocks,
             ref DynamicBuffer<TerrainBlocks> neighborYN)
         {
-            int blocksPerSide = BlocksPerAreaSide.BlocksPerSide.Data;
-            if (j < 0)
+            int bps = Constants.BlocksPerSide.Data;
+            if (min)
             {
+
                 if (neighborYN.IsEmpty)
                     return true;
-                return neighborYN[i + (blocksPerSide - 1) * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == BlockType.Air;
+
+                // If it is outside this chunk, get the block from the neighbouring chunk
+                return neighborYN[iBPS + (bps - 1) + kBPS2].type == BlockType.Air;
             }
 
-            return blocks[i + j * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == BlockType.Air;
+            return blocks[access - 1].type == BlockType.Air;
         }
-
-        public static bool VisibleFaceYP(int i, int j, int k, ref DynamicBuffer<TerrainBlocks> blocks,
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool VisibleFaceYP(int access, bool max, int iBPS, int kBPS2, ref DynamicBuffer<TerrainBlocks> blocks,
             ref DynamicBuffer<TerrainBlocks> neighborYP)
         {
-            int blocksPerSide = BlocksPerAreaSide.BlocksPerSide.Data;
-            if (j >= blocksPerSide)
+            if (max)
             {
                 if (neighborYP.IsEmpty)
                     return true;
-                return neighborYP[i + k * (blocksPerSide * blocksPerSide)].Value == BlockType.Air;
+
+                return neighborYP[iBPS + kBPS2].type == BlockType.Air;
             }
 
-            return blocks[i + j * blocksPerSide + k * (blocksPerSide * blocksPerSide)].Value == BlockType.Air;
+            return blocks[access + 1].type == BlockType.Air;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool VisibleFaceZN(int j, int access, bool min, int iBPS, ref DynamicBuffer<TerrainBlocks> blocks,
+            ref DynamicBuffer<TerrainBlocks> neighborZN)
+        {
+            int bps = Constants.BlocksPerSide.Data;
+            int bpl = Constants.BlocksPerLayer.Data;
+            if (min)
+            {
+
+                if (neighborZN.IsEmpty)
+                    return true;
+
+                return neighborZN[iBPS + j + (bps-1) * bpl].type == BlockType.Air;
+            }
+
+            return blocks[access - bpl].type == BlockType.Air;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool VisibleFaceZP(int j, int access, bool max, int iBPS, ref DynamicBuffer<TerrainBlocks> blocks,
+            ref DynamicBuffer<TerrainBlocks> neighborZP)
+        {
+            int bpl = Constants.BlocksPerLayer.Data;
+            if (max)
+            {
+
+                if (neighborZP.IsEmpty)
+                    return true;
+
+                return neighborZP[iBPS + j].type == BlockType.Air;
+            }
+
+            return blocks[access + bpl].type == BlockType.Air;
         }
     }
 }
