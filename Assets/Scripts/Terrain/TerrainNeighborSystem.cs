@@ -43,16 +43,16 @@ namespace Opencraft.Terrain
             NativeArray<TerrainArea> terrainAreas =
                 _terrainChunkQuery.ToComponentDataArray<TerrainArea>(Allocator.TempJob);
 
-            JobHandle handle = new SetAreaNeighborsJob()
+            new SetAreaNeighborsJob()
             {
                 terrainAreas = terrainAreas,
                 terrainAreaEntities = terrainAreaEntities,
                 terrainNeighborsLookup = _terrainNeighborsLookup
-            }.ScheduleParallel(Dependency);
-            handle.Complete();
-
-            terrainAreas.Dispose();
-            terrainAreaEntities.Dispose();
+            }.ScheduleParallel();
+            //handle.Complete();
+            
+            //terrainAreas.Dispose();
+            //terrainAreaEntities.Dispose();
 
         }
     }
@@ -64,8 +64,12 @@ namespace Opencraft.Terrain
     public partial struct SetAreaNeighborsJob : IJobEntity
     {
         // thread safe as long as no terrain areas have the same location!
-        [NativeDisableParallelForRestriction] public NativeArray<Entity> terrainAreaEntities;
-        [NativeDisableParallelForRestriction] public NativeArray<TerrainArea> terrainAreas;
+        [NativeDisableParallelForRestriction] 
+        [DeallocateOnJobCompletion] 
+        public NativeArray<Entity> terrainAreaEntities;
+        [NativeDisableParallelForRestriction]
+        [DeallocateOnJobCompletion] 
+        public NativeArray<TerrainArea> terrainAreas;
         [NativeDisableParallelForRestriction] public ComponentLookup<TerrainNeighbors> terrainNeighborsLookup;
 
         public void Execute(Entity entity, ref TerrainArea terrainArea)

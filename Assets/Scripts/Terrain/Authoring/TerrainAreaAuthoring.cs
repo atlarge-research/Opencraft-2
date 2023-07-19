@@ -1,4 +1,5 @@
 using Opencraft.Terrain.Blocks;
+using Opencraft.Terrain.Structures;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
@@ -12,7 +13,7 @@ namespace Opencraft.Terrain.Authoring
         {
             public override void Bake(TerrainAreaAuthoring authoring)
             {
-                var entity = GetEntity(TransformUsageFlags.Renderable);
+                var entity = GetEntity(TransformUsageFlags.Dynamic);
                 // Initialize with no neighbors
                 var terrainNeighbors = new TerrainNeighbors()
                 {
@@ -27,9 +28,14 @@ namespace Opencraft.Terrain.Authoring
                 AddComponent<TerrainArea>(entity);
                 AddComponent<NewSpawn>(entity);
                 AddComponent<Remesh>(entity);
+                
+                AddComponent<GenStructures>(entity);
+                SetComponentEnabled<GenStructures>(entity, false);
+                
                 AddBuffer<TerrainBlocks>(entity);
                 AddBuffer<TerrainColMinY>(entity);
                 AddBuffer<TerrainColMaxY>(entity);
+                AddBuffer<TerrainStructuresToSpawn>(entity);
 
             }
         }
@@ -62,6 +68,12 @@ namespace Opencraft.Terrain.Authoring
     public struct Remesh : IComponentData, IEnableableComponent
     {
     }
+    
+    // Remesh component marks an entity as having structures to be generated
+    public struct GenStructures : IComponentData, IEnableableComponent
+    {
+    }
+
 
     [InternalBufferCapacity(4096)]
     // The buffer component to store terrain blocks
@@ -82,6 +94,15 @@ namespace Opencraft.Terrain.Authoring
     public struct TerrainColMaxY : IBufferElementData
     {
         [GhostField] public byte maxY;
+    }
+    
+    [InternalBufferCapacity(32)]
+    // Buffer of terrain area columns we need to spawn but haven't yet
+    public struct TerrainStructuresToSpawn : IBufferElementData
+    {
+        public int3 localPos;
+        public StructureType structureType;
+        public int3 extents;
     }
     
     

@@ -28,7 +28,7 @@ namespace Opencraft.Player.Multiplay
 
         private MultiplaySettings settings;
         
-        private Vector3 initialPosition = new Vector3(0, 3, -4);
+        private Vector3 initialPosition = new Vector3(0, 40, -4);
 
         void Awake()
         {

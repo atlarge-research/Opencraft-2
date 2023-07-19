@@ -12,25 +12,13 @@ using UnityEngine;
 
 namespace Opencraft.Terrain.Utilities
 {
-    // Helper class for shared static BlocksPerAreaSide parameter, initialized in TerrainSpawnerAuthoring
-    public abstract class Constants
-    {
-        public static readonly SharedStatic<int> BlocksPerSide = SharedStatic<int>.GetOrCreate<Constants, BlocksPerSideKey>();
-        public static readonly SharedStatic<int> BlocksPerLayer = SharedStatic<int>.GetOrCreate<Constants, BlocksPerLayerKey>();
-        public static readonly SharedStatic<int> BlocksPerArea = SharedStatic<int>.GetOrCreate<Constants, BlocksPerAreaKey>();
-        
-        private class BlocksPerSideKey {}
-        private class BlocksPerLayerKey {}
-        private class BlocksPerAreaKey {}
-    }
-
     [BurstCompile]
     public static class TerrainUtilities
     {
         // Draws outline of an area
         public static void DebugDrawTerrainArea(ref float3 terrainAreaPos, Color color, float duration = 0.0f)
         {
-            var d = Constants.BlocksPerSide.Data;
+            var d = Env.AREA_SIZE;
             // Draw a bounding box
             Debug.DrawLine(terrainAreaPos, terrainAreaPos + new float3(d, 0, 0),color,duration );
             Debug.DrawLine(terrainAreaPos, terrainAreaPos + new float3(0, d, 0),color,duration );
@@ -68,7 +56,7 @@ namespace Opencraft.Terrain.Utilities
         // Converts a continuous world location to a discrete area location
         public static int3 GetContainingAreaLocation(ref float3 pos)
         {
-            int bps = Constants.BlocksPerSide.Data;
+            int bps = Env.AREA_SIZE;
             // Terrain Areas are placed in cube grid with intervals of blocksPerAreaSide
             //Debug.Log($"before{pos}");
             return new int3(
@@ -90,24 +78,51 @@ namespace Opencraft.Terrain.Utilities
         // Converts a block position in an area to that block's index
         public static int BlockLocationToIndex(ref int3 blockPos)
         {
-            int bps = Constants.BlocksPerSide.Data;
-            return blockPos.y + blockPos.x * bps  + blockPos.z * bps  * bps ;
+            int bps = Env.AREA_SIZE;
+            int bpl = Env.AREA_SIZE_POW_2;
+            return blockPos.y + blockPos.x * bps  + blockPos.z * bpl;
         }
+        
+        // Converts a block position in an area to that block's index
+        public static int BlockLocationToIndex(int x, int y, int z)
+        {
+            int bps = Env.AREA_SIZE;
+            int bpl = Env.AREA_SIZE_POW_2;
+            return y + x * bps  + z * bpl;
+        }
+
+        public static int BlockLocationHash(int x, int y, int z)
+        {
+            unchecked
+            {
+                int hashCode = x;
+                hashCode = (hashCode * 397) ^ y;
+                hashCode = (hashCode * 397) ^ z;
+                return hashCode;
+            }
+        }
+        
         // Converts a block position in an area to it's column index
         public static int BlockLocationToColIndex(ref int3 blockPos)
         {
-            int bps = Constants.BlocksPerSide.Data;
+            int bps = Env.AREA_SIZE;
             return blockPos.x  + blockPos.z * bps ;
+        }
+        
+        public static int BlockLocationToColIndex(int x, int z)
+        {
+            int bps = Env.AREA_SIZE;
+            return x  + z * bps ;
         }
 
 
         [BurstCompile]
-        // Given an int3 position and an array of are transforms, return the containing area index if it exists.
+        // Given an int3 position and an array of area transforms, return the containing area index if it exists.
         public static bool GetTerrainAreaByPosition(ref int3 pos,
             ref NativeArray<LocalTransform> terrainAreaTransforms,
             out int containingAreaIndex)
         {
-            int bps = Constants.BlocksPerSide.Data;
+            //int bps = Env.AREA_SIZE;
             for (int i = 0; i < terrainAreaTransforms.Length; i++)
             {
                 if (terrainAreaTransforms[i].Position.Equals(pos))
@@ -134,7 +149,7 @@ namespace Opencraft.Terrain.Utilities
             if (GetTerrainAreaByPosition(ref containingAreaLocation, ref terrainAreaTransforms,
                     out int containingAreaIndex))
             {
-                int bps = Constants.BlocksPerSide.Data;
+                int bps = Env.AREA_SIZE;
                 int3 localPos = GetBlockLocationInArea(ref pos, ref containingAreaLocation);
                 int index = BlockLocationToIndex(ref localPos);
                 if (index < 0 || index >= bps * bps  * bps )
@@ -197,7 +212,7 @@ namespace Opencraft.Terrain.Utilities
         public static bool VisibleFaceXN(int j, int access, bool min, int kBPS2, ref DynamicBuffer<TerrainBlocks> blocks,
             ref DynamicBuffer<TerrainBlocks> neighborXN)
         {
-            int bps = Constants.BlocksPerSide.Data;
+            int bps = Env.AREA_SIZE;
             if (min)
             {
                 //if (chunkPosX == 0)
@@ -217,7 +232,7 @@ namespace Opencraft.Terrain.Utilities
         public static bool VisibleFaceXP(int j, int access, bool max, int kBPS2, ref DynamicBuffer<TerrainBlocks> blocks,
             ref DynamicBuffer<TerrainBlocks> neighborXP)
         {
-            int bps = Constants.BlocksPerSide.Data;
+            int bps = Env.AREA_SIZE;
             if (max)
             {
                 //if (chunkPosX == Constants.ChunkXAmount - 1)
@@ -237,7 +252,7 @@ namespace Opencraft.Terrain.Utilities
         public static bool VisibleFaceYN(int access, bool min, int iBPS, int kBPS2, ref DynamicBuffer<TerrainBlocks> blocks,
             ref DynamicBuffer<TerrainBlocks> neighborYN)
         {
-            int bps = Constants.BlocksPerSide.Data;
+            int bps = Env.AREA_SIZE;
             if (min)
             {
 
@@ -270,8 +285,8 @@ namespace Opencraft.Terrain.Utilities
         public static bool VisibleFaceZN(int j, int access, bool min, int iBPS, ref DynamicBuffer<TerrainBlocks> blocks,
             ref DynamicBuffer<TerrainBlocks> neighborZN)
         {
-            int bps = Constants.BlocksPerSide.Data;
-            int bpl = Constants.BlocksPerLayer.Data;
+            int bps = Env.AREA_SIZE;
+            int bpl = Env.AREA_SIZE_POW_2;
             if (min)
             {
 
@@ -288,7 +303,7 @@ namespace Opencraft.Terrain.Utilities
         public static bool VisibleFaceZP(int j, int access, bool max, int iBPS, ref DynamicBuffer<TerrainBlocks> blocks,
             ref DynamicBuffer<TerrainBlocks> neighborZP)
         {
-            int bpl = Constants.BlocksPerLayer.Data;
+            int bpl = Env.AREA_SIZE_POW_2;
             if (max)
             {
 

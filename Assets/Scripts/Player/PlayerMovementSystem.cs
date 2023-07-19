@@ -39,7 +39,6 @@ namespace Opencraft.Player
         private BufferLookup<TerrainBlocks> _terrainBlockLookup;
         private NativeArray<Entity> terrainAreasEntities;
         private NativeArray<LocalTransform> terrainAreaTransforms;
-        private int blocksPerChunkSide;
 
         public void OnCreate(ref SystemState state)
         {
@@ -69,7 +68,6 @@ namespace Opencraft.Player
             var terrainAreasQuery = SystemAPI.QueryBuilder().WithAll<TerrainArea, LocalTransform>().Build();
             terrainAreasEntities = terrainAreasQuery.ToEntityArray(state.WorldUpdateAllocator);
             terrainAreaTransforms = terrainAreasQuery.ToComponentDataArray<LocalTransform>(state.WorldUpdateAllocator);
-            blocksPerChunkSide = SystemAPI.GetSingleton<TerrainSpawner>().blocksPerSide;
 
             foreach (var player in SystemAPI.Query<PlayerAspect>().WithAll<Simulate>())
             {
@@ -202,7 +200,7 @@ namespace Opencraft.Player
                 transform.pos.x - offset,
                 transform.pos.y - 1.1f,
                 transform.pos.z + offset));
-
+            
             foreach (var pos in set)
             {
                 if (TerrainUtilities.GetBlockAtPosition(pos,
@@ -213,6 +211,9 @@ namespace Opencraft.Player
                 {
                     return PlayerUtilities.PlayerSupportState.Supported;
                 }
+
+               
+                
             }
 
             return PlayerUtilities.PlayerSupportState.Unsupported;

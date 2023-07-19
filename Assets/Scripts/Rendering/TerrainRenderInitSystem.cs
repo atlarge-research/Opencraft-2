@@ -15,16 +15,15 @@ namespace Opencraft.Rendering
     [UpdateAfter(typeof(TerrainNeighborSystem))]
     public partial class TerrainRenderInitSystem : SystemBase
     {
-        private EntityQuery _terrainSpawnerQuery;
+        private EntityQuery _materialQuery;
         private EntityQuery _newSpawnQuery;
 
         protected override void OnCreate()
         {
-            RequireForUpdate<TerrainSpawner>();
             RequireForUpdate<TerrainArea>();
+            RequireForUpdate<MaterialBank>();
             RequireForUpdate<NewSpawn>();
-            _terrainSpawnerQuery = GetEntityQuery(ComponentType.ReadOnly<TerrainSpawner>(),
-                ComponentType.ReadOnly<MaterialBank>());
+            _materialQuery = GetEntityQuery(ComponentType.ReadOnly<MaterialBank>());
             _newSpawnQuery = GetEntityQuery(ComponentType.ReadOnly<TerrainArea>(), ComponentType.ReadOnly<NewSpawn>());
         }
 
@@ -32,11 +31,10 @@ namespace Opencraft.Rendering
         {
             if (_newSpawnQuery.IsEmpty)
                 return;
-            var terrainSpawner = _terrainSpawnerQuery.GetSingleton<TerrainSpawner>();
             // On each new terrain area, add a new Mesh managed object
             EntityCommandBuffer ecb = new EntityCommandBuffer(Allocator.Temp);
-            float3 boundsExtents = new float3(0.5 * terrainSpawner.blocksPerSide);
-            MaterialBank materialBank = _terrainSpawnerQuery.GetSingleton<MaterialBank>();
+            float3 boundsExtents = new float3(0.5 * Env.AREA_SIZE);
+            MaterialBank materialBank = _materialQuery.GetSingleton<MaterialBank>();
             foreach (var (terrainArea, terrainNeighbors, entity) in SystemAPI.Query<RefRO<TerrainArea>,RefRO<TerrainNeighbors>>().WithAll<NewSpawn>()
                          .WithEntityAccess())
             {

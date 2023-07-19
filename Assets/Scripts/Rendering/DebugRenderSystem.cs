@@ -20,9 +20,7 @@ namespace Opencraft.Rendering
         //[BurstCompile]
         public void OnCreate(ref SystemState state)
         {
-            state.RequireForUpdate<TerrainSpawner>();
             state.RequireForUpdate<TerrainArea>();
-            _terrainSpawnerQuery = state.GetEntityQuery(ComponentType.ReadOnly<TerrainSpawner>());
             if (!CmdArgs.DebugEnabled)
             {
                 state.Enabled = false;
@@ -32,16 +30,13 @@ namespace Opencraft.Rendering
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
-            TerrainSpawner terrainSpawner = _terrainSpawnerQuery.GetSingleton<TerrainSpawner>();
-
-            new DebugDrawTerrain { blocksPerSide = terrainSpawner.blocksPerSide }.ScheduleParallel();
+           new DebugDrawTerrain().ScheduleParallel();
         }
     }
 
     [BurstCompile]
     public partial struct DebugDrawTerrain : IJobEntity
     {
-        public int blocksPerSide;
 
         public void Execute(in TerrainArea terrainChunk, in LocalTransform t)
         {

@@ -94,7 +94,7 @@ Shader "Custom/VoxelShader"
             #define BUMP_SCALE_NOT_SUPPORTED 1
             
             UNITY_DECLARE_TEX2DARRAY(_ColourTextures);
-            uniform float _uvSizes[2 * 5]; // Needs to be set from C#
+            uniform float _uvSizes[2 * 6]; // Needs to be set from C#
             #include "Assets/Materials/Shaders/VoxelShaderInput.hlsl"
             #include "Assets/Materials/Shaders/VoxelForwardPass.hlsl"
             ENDHLSL
@@ -130,7 +130,7 @@ Shader "Custom/VoxelShader"
             
             #include <HLSLSupport.cginc>
             UNITY_DECLARE_TEX2DARRAY(_ColourTextures);
-            uniform float _uvSizes[2 * 5]; // Needs to be set from C#
+            uniform float _uvSizes[2 * 6]; // Needs to be set from C#
             #include "Assets/Materials/Shaders/VoxelShaderInput.hlsl"
             
             // vertex shader inputs
@@ -200,7 +200,7 @@ Shader "Custom/VoxelShader"
             
             #include <HLSLSupport.cginc>
             UNITY_DECLARE_TEX2DARRAY(_ColourTextures);
-            uniform float _uvSizes[2 * 5]; // Needs to be set from C#
+            uniform float _uvSizes[2 * 6]; // Needs to be set from C#
             #include "Assets/Materials/Shaders/VoxelShaderInput.hlsl"
             
             // vertex shader inputs

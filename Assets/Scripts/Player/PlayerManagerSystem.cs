@@ -61,7 +61,7 @@ namespace Opencraft.Player
                         networkId.Value * math.@select(halfCharacterWidthPlusHalfPadding,
                             -halfCharacterWidthPlusHalfPadding, isEven) +
                         math.@select(-spawnStaggeredOffset, spawnStaggeredOffset, isEven);
-                    var preventZFighting = 2.5f + -0.01f * networkId.Value;
+                    var preventZFighting = 30f + -0.01f * networkId.Value;
 
                     commandBuffer.SetComponent(player,
                         LocalTransform.FromPosition(new float3(staggeredXPos, preventZFighting, -1)));

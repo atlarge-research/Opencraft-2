@@ -7,7 +7,8 @@
         Stone,
         Dirt,
         Tin,
-        Gem
+        Gem,
+        Grass
     }
     public static class BlockData
     {
@@ -18,7 +19,8 @@
             (1 & 31) << 24,
             (2 & 31) << 24,
             (3 & 31) << 24,
-            (4 & 31) << 24
+            (4 & 31) << 24,
+            (5 & 31) << 24
         };
     }
     

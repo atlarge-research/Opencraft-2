@@ -30,7 +30,7 @@ namespace Opencraft.Terrain
         {
             // Wait for scene load/baking to occur before updates. 
             state.RequireForUpdate<TerrainSpawner>();
-            state.RequireForUpdate<TerrainAreasToSpawn>();
+            state.RequireForUpdate<TerrainColumnsToSpawn>();
             _terrainAreasQuery = SystemAPI.QueryBuilder().WithAll<TerrainArea>().Build();
             markerPlayerTerrainGenCheck = new ProfilerMarker("PlayerTerrainGenCheck");
         }
@@ -45,44 +45,42 @@ namespace Opencraft.Terrain
             terrainAreas = _terrainAreasQuery.ToComponentDataArray<TerrainArea>(state.WorldUpdateAllocator);
 
             // Determine what chunks need to be spawned
-            var toSpawnbuffer = SystemAPI.GetBuffer<TerrainAreasToSpawn>(terrainSpawnerEntity);
-            DynamicBuffer<int3> chunksToSpawnBuffer = toSpawnbuffer.Reinterpret<int3>();
+            var toSpawnbuffer = SystemAPI.GetBuffer<TerrainColumnsToSpawn>(terrainSpawnerEntity);
+            DynamicBuffer<int2> chunksToSpawnBuffer = toSpawnbuffer.Reinterpret<int2>();
             markerPlayerTerrainGenCheck.Begin();
             // todo - make this parallel
-            var areasPlayersCloseTo = new NativeHashSet<int3>(32, Allocator.TempJob);
-            int blocksPerSide = terrainSpawner.blocksPerSide;
+            var areasPlayersCloseTo = new NativeHashSet<int2>(32, Allocator.TempJob);
             int viewRange = terrainSpawner.terrainSpawnRange;
             foreach (var transform in SystemAPI.Query<LocalTransform>().WithAll<Player.Authoring.Player, Simulate>())
             {
                 var pos = transform.Position;
-                int3 playerChunk =new int3(
-                    (int) (math.floor(pos.x / blocksPerSide )),
-                    (int) (math.floor(pos.y / blocksPerSide )),
-                    (int) (math.floor(pos.z / blocksPerSide )));
+                int2 playerColumn =new int2(
+                    (int) (math.floor(pos.x / Env.AREA_SIZE )),
+                    (int) (math.floor(pos.z / Env.AREA_SIZE )));
                 var viewRangeSide = (viewRange +1+ viewRange);
                 // Set of areas forming cube around players current area
-                NativeHashSet<int3> nearbyAreas = new NativeHashSet<int3>(viewRangeSide * viewRangeSide * viewRangeSide, Allocator.Temp);
+                NativeHashSet<int2> nearbyColumns = new NativeHashSet<int2>(viewRangeSide  * viewRangeSide, Allocator.Temp);
                 for (int i = -viewRange; i < viewRange; i++)
                 {
-                    for (int j = -viewRange; j < viewRange; j++)
+                    //for (int j = -viewRange; j < viewRange; j++)
+                    //{
+                    for (int k = -viewRange; k < viewRange; k++)
                     {
-                        for (int k = -viewRange; k < viewRange; k++)
-                        {
-                            nearbyAreas.Add(playerChunk + new int3(i,j,k));
-                        }
+                        nearbyColumns.Add(playerColumn + new int2(i,k));
                     }
+                    //}
                 }
             
                 // O(n) in number of areas, may be further improvement by partitioning around players in advance
                 foreach (var terrainArea in terrainAreas)
                 {
-                    if (nearbyAreas.Contains(terrainArea.location))
+                    if (nearbyColumns.Contains(terrainArea.location.xz))
                     {
-                        nearbyAreas.Remove(terrainArea.location);
+                        nearbyColumns.Remove(terrainArea.location.xz);
                     }
                 }
                 // Copy the nearby areas of this player that aren't yet spawned to the global hashset
-                areasPlayersCloseTo.UnionWith(nearbyAreas);
+                areasPlayersCloseTo.UnionWith(nearbyColumns);
             }
             // Mark areas that need to be spawned
             chunksToSpawnBuffer.AddRange(areasPlayersCloseTo.ToNativeArray(Allocator.Temp));

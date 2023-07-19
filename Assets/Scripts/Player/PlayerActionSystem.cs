@@ -63,12 +63,11 @@ namespace Opencraft.Player
                             var colMaxes = _terrainColumnMaxBufferLookup[terrainAreaEntity].Reinterpret<byte>();
                             int minY = colMins[colIndex];
                             int maxY = colMaxes[colIndex];
-                            int bps = Constants.BlocksPerSide.Data;
                             // If removed block is top or bottom of a column, search for new top or bottom and update heightmaps
                             if (blockLoc.y == minY)
                             {
                                 // Search upwards for new min y
-                                for (int y = 1; y < bps - blockLoc.y; y++)
+                                for (int y = 1; y < Env.AREA_SIZE - blockLoc.y; y++)
                                 {
                                     if (blocks[blockIndex + y] != BlockType.Air)
                                     {
@@ -77,10 +76,10 @@ namespace Opencraft.Player
                                         break;
                                     }
 
-                                    if (y == (bps - blockLoc.y) - 1)
+                                    if (y == (Env.AREA_SIZE - blockLoc.y) - 1)
                                     {
                                         // no non-empty blocks found, set min to a max value
-                                        colMins[colIndex] = (byte)bps;
+                                        colMins[colIndex] = (byte)Env.AREA_SIZE;
                                     }
                                 }
                             }

@@ -74,12 +74,6 @@ namespace Opencraft.Rendering
             MeshTerrainChunkJob meshJob = new MeshTerrainChunkJob
             {
                 vertexLayout = _vertexLayout,
-                blocksPerSide = terrainSpawner.blocksPerSide,
-                blocksPerSideSquared = terrainSpawner.blocksPerSide * terrainSpawner.blocksPerSide,
-                blocksPerSideCubed = terrainSpawner.blocksPerSide * terrainSpawner.blocksPerSide *
-                                     terrainSpawner.blocksPerSide,
-                blocksPerSideMinusOne =  terrainSpawner.blocksPerSide - 1,
-                blocksPerSideShifted = (terrainSpawner.blocksPerSide& 255) << 8,
                 meshDataArray = meshDataArray,
                 areasToUpdate = chunksToUpdate,
                 terrainAreas = terrainAreas,
@@ -122,11 +116,6 @@ namespace Opencraft.Rendering
     public partial struct MeshTerrainChunkJob : IJobParallelFor
     {
         [ReadOnly] public NativeArray<VertexAttributeDescriptor> vertexLayout;
-        public int blocksPerSide;
-        public int blocksPerSideSquared;
-        public int blocksPerSideCubed;
-        public int blocksPerSideMinusOne;
-        public int blocksPerSideShifted;
         public Mesh.MeshDataArray meshDataArray;
         [ReadOnly] public NativeArray<Entity> areasToUpdate;
         [ReadOnly] public NativeArray<TerrainArea> terrainAreas;
@@ -141,7 +130,7 @@ namespace Opencraft.Rendering
             TerrainNeighbors terrainNeighbor = terrainNeighbors[index];
             TerrainArea terrainArea = terrainAreas[index];
             // When area is remeshed, outline it in red
-            float3 terrainAreaLocation = terrainArea.location * blocksPerSide;
+            float3 terrainAreaLocation = terrainArea.location * Env.AREA_SIZE;
             TerrainUtilities.DebugDrawTerrainArea(ref terrainAreaLocation, Color.red, 0.5f);
             
             // Mesh object vertex data
@@ -174,12 +163,12 @@ namespace Opencraft.Rendering
                 neighborZN = terrainBufferLookup[terrainNeighbor.neighborZN];
             
             // Bitmasks that mark a terrain block as visited
-            NativeArray<bool> visitedXN = new NativeArray<bool>(blocksPerSideCubed, Allocator.Temp);
-            NativeArray<bool> visitedXP = new NativeArray<bool>(blocksPerSideCubed, Allocator.Temp);
-            NativeArray<bool> visitedZN = new NativeArray<bool>(blocksPerSideCubed, Allocator.Temp);
-            NativeArray<bool> visitedZP = new NativeArray<bool>(blocksPerSideCubed, Allocator.Temp);
-            NativeArray<bool> visitedYN = new NativeArray<bool>(blocksPerSideCubed, Allocator.Temp);
-            NativeArray<bool> visitedYP = new NativeArray<bool>(blocksPerSideCubed, Allocator.Temp);
+            NativeArray<bool> visitedXN = new NativeArray<bool>(Env.AREA_SIZE_POW_3, Allocator.Temp);
+            NativeArray<bool> visitedXP = new NativeArray<bool>(Env.AREA_SIZE_POW_3, Allocator.Temp);
+            NativeArray<bool> visitedZN = new NativeArray<bool>(Env.AREA_SIZE_POW_3, Allocator.Temp);
+            NativeArray<bool> visitedZP = new NativeArray<bool>(Env.AREA_SIZE_POW_3, Allocator.Temp);
+            NativeArray<bool> visitedYN = new NativeArray<bool>(Env.AREA_SIZE_POW_3, Allocator.Temp);
+            NativeArray<bool> visitedYP = new NativeArray<bool>(Env.AREA_SIZE_POW_3, Allocator.Temp);
             
             // Setup mesh data arrays
             int currentVertexBufferSize = 6144;
@@ -190,7 +179,7 @@ namespace Opencraft.Rendering
             NativeArray<ushort> indices = meshData.GetIndexData<ushort>();
             
             // Precalculate the map-relative Y position of the chunk in the map
-            int chunkY = (int)terrainAreaLocation.y * blocksPerSide;
+            int chunkY = (int)terrainAreaLocation.y * Env.AREA_SIZE;
             // Allocate variables on the stack
             // iBPS is i * bps, kBPS2 is k*bps*bps. S means shifted, x1 means x + 1
             int access, heightMapAccess, iBPS, kBPS2, i1, k1, j, j1, jS, jS1, topJ,
@@ -200,37 +189,39 @@ namespace Opencraft.Rendering
             int numFaces = 0;
 
             // Z axis
-            for (int k = 0; k < blocksPerSide;  k++, k1++)
+            for (int k = 0; k < Env.AREA_SIZE;  k++, k1++)
             {
-                kBPS2 = k * blocksPerSideSquared;
+                kBPS2 = k * Env.AREA_SIZE_POW_2;
                 i1 = 1;
-                heightMapAccess = k * blocksPerSide;
+                heightMapAccess = k * Env.AREA_SIZE;
                 // Is the current run on the Z- or Z+ edge of the chunk
                 minZ = k == 0;
-                maxZ = k == blocksPerSideMinusOne;
+                maxZ = k == Env.AREA_SIZE_1;
                 
                 // X axis
-                for (int i = 0; i < blocksPerSide; i++, i1++)
+                for (int i = 0; i < Env.AREA_SIZE; i++, i1++)
                 {
                     j = colMin[heightMapAccess];
                     topJ = colMax[heightMapAccess];
                     heightMapAccess++;
                     // Calculate this once, rather than multiple times in the inner loop
-                    iBPS = i * blocksPerSide;
+                    iBPS = i * Env.AREA_SIZE;
                     // Calculate access here and increment it each time in the innermost loop
                     access = kBPS2 + iBPS + j;
                     minX = i == 0;
-                    maxX = i == blocksPerSideMinusOne;
+                    maxX = i == Env.AREA_SIZE_1;
                     // Y axis
                     for (; j < topJ; j++, access++)
                     {
+                        if(access >= Env.AREA_SIZE_POW_3)
+                            Debug.Log($"Access {access} OOB for {i} {j} {k} with col max height {topJ}");
                         BlockType b = blocks[access].type;
 
                         if (b == BlockType.Air)
                             continue;
                         // Calculate length of run and make quads accordingly
                         minY = j == 0;
-                        maxY = j== blocksPerSideMinusOne;
+                        maxY = j== Env.AREA_SIZE_1;
                         kS = (k&255) << 16; // pre bit shift for packing in AppendQuad functions
                         kS1 = (k1&255)  << 16;
                         y = j + chunkY;
@@ -245,7 +236,7 @@ namespace Opencraft.Rendering
                             visitedXN[access] = true;
                             chunkAccess = accessIncremented;
             
-                            for (length = jS1; length < blocksPerSideShifted; length += (1 << 8))
+                            for (length = jS1; length < Env.AREA_SIZE_SHIFTED; length += (1 << 8))
                             {
                                 if (blocks[chunkAccess].type != b)
                                     break;
@@ -263,7 +254,7 @@ namespace Opencraft.Rendering
 
                             chunkAccess = accessIncremented;
 
-                            for (length = jS1; length < blocksPerSideShifted; length += (1 << 8))
+                            for (length = jS1; length < Env.AREA_SIZE_SHIFTED; length += (1 << 8))
                             {
                                 if (blocks[chunkAccess].type != b)
                                     break;
@@ -280,7 +271,7 @@ namespace Opencraft.Rendering
 
                             chunkAccess = accessIncremented;
 
-                            for (length = jS1; length < blocksPerSideShifted; length += (1 << 8))
+                            for (length = jS1; length < Env.AREA_SIZE_SHIFTED; length += (1 << 8))
                             {
                                 if (blocks[chunkAccess].type != b)
                                     break;
@@ -298,7 +289,7 @@ namespace Opencraft.Rendering
 
                             chunkAccess = accessIncremented;
 
-                            for (length = jS1; length < blocksPerSideShifted; length += (1 << 8))
+                            for (length = jS1; length < Env.AREA_SIZE_SHIFTED; length += (1 << 8))
                             {
                                 if (blocks[chunkAccess].type != b)
                                     break;
@@ -313,16 +304,16 @@ namespace Opencraft.Rendering
                         {
                             visitedYN[access] = true;
 
-                            chunkAccess = access + blocksPerSide;
+                            chunkAccess = access + Env.AREA_SIZE;
 
-                            for (length = i1; length < blocksPerSide; length++)
+                            for (length = i1; length < Env.AREA_SIZE; length++)
                             {
                                 if (blocks[chunkAccess].type != b)
                                     break;
 
                                 visitedYN[chunkAccess] = true;
 
-                                chunkAccess += blocksPerSide;
+                                chunkAccess += Env.AREA_SIZE;
                             }
                             AppendQuadY(ref vertexBuffer, ref indices, ref numFaces, i, length, jS, kS1, kS, (int)FaceDirectionShifted.yn, texture);
                         }
@@ -332,16 +323,16 @@ namespace Opencraft.Rendering
                         {
                             visitedYP[access] = true;
 
-                            chunkAccess = access + blocksPerSide;
+                            chunkAccess = access + Env.AREA_SIZE;
 
-                            for (length = i1; length < blocksPerSide; length++)
+                            for (length = i1; length < Env.AREA_SIZE; length++)
                             {
                                 if (blocks[chunkAccess].type != b)
                                     break;
 
                                 visitedYP[chunkAccess] = true;
 
-                                chunkAccess += blocksPerSide;
+                                chunkAccess += Env.AREA_SIZE;
                             }
                             AppendQuadY(ref vertexBuffer, ref indices, ref numFaces, i, length, jS1, kS, kS1, (int)FaceDirectionShifted.yp, texture);
                         }

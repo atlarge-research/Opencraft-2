@@ -1,3 +1,6 @@
+using Opencraft.Terrain.Blocks;
+using Opencraft.Terrain.Layers;
+using Opencraft.Terrain.Structures;
 using Opencraft.Terrain.Utilities;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -7,20 +10,22 @@ using UnityEngine;
 namespace Opencraft.Terrain.Authoring
 {
     [InternalBufferCapacity(64)]
-    // Buffer of terrain areas we need to spawn but haven't yet
-    public struct TerrainAreasToSpawn : IBufferElementData, ISingleton
+    // Buffer of terrain area columns we need to spawn but haven't yet
+    public struct TerrainColumnsToSpawn : IBufferElementData, ISingleton
     {
-        public int3 Value;
+        public int2 ColumnPos;
     }
+    
+    
+    
     
     // Singleton holding the TerrainArea prefab entity we instantiate, and some world settings
     public struct TerrainSpawner : IComponentData, ISingleton
     {
         public Entity TerrainArea;
         public int seed;
-        public int blocksPerSide;
-        public int maxChunkSpawnsPerTick;
-        public int2 YBounds;
+        public int maxColumnSpawnsPerTick;
+        public int2 worldLimitsHeight;
         public int playerViewRange;
         public int terrainSpawnRange;
     }
@@ -30,6 +35,21 @@ namespace Opencraft.Terrain.Authoring
     {
         public Material TerrainMaterial;
     }
+    
+    public struct TerrainGenerationLayer : IComponentData
+    {
+        public LayerType layerType;
+        public int index;
+        public BlockType blockType;
+        public StructureType structureType;
+        public float frequency;
+        public float exponent;
+        //public int baseHeight;
+        public int minHeight;
+        public int maxHeight;
+        public int amplitude;
+        public float chance;
+    }
 
     [DisallowMultipleComponent]
     public class TerrainSpawnerAuthoring : MonoBehaviour
@@ -37,15 +57,13 @@ namespace Opencraft.Terrain.Authoring
         public GameObject TerrainArea;
         public Material TerrainMaterial;
         public float[] TerrainMaterialUVSizing= new float[] { 1.0f,1.0f, 1.0f,1.0f, 1.0f,1.0f, 1.0f,1.0f,1.0f,1.0f};
+        public LayerCollection layerCollection = null;
         public int seed = 42;
-        public int3 initialAreas = new int3(3, 3, 3);
+        public int initialColumnsX = 3;
+        public int initialColumnsZ = 3;
         public int playerViewRange = 5;
         public int terrainSpawnRange = 5;
-        public int maxChunkSpawnsPerTick = 25;
-        public int blocksPerAreaSide = 4;
-
-        [Tooltip("x is sea level, y is sky level")]
-        public int2 YBounds;
+        public int maxColumnSpawnsPerTick = 10;
 
         class Baker : Baker<TerrainSpawnerAuthoring>
         {
@@ -56,9 +74,7 @@ namespace Opencraft.Terrain.Authoring
                 TerrainSpawner terrainSpawner = new TerrainSpawner
                 {
                     TerrainArea = GetEntity(authoring.TerrainArea, TransformUsageFlags.Dynamic),
-                    blocksPerSide = authoring.blocksPerAreaSide,
-                    YBounds = authoring.YBounds,
-                    maxChunkSpawnsPerTick = authoring.maxChunkSpawnsPerTick,
+                    maxColumnSpawnsPerTick = authoring.maxColumnSpawnsPerTick,
                     seed = CmdArgs.seed != -1 ? CmdArgs.seed : authoring.seed,
                     playerViewRange = authoring.playerViewRange,
                     terrainSpawnRange = authoring.terrainSpawnRange
@@ -67,25 +83,39 @@ namespace Opencraft.Terrain.Authoring
                 MaterialBank materialBank = new MaterialBank() { TerrainMaterial = authoring.TerrainMaterial };
 
                 // Add to the TerrainSpawner entity a buffer of terrain areas to spawn
-                var toSpawnBuffer = AddBuffer<TerrainAreasToSpawn>(entity);
-                DynamicBuffer<int3> intBuffer = toSpawnBuffer.Reinterpret<int3>();
-                for (int x = -(int)math.floor(authoring.initialAreas.x / 2.0f);
-                     x < math.ceil(authoring.initialAreas.x / 2.0f);
+                var columnsToSpawnBuffer = AddBuffer<TerrainColumnsToSpawn>(entity);
+                DynamicBuffer<int2> intBuffer = columnsToSpawnBuffer.Reinterpret<int2>();
+                for (int x = -(int)math.floor(authoring.initialColumnsX / 2.0f);
+                     x < math.ceil(authoring.initialColumnsX / 2.0f);
                      x++)
-                    for (int y = -(int)math.floor(authoring.initialAreas.y / 2.0f);
-                         y < math.ceil(authoring.initialAreas.y / 2.0f);
-                         y++)
-                        for (int z = -(int)math.floor(authoring.initialAreas.z / 2.0f);
-                             z < math.ceil(authoring.initialAreas.z / 2.0f);
-                             z++)
-                            intBuffer.Add(new int3(x, y, z));
+                    for (int z = -(int)math.floor(authoring.initialColumnsZ / 2.0f);
+                         z < math.ceil(authoring.initialColumnsZ / 2.0f);
+                         z++)
+                        intBuffer.Add(new int2(x, z));
 
                 AddComponent(entity, terrainSpawner);
                 AddComponentObject(entity, materialBank);
-                int bps = authoring.blocksPerAreaSide;
-                Constants.BlocksPerSide.Data = bps;
-                Constants.BlocksPerLayer.Data = bps*bps;
-                Constants.BlocksPerArea.Data = bps*bps*bps;
+                
+                authoring.layerCollection.SortLayers();
+                foreach(var layer in authoring.layerCollection.Layers)
+                {
+                    Entity layerEntity = CreateAdditionalEntity(TransformUsageFlags.None, entityName:layer.LayerName);
+                    AddComponent(layerEntity, new TerrainGenerationLayer
+                    {
+                        layerType=layer.LayerType,
+                        index=layer.Index,
+                        blockType=layer.BlockType,
+                        structureType = layer.StructureType,
+                        frequency = layer.Frequency,
+                        exponent =layer.Exponent,
+                        //baseHeight = layer.BaseHeight,
+                        minHeight = layer.MinHeight,
+                        maxHeight= layer.MaxHeight,
+                        amplitude = layer.MaxHeight - layer.MinHeight,
+                        chance = layer.Chance
+                    });
+                }
+                
             }
         }
     }

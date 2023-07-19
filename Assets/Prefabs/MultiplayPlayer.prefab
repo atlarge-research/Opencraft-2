@@ -317,7 +317,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerInput: {fileID: -3399718007712543476}
-  Username: 0
+  username: 0
   inputMovement: {x: 0, y: 0}
   inputLook: {x: 0, y: 0}
   inputJump: 0

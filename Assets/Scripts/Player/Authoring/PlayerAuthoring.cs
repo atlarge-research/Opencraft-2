@@ -15,6 +15,8 @@ namespace Opencraft.Player.Authoring
     {
         // Link to an associated configuration entity
         public Entity PlayerConfig;
+        // Link to containing area
+        public Entity ContainingArea;
         // Movement variables
         [GhostField(Quantization = 1000)] public float3 Velocity;
         [GhostField] public byte OnGround;

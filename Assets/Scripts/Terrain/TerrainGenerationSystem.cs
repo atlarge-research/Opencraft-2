@@ -2,8 +2,10 @@
 using Opencraft.Terrain;
 using Opencraft.Terrain.Authoring;
 using Opencraft.Terrain.Blocks;
+using Opencraft.Terrain.Layers;
 using Opencraft.Terrain.Utilities;
 using Opencraft.ThirdParty;
+using Packages.procgen.Runtime.Terrain.Approach2;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -11,13 +13,14 @@ using Unity.NetCode;
 using Unity.Transforms;
 using Unity.Burst;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Physics;
 using Unity.Profiling;
 using Unity.Rendering;
 using UnityEngine;
 
 // Annoyingly this assembly directive must be outside the namespace. So we have to import Opencraft.Terrain namespace to itself...
-[assembly: RegisterGenericJobType(typeof(SortJob<int3, Int3DistanceComparer>))]
+[assembly: RegisterGenericJobType(typeof(SortJob<int2, Int2DistanceComparer>))]
 namespace Opencraft.Terrain
 {
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
@@ -28,21 +31,45 @@ namespace Opencraft.Terrain
     public partial struct TerrainGenerationSystem : ISystem
     {
         private EntityQuery _newSpawnQuery;
-        private ProfilerMarker markerTerrainGen;
+        private NativeArray<TerrainGenerationLayer> _terrainGenLayers;
+        private ProfilerMarker _markerTerrainGen;
+        private ComponentLookup<TerrainArea> _terrainAreaLookup;
+        private ComponentLookup<LocalTransform> _localTransformLookup;
+        private BufferLookup<TerrainBlocks> _terrainBlocksLookup;
+        private BufferLookup<TerrainColMinY> _terrainColMinLookup;
+        private BufferLookup<TerrainColMaxY> _terrainColMaxLookup;
+        private BufferLookup<TerrainStructuresToSpawn> _structuresToSpawnLookup;
         //private double lastUpdate;
 
         public void OnCreate(ref SystemState state)
         {
             // Wait for scene load/baking to occur before updates. 
             state.RequireForUpdate<TerrainSpawner>();
-            state.RequireForUpdate<TerrainAreasToSpawn>();
-            _newSpawnQuery = SystemAPI.QueryBuilder().WithAll<NewSpawn>().Build();
-            markerTerrainGen = new ProfilerMarker("TerrainGeneration");
+            state.RequireForUpdate<TerrainGenerationLayer>();
+            state.RequireForUpdate<TerrainColumnsToSpawn>();
+            _newSpawnQuery = SystemAPI.QueryBuilder().WithAll<NewSpawn, TerrainArea, LocalTransform>().Build();
+            //_terrainGenLayers= SystemAPI.QueryBuilder().WithAll<TerrainGenerationLayer>().Build().ToComponentDataArray<TerrainGenerationLayer>(Allocator.Persistent);
+            _markerTerrainGen = new ProfilerMarker("TerrainGeneration");
             //lastUpdate = -1.0;
+            _terrainAreaLookup = state.GetComponentLookup<TerrainArea>(isReadOnly: false);
+            _localTransformLookup = state.GetComponentLookup<LocalTransform>(isReadOnly: false);
+            _terrainBlocksLookup = state.GetBufferLookup<TerrainBlocks>(isReadOnly: false);
+            _terrainColMinLookup = state.GetBufferLookup<TerrainColMinY>(isReadOnly: false);
+            _terrainColMaxLookup = state.GetBufferLookup<TerrainColMaxY>(isReadOnly: false);
+            _structuresToSpawnLookup = state.GetBufferLookup<TerrainStructuresToSpawn>(isReadOnly: false);
+        }
+
+        public void OnDestroy(ref SystemState state)
+        {
+            _terrainGenLayers.Dispose();
         }
 
         public void OnUpdate(ref SystemState state)
         {
+            if (!_terrainGenLayers.IsCreated)
+            {
+                _terrainGenLayers= SystemAPI.QueryBuilder().WithAll<TerrainGenerationLayer>().Build().ToComponentDataArray<TerrainGenerationLayer>(Allocator.Persistent);
+            }
             /*if (state.World.Time.ElapsedTime - lastUpdate < 1.0)
             {
                 return;
@@ -57,52 +84,80 @@ namespace Opencraft.Terrain
             Entity terrainSpawnerEntity = SystemAPI.GetSingletonEntity<TerrainSpawner>();
 
             // Fetch what chunks to spawn this tick
-            var toSpawnbuffer = SystemAPI.GetBuffer<TerrainAreasToSpawn>(terrainSpawnerEntity);
-            DynamicBuffer<int3> chunksToSpawnBuffer = toSpawnbuffer.Reinterpret<int3>();
+            var toSpawnbuffer = SystemAPI.GetBuffer<TerrainColumnsToSpawn>(terrainSpawnerEntity);
+            DynamicBuffer<int2> chunksColumnsSpawnBuffer = toSpawnbuffer.Reinterpret<int2>();
             // If there is nothing to spawn, don't :)
-            if (chunksToSpawnBuffer.Length == 0)
+            if (chunksColumnsSpawnBuffer.Length == 0)
             {
                 return;
             }
-            markerTerrainGen.Begin();
-            NativeArray<int3> chunksToSpawn = chunksToSpawnBuffer.AsNativeArray();
-            // Sort the chunks to spawn so ones closer to 0,0 are first
-            SortJob<int3, Int3DistanceComparer> sortJob = chunksToSpawn.SortJob<int3, Int3DistanceComparer>(new Int3DistanceComparer { });
+            _markerTerrainGen.Begin();
+            NativeArray<int2> columnsToSpawn = chunksColumnsSpawnBuffer.AsNativeArray();
+            // Sort the columns to spawn so ones closer to 0,0 are first
+            SortJob<int2, Int2DistanceComparer> sortJob = columnsToSpawn.SortJob<int2, Int2DistanceComparer>(new Int2DistanceComparer { });
             JobHandle sortHandle = sortJob.Schedule();
 
             // Spawn the terrain area entities
-            state.EntityManager.Instantiate(terrainSpawner.TerrainArea,
-                chunksToSpawn.Length > terrainSpawner.maxChunkSpawnsPerTick
-                    ? terrainSpawner.maxChunkSpawnsPerTick
-                    : chunksToSpawn.Length,
-                Allocator.Temp);
-            // Then populate them on worker threads
-            JobHandle populateHandle = new PopulateTerrainAreas
+            int numColumnsToSpawn = columnsToSpawn.Length > terrainSpawner.maxColumnSpawnsPerTick
+                ? terrainSpawner.maxColumnSpawnsPerTick
+                : columnsToSpawn.Length;
+            NativeArray<Entity> terrainAreaEntities = state.EntityManager.Instantiate(terrainSpawner.TerrainArea,
+                numColumnsToSpawn * Env.AREA_COLUMN_HEIGHT,
+                Allocator.TempJob);
+            //NativeArray<Entity> terrainAreaEntities = _newSpawnQuery.ToEntityArray(Allocator.TempJob);
+            //NativeArray<TerrainArea> terrainAreas = _newSpawnQuery.ToComponentDataArray<TerrainArea>(Allocator.TempJob);
+            //NativeArray<LocalTransform> localTransforms = _newSpawnQuery.ToComponentDataArray<LocalTransform>(Allocator.TempJob);
+            //_terrainAreaLookup.Update(ref state);
+            //_localTransformLookup.Update(ref state);
+            _terrainBlocksLookup.Update(ref state);
+            _terrainColMinLookup.Update(ref state);
+            _terrainColMaxLookup.Update(ref state);
+            _structuresToSpawnLookup.Update(ref state);
+            EntityCommandBuffer ecb = new EntityCommandBuffer(Allocator.TempJob);
+            EntityCommandBuffer.ParallelWriter parallelEcb = ecb.AsParallelWriter();
+            
+            // Populate new terrain areas on worker threads
+            JobHandle populateHandle = new PopulateTerrainColumns
             {
-                chunksToSpawn = chunksToSpawn,
+                terrainAreaEntities = terrainAreaEntities,
+                ecb = parallelEcb,
+                terrainSpawnerEntity = terrainSpawnerEntity,
+                //terrainAreaLookup = _terrainAreaLookup,
+                //localTransformLookup = _localTransformLookup,
+                //terrainAreas = terrainAreas,
+                //localTransforms = localTransforms,
+                terrainBlocksLookup = _terrainBlocksLookup,
+                terrainColMinLookup = _terrainColMinLookup,
+                terrainColMaxLookup = _terrainColMaxLookup,
+                _structuresToSpawnLookup = _structuresToSpawnLookup,
+                columnsToSpawn = columnsToSpawn,
                 noiseSeed = terrainSpawner.seed,
-                blocksPerSide = terrainSpawner.blocksPerSide,
-                YBounds = terrainSpawner.YBounds,
-            }.ScheduleParallel(sortHandle);
+                terrainGenLayers = _terrainGenLayers
+            }.Schedule(numColumnsToSpawn, 1, sortHandle); // Each thread gets 1 column
             populateHandle.Complete();
+            terrainAreaEntities.Dispose();
+            //terrainAreas.Dispose();
+            //localTransforms.Dispose();
 
             // Remove spawned areas from the toSpawn buffer
-            if (chunksToSpawnBuffer.Length > terrainSpawner.maxChunkSpawnsPerTick)
-                chunksToSpawnBuffer.RemoveRange(0, terrainSpawner.maxChunkSpawnsPerTick);
+            if (chunksColumnsSpawnBuffer.Length > terrainSpawner.maxColumnSpawnsPerTick)
+                chunksColumnsSpawnBuffer.RemoveRange(0, terrainSpawner.maxColumnSpawnsPerTick);
             else
-                chunksToSpawnBuffer.Clear();
-            markerTerrainGen.End();
+                chunksColumnsSpawnBuffer.Clear();
+            ecb.Playback(state.EntityManager);
+            ecb.Dispose();
+            _markerTerrainGen.End();
         }
     }
 
 
     // Comparer for sorting locations by distance from zero
-    public struct Int3DistanceComparer : IComparer<int3>
+    public struct Int2DistanceComparer : IComparer<int2>
     {
-        public int Compare(int3 a, int3 b)
+        public int Compare(int2 a, int2 b)
         {
-            int lSum = math.abs(a.x) + math.abs(a.y) + math.abs(a.z);
-            int rSum = math.abs(b.x) + math.abs(b.y) + math.abs(b.z);
+            int lSum = math.abs(a.x) + math.abs(a.y);
+            int rSum = math.abs(b.x) + math.abs(b.y);
             if (lSum > rSum)
                 return 1;
             if (lSum < rSum)
@@ -111,73 +166,302 @@ namespace Opencraft.Terrain
         }
     }
 
-    [WithAll(typeof(NewSpawn))]
     [BurstCompile]
-    // Job that fills the terrain area block buffer
-    partial struct PopulateTerrainAreas : IJobEntity
+    partial struct PopulateTerrainColumns : IJobParallelFor
     {
-        public NativeArray<int3> chunksToSpawn;
 
-        public int blocksPerSide;
+        [ReadOnly] public NativeArray<Entity> terrainAreaEntities;
+        [ReadOnly] public NativeArray<int2> columnsToSpawn;
 
+        public Entity terrainSpawnerEntity;
+
+        public EntityCommandBuffer.ParallelWriter ecb;
+        //[NativeDisableParallelForRestriction] public ComponentLookup<TerrainArea> terrainAreaLookup;
+        //[NativeDisableParallelForRestriction] public ComponentLookup<LocalTransform> localTransformLookup;
+        //[NativeDisableParallelForRestriction] public NativeArray<TerrainArea> terrainAreas;
+        //[NativeDisableParallelForRestriction] public NativeArray<LocalTransform> localTransforms;
+        [NativeDisableParallelForRestriction] public BufferLookup<TerrainBlocks> terrainBlocksLookup;
+        [NativeDisableParallelForRestriction] public BufferLookup<TerrainColMinY> terrainColMinLookup;
+        [NativeDisableParallelForRestriction] public BufferLookup<TerrainColMaxY> terrainColMaxLookup;
+        [NativeDisableParallelForRestriction] public BufferLookup<TerrainStructuresToSpawn> _structuresToSpawnLookup;
         public int noiseSeed;
-        public int2 YBounds; // x is sea level, y is sky level
+        [ReadOnly] public NativeArray<TerrainGenerationLayer> terrainGenLayers;
 
-        public void Execute([EntityIndexInQuery] int index, ref DynamicBuffer<TerrainBlocks> terrainBlocksBuffer,
-            ref DynamicBuffer<TerrainColMinY> colMinBuffer,ref DynamicBuffer<TerrainColMaxY> colMaxBuffer,  ref LocalTransform localTransform, ref TerrainArea terrainArea)
+        public void Execute(int jobIndex)
         {
-            int3 chunk = chunksToSpawn[index];
-            terrainArea.location = chunk; // terrain area grid position
-            int areaX = chunk.x * blocksPerSide;
-            int areaY = chunk.y * blocksPerSide;
-            int areaZ = chunk.z * blocksPerSide;
-            localTransform.Position = new float3(areaX, areaY, areaZ); // world space position
-
-            var perLayer = blocksPerSide * blocksPerSide;
-            var perArea = perLayer * blocksPerSide;
-            terrainBlocksBuffer.Resize(perArea, NativeArrayOptions.UninitializedMemory);
-            colMinBuffer.Resize(perLayer, NativeArrayOptions.UninitializedMemory);
-            colMaxBuffer.Resize(perLayer, NativeArrayOptions.UninitializedMemory);
-            DynamicBuffer<BlockType> terrainBlocks = terrainBlocksBuffer.Reinterpret<BlockType>();
-            DynamicBuffer<byte> colMin = colMinBuffer.Reinterpret<byte>();
-            DynamicBuffer<byte> colMax = colMaxBuffer.Reinterpret<byte>();
-            int globalX, globalY, globalZ, block, column;
-            float noise, cutoff;
-            for (int z = 0; z < blocksPerSide; z++)
+            int index = jobIndex * Env.AREA_COLUMN_HEIGHT;
+            int2 columnToSpawn = columnsToSpawn[jobIndex];
+            int columnX = columnToSpawn.x * Env.AREA_SIZE;
+            int columnZ = columnToSpawn.y * Env.AREA_SIZE;
+            
+            // Preprocess terrain generation layers to create noise lookup tables
+            NativeArray<NativeArray<float>> terrainLayerLookupTables =
+                new NativeArray<NativeArray<float>>(terrainGenLayers.Length, Allocator.Temp);
+            NativeArray<NoiseUtilities.NoiseInterpolatorSettings> terrainLayerInterpolateSettings =
+                new NativeArray<NoiseUtilities.NoiseInterpolatorSettings>(terrainGenLayers.Length, Allocator.Temp);
+            for (int i = 0; i < terrainGenLayers.Length; i++)
             {
-                globalZ = areaZ + z; 
-                for (int x = 0; x < blocksPerSide; x++)
+                TerrainGenerationLayer terrainGenLayer = terrainGenLayers[i];
+                switch (terrainGenLayer.layerType)
                 {
-                    globalX = areaX + x;
-                    int minY = blocksPerSide;
-                    int maxY = 0;
-                    column = x + z * blocksPerSide;
-                    for (int y = 0; y < blocksPerSide; y++)
-                    {
-                        globalY = areaY + y;
-                        noise = FastPerlin.PerlinGetNoise(globalX, globalZ, noiseSeed);
-                        cutoff = YBounds.x + noise * (YBounds.y - YBounds.x);
-                        block = y + x * blocksPerSide + z * perLayer;
-                        if (globalY > cutoff)
+                    case LayerType.Absolute:
+                    case LayerType.Additive:
+                        NoiseUtilities.NoiseInterpolatorSettings nis =
+                            NoiseUtilities.GetNoiseInterpolatorSettings(Env.AREA_SIZE_WITH_PADDING,  downsamplingFactor:2);
+                        terrainLayerInterpolateSettings[i] = nis;
+                        NativeArray<float> lut = new NativeArray<float>((nis.size + 1) * (nis.size + 1), Allocator.Temp);
+                        terrainLayerLookupTables[i] = lut;
+                        // Generate a lookup table for this column of areas
+                        int j = 0;
+                        for (int z = 0; z < nis.size; z++)
                         {
-                            terrainBlocks[block] = BlockType.Air;
-                            continue;
+                            float zf = (z << nis.step) + columnZ;
+                            for (int x = 0; x < nis.size; x++)
+                            {
+                                float xf = (x << nis.step) + columnX;
+                                lut[j++] = NoiseUtilities.GetNoise(xf, 0.0f, zf, noiseSeed,1f,
+                                    terrainGenLayer.amplitude,terrainGenLayer.exponent, terrainGenLayer.frequency,
+                                    FastNoise.NoiseType.Simplex); 
+                            }
+                        }
+                        break;
+                    case LayerType.Surface:
+                        // No noise sampling is performed for a surface layer
+                        break;
+                    case LayerType.Structure:
+                        // Since probabilities are low for structure creation, we use individual random calls
+                        break;
+                }
+            }
+            // Arrays of relevant components for entire terrain area column
+            //NativeArray<TerrainArea> columnTerrainAreas =
+            //    new NativeArray<TerrainArea>(Env.AREA_COLUMN_HEIGHT, Allocator.Temp);
+            NativeArray<DynamicBuffer<BlockType>> terrainBlockBuffers =
+                new NativeArray<DynamicBuffer<BlockType>>(Env.AREA_COLUMN_HEIGHT, Allocator.Temp);
+            NativeArray<DynamicBuffer<byte>> colMinBuffers =
+                new NativeArray<DynamicBuffer<byte>>(Env.AREA_COLUMN_HEIGHT, Allocator.Temp);
+            NativeArray<DynamicBuffer<byte>> colMaxBuffers =
+                new NativeArray<DynamicBuffer<byte>>(Env.AREA_COLUMN_HEIGHT, Allocator.Temp);
+            NativeArray<DynamicBuffer<TerrainStructuresToSpawn>> terrainStructureBuffers =
+                new NativeArray<DynamicBuffer<TerrainStructuresToSpawn>>(Env.AREA_COLUMN_HEIGHT, Allocator.Temp);
+            //Preprocess terrain area column
+            for (int columnAreaY = 0;
+                 columnAreaY < Env.AREA_COLUMN_HEIGHT;
+                 columnAreaY++)
+            {
+                //Entity
+                Entity terrainEntity = terrainAreaEntities[index + columnAreaY];
+               
+                //TerrainArea
+                //TerrainArea terrainArea = terrainAreas[index + columnAreaY];
+                //columnTerrainAreas[columnAreaY] = terrainArea;
+                int3 chunk = new int3(columnToSpawn.x, columnAreaY, columnToSpawn.y);
+                //terrainArea.location = chunk; // terrain area grid position
+                ecb.SetComponent(index + columnAreaY, terrainEntity, new TerrainArea{location = chunk});
+
+                //LocalTransform
+                int areaY = columnAreaY * Env.AREA_SIZE;
+                //LocalTransform localTransform = localTransforms[index + columnAreaY];
+                //localTransform.Position = new float3(columnX, areaY, columnZ); // world space position
+                ecb.SetComponent(index + columnAreaY, terrainEntity, new LocalTransform{Position = new float3(columnX, areaY, columnZ) });
+                // Block buffer
+                DynamicBuffer<TerrainBlocks> terrainBlocksBuffer = terrainBlocksLookup[terrainEntity];
+                terrainBlocksBuffer.Resize(Env.AREA_SIZE_POW_3, NativeArrayOptions.ClearMemory);
+                DynamicBuffer<BlockType> terrainBlocks = terrainBlocksBuffer.Reinterpret<BlockType>();
+                terrainBlockBuffers[columnAreaY] = terrainBlocks;
+                // Terrain area column min buffer
+                DynamicBuffer<TerrainColMinY> colMinBuffer = terrainColMinLookup[terrainEntity];
+                colMinBuffer.Resize(Env.AREA_SIZE_POW_3, NativeArrayOptions.UninitializedMemory);
+                unsafe
+                {
+                    // Initialize array to a max value for column height
+                    UnsafeUtility.MemSet(colMinBuffer.GetUnsafePtr(), (byte)Env.AREA_SIZE, Env.AREA_SIZE_POW_3);
+                }
+
+                DynamicBuffer<byte> colMin = colMinBuffer.Reinterpret<byte>();
+                colMinBuffers[columnAreaY] = colMin;
+                //Terrain area column max buffer
+                DynamicBuffer<TerrainColMaxY> colMaxBuffer = terrainColMaxLookup[terrainEntity];
+                colMaxBuffer.Resize(Env.AREA_SIZE_POW_3, NativeArrayOptions.ClearMemory);
+                DynamicBuffer<byte> colMax = colMaxBuffer.Reinterpret<byte>();
+                colMaxBuffers[columnAreaY] = colMax;
+                // terrain Structures
+                DynamicBuffer<TerrainStructuresToSpawn> structuresToSpawnBuffer = _structuresToSpawnLookup[terrainEntity];
+                terrainStructureBuffers[columnAreaY] = structuresToSpawnBuffer;
+            }
+
+            // iterate up each block column in this area column
+            int globalX, globalZ;
+            for (int z = 0; z < Env.AREA_SIZE; z++)
+            {
+                globalZ = columnZ + z;
+                for (int x = 0; x < Env.AREA_SIZE; x++)
+                {
+                    globalX = columnX + x;
+                    // For each block column in area column, iterate upwards 
+                    int columnAccess = x + z * Env.AREA_SIZE;
+                    int heightSoFar = 0; // Start at y = 0
+                    int startIndex = TerrainUtilities.BlockLocationToIndex(x, 0, z);
+                    for (int i = 0; i < terrainGenLayers.Length; i++)
+                    {
+                        TerrainGenerationLayer terrainGenerationLayer = terrainGenLayers[i];
+                        NativeArray<float> lookupTable = terrainLayerLookupTables[i];
+                        NoiseUtilities.NoiseInterpolatorSettings nis = terrainLayerInterpolateSettings[i];
+                        switch (terrainGenerationLayer.layerType)
+                        {
+                            case LayerType.Absolute:
+                                heightSoFar  = GenerateAbsoluteLayer(ref terrainBlockBuffers,
+                                    ref colMinBuffers, ref colMaxBuffers, nis,ref lookupTable, x, z, startIndex,
+                                    heightSoFar, ref terrainGenerationLayer, columnAccess);
+                                break;
+                            case LayerType.Additive:
+                                heightSoFar  = GenerateAdditiveLayer(ref terrainBlockBuffers,
+                                    ref colMinBuffers, ref colMaxBuffers, nis,ref lookupTable, x, z, startIndex,
+                                    heightSoFar, ref terrainGenerationLayer, columnAccess);
+                                break;
+                            case LayerType.Surface:
+                                heightSoFar  = GenerateSurfaceLayer(ref terrainBlockBuffers,
+                                    ref colMinBuffers, ref colMaxBuffers, startIndex,
+                                    heightSoFar, ref terrainGenerationLayer, columnAccess);
+                                break;
+                            case LayerType.Structure:
+                                // Structure layers do not immediately change blocks or height. Instead, 
+                                // they mark that a structure should be generated at a given position
+                                GenerateStructureLayer(ref terrainGenerationLayer, ref terrainStructureBuffers,index, x,z, globalX, heightSoFar, globalZ );
+                                break;
                         }
 
-                        if (y < minY)
-                            minY = y;
-                        if (y + 1 > maxY)
-                            maxY = y + 1;
-                        
-                        // todo generate biomes, trees, etc
-                        terrainBlocks[block] = (BlockType) ((math.abs(globalX) % 4) + 1);
-
+                        //startIndex += currentChunkY;
                     }
                     // Set column heights in heightmap buffers
-                    colMin[column] = (byte)minY;
-                    colMax[column] = (byte)maxY;
-                    
+                    //colMin[columnAccess] = (byte)minY;
+                    //colMax[columnAccess] = (byte)(heightSoFar);
+
+
                 }
+            }
+
+        }
+
+        private void GenerateStructureLayer(ref TerrainGenerationLayer terrainGenLayer, ref NativeArray<DynamicBuffer<TerrainStructuresToSpawn>> structuresToSpawnBuffers,
+            int index, int localX, int localZ, int globalX, int globalY, int globalZ)
+        {
+            float chanceAtPos = NoiseUtilities.RandomPrecise(TerrainUtilities.BlockLocationHash(globalX, globalY, globalZ), (byte)noiseSeed);
+            int colY = globalY / Env.AREA_SIZE;
+            DynamicBuffer<TerrainStructuresToSpawn> structuresToSpawn = structuresToSpawnBuffers[colY];
+            int localY = globalY - (colY * Env.AREA_SIZE);
+            if (terrainGenLayer.chance > chanceAtPos)
+            {
+                if (NoiseUtilities.RandomPrecise(TerrainUtilities.BlockLocationHash(globalX+1, globalY, globalZ), (byte)noiseSeed) > chanceAtPos &&
+                    NoiseUtilities.RandomPrecise(TerrainUtilities.BlockLocationHash(globalX-1, globalY, globalZ), (byte)noiseSeed) > chanceAtPos &&
+                    NoiseUtilities.RandomPrecise(TerrainUtilities.BlockLocationHash(globalX, globalY, globalZ+1), (byte)noiseSeed) > chanceAtPos &&
+                    NoiseUtilities.RandomPrecise(TerrainUtilities.BlockLocationHash(globalX, globalY, globalZ-1), (byte)noiseSeed) > chanceAtPos)
+                {
+                   // Mark that we need to spawn a structure here
+                   structuresToSpawn.Add(new TerrainStructuresToSpawn
+                       {
+                           localPos = new int3(localX, localY, localZ),
+                           structureType = terrainGenLayer.structureType,
+                           extents = new int3(3,3,5)
+                       });
+                   ecb.SetComponentEnabled<GenStructures>(index, terrainAreaEntities[index + colY], true);
+                }
+            }
+        }
+
+        private int GenerateAbsoluteLayer(ref NativeArray<DynamicBuffer<BlockType>> terrainBlockBuffers,
+            ref NativeArray<DynamicBuffer<byte>> colMinBuffers,
+            ref NativeArray<DynamicBuffer<byte>> colMaxBuffers,
+            NoiseUtilities.NoiseInterpolatorSettings nis, ref NativeArray<float> lut, int x, int z,
+            int blockIndex, int heightSoFar, ref TerrainGenerationLayer terrainGenLayer, int columnAccess)
+        {
+            // Calculate height to add and sum it with the min height (because the height of this
+            // layer should fluctuate between minHeight and minHeight+the max noise)
+            int columnTop = terrainGenLayer.minHeight + (int)(NoiseUtilities.Interpolate(nis, x, z, lut));
+
+            // Absolute layers add from the minY and up but if the layer height is lower than
+            // the existing terrain there's nothing to add so just return the initial value
+            if (columnTop > heightSoFar)
+            {
+                // set blocks from 
+                int start = terrainGenLayer.minHeight > 0 ? terrainGenLayer.minHeight : 0;
+                int end = columnTop < Env.WORLD_HEIGHT ? columnTop : Env.WORLD_HEIGHT;
+                SetBlocks(ref terrainBlockBuffers, ref colMinBuffers, ref colMaxBuffers, start, end,
+                    terrainGenLayer.blockType, blockIndex, columnAccess);
+
+                //Return the new global height of this column
+                return end;
+            }
+
+            return heightSoFar;
+        }
+        
+        private int GenerateAdditiveLayer(ref NativeArray<DynamicBuffer<BlockType>> terrainBlockBuffers,
+            ref NativeArray<DynamicBuffer<byte>> colMinBuffers,
+            ref NativeArray<DynamicBuffer<byte>> colMaxBuffers,
+            NoiseUtilities.NoiseInterpolatorSettings nis, ref NativeArray<float> lut, int x, int z,
+            int blockIndex, int heightSoFar, ref TerrainGenerationLayer terrainGenLayer, int columnAccess)
+        {
+            int heightToAdd= terrainGenLayer.minHeight + (int)(NoiseUtilities.Interpolate(nis, x, z, lut));
+            
+            
+            int end = heightSoFar + heightToAdd < Env.WORLD_HEIGHT ? heightSoFar + heightToAdd: Env.WORLD_HEIGHT;
+            SetBlocks(ref terrainBlockBuffers, ref colMinBuffers, ref colMaxBuffers, heightSoFar, end,
+                terrainGenLayer.blockType, blockIndex, columnAccess);
+
+            //Return the new global height of this column
+            return end;
+        }
+        
+        private int GenerateSurfaceLayer(ref NativeArray<DynamicBuffer<BlockType>> terrainBlockBuffers,
+            ref NativeArray<DynamicBuffer<byte>> colMinBuffers,
+            ref NativeArray<DynamicBuffer<byte>> colMaxBuffers,
+            int blockIndex, int heightSoFar, ref TerrainGenerationLayer terrainGenLayer, int columnAccess)
+        {
+            int heightToAdd= 1;
+            
+            int end = heightSoFar + heightToAdd < Env.WORLD_HEIGHT ? heightSoFar + heightToAdd: Env.WORLD_HEIGHT;
+            SetBlocks(ref terrainBlockBuffers, ref colMinBuffers, ref colMaxBuffers, heightSoFar, end,
+                terrainGenLayer.blockType, blockIndex, columnAccess);
+
+            //Return the new global height of this column
+            return end;
+        }
+
+        private void SetBlocks(ref NativeArray<DynamicBuffer<BlockType>> terrainBlockBuffers,
+            ref NativeArray<DynamicBuffer<byte>> colMinBuffers,
+            ref NativeArray<DynamicBuffer<byte>> colMaxBuffers,
+            int start, int end, BlockType blockType, int blockIndex, int columnAccess)
+        {
+            DynamicBuffer<BlockType> terrainBlockBuffer = terrainBlockBuffers[0];
+            DynamicBuffer<byte> colMinBuffer; 
+            DynamicBuffer<byte> colMaxBuffer;
+            int prevColY = -1;
+            for (int globalY = start; globalY < end; globalY++)
+            {
+                int colY = globalY / Env.AREA_SIZE;
+                int chunkYMin = colY * Env.AREA_SIZE;
+                int chunkYMax = chunkYMin + Env.AREA_SIZE - 1;
+                int localY = globalY - chunkYMin;
+                // Check if we have entered a new terrain area
+                if (colY != prevColY)
+                {
+                    // Get buffers for new terrain area
+                    terrainBlockBuffer = terrainBlockBuffers[colY];
+                    colMinBuffer = colMinBuffers[colY];
+                    colMaxBuffer = colMaxBuffers[colY];
+                    // Set column heightmap
+                    if(localY < colMinBuffer[columnAccess])
+                        colMinBuffer[columnAccess] = (byte)localY;
+                    if (end > colY + chunkYMax)
+                        colMaxBuffer[columnAccess] = (byte)(Env.AREA_SIZE);
+                    else
+                        colMaxBuffer[columnAccess] = (byte)(end - chunkYMin);
+                }
+                terrainBlockBuffer[blockIndex + localY] = blockType;
+
+                prevColY = colY;
+
             }
         }
     }

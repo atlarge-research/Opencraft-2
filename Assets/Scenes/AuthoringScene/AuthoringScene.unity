@@ -180,18 +180,15 @@ MonoBehaviour:
   - 1
   - 1
   - 1
-  seed: 44
-  initialAreas:
-    x: 4
-    y: 2
-    z: 4
-  playerViewRange: 2
+  - 1
+  - 1
+  layerCollection: {fileID: 11400000, guid: bf78fd0d717835f4ebfb0ab97738fcc3, type: 2}
+  seed: 42
+  initialColumnsX: 2
+  initialColumnsZ: 2
+  playerViewRange: 0
   terrainSpawnRange: 2
-  maxChunkSpawnsPerTick: 50
-  blocksPerAreaSide: 16
-  YBounds:
-    x: 0
-    y: 8
+  maxColumnSpawnsPerTick: 8
 --- !u!114 &176225512
 MonoBehaviour:
   m_ObjectHideFlags: 0
