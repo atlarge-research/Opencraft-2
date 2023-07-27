@@ -5,13 +5,16 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
+using Unity.NetCode;
 
 namespace Opencraft.Terrain
 {
     [BurstCompile]
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation | WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(InitializationSystemGroup))]
+#if UNITY_CLIENT
     [UpdateBefore(typeof(TerrainRenderInitSystem))]
+#endif
     // Calculates terrain neighbors and sets up links between them for easy access by terrain modification and meshing systems
     public partial class TerrainNeighborSystem : SystemBase
     {
@@ -49,10 +52,6 @@ namespace Opencraft.Terrain
                 terrainAreaEntities = terrainAreaEntities,
                 terrainNeighborsLookup = _terrainNeighborsLookup
             }.ScheduleParallel();
-            //handle.Complete();
-            
-            //terrainAreas.Dispose();
-            //terrainAreaEntities.Dispose();
 
         }
     }

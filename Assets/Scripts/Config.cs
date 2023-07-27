@@ -8,7 +8,7 @@ namespace Opencraft
         public const int AREA_POW = 4;
         
         //! How many terrain areas from world bottom to world top
-        public const int AREA_COLUMN_HEIGHT = 8;
+        public const int AREA_COLUMN_HEIGHT = 4;
         public const int HALF_AREA_COLUMN_HEIGHT = 4;
         
         #region DO NOT CHANGE THESE!

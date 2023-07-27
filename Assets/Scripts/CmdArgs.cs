@@ -21,12 +21,6 @@ namespace Opencraft
         }
 
         private static StreamingRole DefaultStreamingRole = StreamingRole.Disabled;
-#else
-        // All clients are assumed hosts, a command line argument is necessary to start as a streaming Guest
-        private const StreamingRole DefaultStreamingRole = StreamingRole.Host;
-    
-#endif
-#if UNITY_EDITOR
         public static StreamingRole ClientStreamingRole
         {
             get
@@ -40,8 +34,11 @@ namespace Opencraft
             set => DefaultStreamingRole = value;
         }
 #else
+        // All clients are assumed hosts, a command line argument is necessary to start as a streaming Guest
+        private const StreamingRole DefaultStreamingRole = StreamingRole.Host;
         public static StreamingRole ClientStreamingRole { get; set; } = DefaultStreamingRole;
 #endif
+
         public static bool DebugEnabled =  false;
         public static bool EmulationEnabled =  false;
         public static EmulationType emulationType = EmulationType.None;

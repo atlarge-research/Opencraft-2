@@ -112,7 +112,7 @@ namespace Opencraft.Terrain.Authoring
                         minHeight = layer.MinHeight,
                         maxHeight= layer.MaxHeight,
                         amplitude = layer.MaxHeight - layer.MinHeight,
-                        chance = layer.Chance
+                        chance = layer.Chance,
                     });
                 }
                 

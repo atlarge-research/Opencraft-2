@@ -35,7 +35,7 @@ namespace Opencraft
                         break;
                 }
             }
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !UNITY_SERVER
             Debug.Log($"Client streaming role is {CmdArgs.ClientStreamingRole} {CmdArgs.getPlayType()}");
 #endif
             // Debug flag, used for rendering outlines 

@@ -15,7 +15,9 @@ namespace Opencraft.Terrain.Utilities
     [BurstCompile]
     public static class TerrainUtilities
     {
+        
         // Draws outline of an area
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void DebugDrawTerrainArea(ref float3 terrainAreaPos, Color color, float duration = 0.0f)
         {
             var d = Env.AREA_SIZE;
@@ -35,6 +37,7 @@ namespace Opencraft.Terrain.Utilities
         }
         
         // Draws outline of a block
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void DebugDrawTerrainBlock(ref float3 terrainBlockPos, Color color, float duration = 0.0f)
         {
             var d = 1;
@@ -54,19 +57,19 @@ namespace Opencraft.Terrain.Utilities
         }
         
         // Converts a continuous world location to a discrete area location
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int3 GetContainingAreaLocation(ref float3 pos)
         {
             int bps = Env.AREA_SIZE;
-            // Terrain Areas are placed in cube grid with intervals of blocksPerAreaSide
-            //Debug.Log($"before{pos}");
+            // Terrain Areas are placed in cube grid
             return new int3(
                 (int) (bps  * math.floor(pos.x / bps )),
                 (int) (bps  * math.floor(pos.y / bps )),
                 (int) (bps  * math.floor(pos.z / bps )));
-            //Debug.Log($"after{pos}");
         }
         
         // Converts world location to block location within an area
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int3 GetBlockLocationInArea(ref float3 blockPos, ref int3 terrainAreaPos)
         {
             return new int3(
@@ -76,6 +79,7 @@ namespace Opencraft.Terrain.Utilities
         }
         
         // Converts a block position in an area to that block's index
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int BlockLocationToIndex(ref int3 blockPos)
         {
             int bps = Env.AREA_SIZE;
@@ -84,13 +88,15 @@ namespace Opencraft.Terrain.Utilities
         }
         
         // Converts a block position in an area to that block's index
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int BlockLocationToIndex(int x, int y, int z)
         {
             int bps = Env.AREA_SIZE;
             int bpl = Env.AREA_SIZE_POW_2;
             return y + x * bps  + z * bpl;
         }
-
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int BlockLocationHash(int x, int y, int z)
         {
             unchecked
@@ -103,12 +109,14 @@ namespace Opencraft.Terrain.Utilities
         }
         
         // Converts a block position in an area to it's column index
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int BlockLocationToColIndex(ref int3 blockPos)
         {
             int bps = Env.AREA_SIZE;
             return blockPos.x  + blockPos.z * bps ;
         }
         
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int BlockLocationToColIndex(int x, int z)
         {
             int bps = Env.AREA_SIZE;
@@ -118,6 +126,7 @@ namespace Opencraft.Terrain.Utilities
 
         [BurstCompile]
         // Given an int3 position and an array of area transforms, return the containing area index if it exists.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool GetTerrainAreaByPosition(ref int3 pos,
             ref NativeArray<LocalTransform> terrainAreaTransforms,
             out int containingAreaIndex)
@@ -140,6 +149,7 @@ namespace Opencraft.Terrain.Utilities
         // Given a float3 position and an array of are transforms, return the containing area
         // entity and the index of the block within it
         // Returns true if the position is in an existing area, and false if no area contains it
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool GetBlockLocationAtPosition(ref float3 pos,
             ref NativeArray<LocalTransform> terrainAreaTransforms,
             out int terrainAreaIndex,
@@ -182,6 +192,7 @@ namespace Opencraft.Terrain.Utilities
         // Given a float3 position and an array of terrain entities, area transforms, and block buffer lookup, return the value of 
         // the block.
         // Returns true if the block exists, and false otherwise
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool GetBlockAtPosition(float3 pos,
             ref NativeArray<Entity> terrainAreasEntities,
             ref NativeArray<LocalTransform> terrainAreaTransforms,

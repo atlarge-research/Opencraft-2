@@ -97,12 +97,15 @@ namespace Opencraft.Terrain.Authoring
     }
     
     [InternalBufferCapacity(32)]
-    // Buffer of terrain area columns we need to spawn but haven't yet
+    // Buffer of terrain area structures we need to spawn but haven't yet
     public struct TerrainStructuresToSpawn : IBufferElementData
     {
-        public int3 localPos;
+        public int3 basePos;
         public StructureType structureType;
-        public int3 extents;
+        public int3 extentsPos;
+        public int3 extentsNeg;
+        public int noise;
+        public int3 offset;
     }
     
     

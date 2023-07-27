@@ -12,6 +12,7 @@ namespace Opencraft.Terrain.Utilities
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [BurstCompile]
+        // Wrapper around FastNoise lib, applies scaling, power operations to noise
         public static float GetNoise(float x, float y, float z, int seed, float scale, int max, float power, float frequency = 0.01f, FastNoise.NoiseType noiseType = FastNoise.NoiseType.Simplex)
         {
             float scaleInv = 1f / scale;
@@ -28,19 +29,16 @@ namespace Opencraft.Terrain.Utilities
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [BurstCompile]
-        public static NoiseInterpolatorSettings GetNoiseInterpolatorSettings(int areaSize, int downsamplingFactor)
+        public static void GetNoiseInterpolatorSettings(ref NoiseInterpolatorSettings nis, int areaSize, int downsamplingFactor)
         {
             int step = downsamplingFactor;
             int size = (areaSize >> step) + 1;
             int size2 = size * size;
-            return new NoiseInterpolatorSettings
-            {
-                size = size,
-                sizePow2 = size2,
-                sizePow2plusSize = size2 + size,
-                step = downsamplingFactor,
-                scale = 1f / (1 << step)
-            };
+            nis.size = size;
+            nis.sizePow2 = size2;
+            nis.sizePow2plusSize = size2 + size;
+            nis.step = downsamplingFactor;
+            nis.scale = 1f / (1 << step);
         } 
         
         public struct NoiseInterpolatorSettings
@@ -185,6 +183,7 @@ namespace Opencraft.Terrain.Utilities
             1579, 1583, 1597, 1601, 1607, 1609, 1613, 1619
         };
         [BurstCompile]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float Random(int h, byte seed)
         {
             int hash = h;
@@ -201,6 +200,7 @@ namespace Opencraft.Terrain.Utilities
             }
         }
         [BurstCompile]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float RandomPrecise(int h, byte seed)
         {
             int hash = h;

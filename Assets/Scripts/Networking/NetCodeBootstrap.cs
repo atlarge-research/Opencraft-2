@@ -66,12 +66,12 @@ namespace Opencraft.Networking
             DefaultWorldInitialization.AddSystemsToRootLevelSystemGroups(world, systems);
 
             ScriptBehaviourUpdateOrder.AppendWorldToCurrentPlayerLoop(world);
-#endif
 
             if (World.DefaultGameObjectInjectionWorld == null)
                 World.DefaultGameObjectInjectionWorld = world;
 
             return world;
+#endif
         }
 
 
