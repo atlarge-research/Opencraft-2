@@ -19,7 +19,7 @@ namespace Opencraft.Player.Emulated
             emulation.emulationType = CmdArgs.emulationType;
             
             // Multiplay guest emulation only supports input playback
-            if (CmdArgs.ClientStreamingRole == CmdArgs.StreamingRole.Guest && emulation.emulationType != EmulationType.InputPlayback)
+            if (CmdArgs.ClientStreamingRole == CmdArgs.StreamingRole.Guest && emulation.emulationType == EmulationType.BehaviourProfile)
             {
                 Debug.LogWarning("Multiplay guest emulation only supports input playback, switching to it.");
                 emulation.emulationType = EmulationType.InputPlayback;

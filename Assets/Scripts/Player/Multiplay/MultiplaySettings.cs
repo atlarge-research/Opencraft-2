@@ -14,8 +14,8 @@ namespace Opencraft.Player.Multiplay
     // Multiplay settings class, has the default values
     public class MultiplaySettings
     {
-        public const int DefaultStreamWidth = 1280;
-        public const int DefaultStreamHeight = 720;
+        public const int DefaultStreamWidth = 1920;
+        public const int DefaultStreamHeight = 1080;
 
         private bool useDefaultSettings = true;
         private SignalingType signalingType = SignalingType.WebSocket;
@@ -136,7 +136,27 @@ namespace Opencraft.Player.Multiplay
         public void Initialize()
         {
             if (m_settings == null)
+            {
                 m_settings = new MultiplaySettings();
+                var codecs = VideoStreamReceiver.GetAvailableCodecs();
+                bool h264NotFound = true;
+                foreach(var codec in codecs)
+                {
+                    if (codec.name == "H264")
+                    {
+                        H264CodecInfo  h264 = (H264CodecInfo) codec;
+                        if (h264.profile == H264Profile.High)
+                        {
+                            m_settings.ReceiverVideoCodec = codec;
+                            m_settings.SenderVideoCodec = codec;
+                            h264NotFound = false;
+                            break;
+                        }
+                    }
+                }
+                if(h264NotFound)
+                    Debug.LogWarning($"Could not find H264.High as streaming codec!");
+            }
         }
     }
 }

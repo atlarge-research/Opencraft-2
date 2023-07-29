@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Opencraft.Player.Multiplay.MultiplayStats;
 using Unity.RenderStreaming;
 using UnityEngine;
 using UnityEngine.UI;
@@ -18,6 +19,7 @@ namespace Opencraft.Player.Multiplay
         public GameObject guestPrefab;
         public GameObject playerPrefab;
         public RawImage videoImage;
+        public StatsUI statsUI;
         public GameObject defaultCamera;
 
         private List<string> connectionIds = new List<string>();
@@ -142,6 +144,7 @@ namespace Opencraft.Player.Multiplay
                 renderStreaming.useDefaultSettings = settings.UseDefaultSettings;
             if (settings?.SignalingSettings != null)
                 renderStreaming.SetSignalingSettings(settings.SignalingSettings);
+            statsUI.AddSignalingHandler(this);
             renderStreaming.Run(handlers: new SignalingHandlerBase[] { this });
         }
 
@@ -155,6 +158,7 @@ namespace Opencraft.Player.Multiplay
             var connectionId = Guid.NewGuid().ToString("N");
             var guestPlayer = Instantiate(guestPrefab);
             var handler = guestPlayer.GetComponent<SingleConnection>();
+            statsUI.AddSignalingHandler(handler);
             
             if (settings != null)
                 renderStreaming.useDefaultSettings = settings.UseDefaultSettings;

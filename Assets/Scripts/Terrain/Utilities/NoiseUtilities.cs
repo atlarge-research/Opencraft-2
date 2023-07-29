@@ -144,7 +144,7 @@ namespace Opencraft.Terrain.Utilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int FastFloor(float val)
         {
-            return (val > 0) ? (int)val : (int)val - 1;
+            return (val >= 0) ? (int)val : (int)val - 1;
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

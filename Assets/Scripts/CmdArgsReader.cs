@@ -53,12 +53,15 @@ namespace Opencraft
                     case "playback":
                         CmdArgs.emulationType = EmulationType.InputPlayback;
                         break;
+                    case "recording":
                     case "record":
                         CmdArgs.emulationType = EmulationType.RecordInput;
                         break;
                     case "behaviour":
-                    default:
                         CmdArgs.emulationType = EmulationType.BehaviourProfile;
+                        break;
+                    default:
+                        CmdArgs.emulationType = EmulationType.None;
                         break;
                 }
             }

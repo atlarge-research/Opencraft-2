@@ -16,5 +16,4 @@ MonoBehaviour:
     ExcludedBakingSystemAssemblies: []
   AdditionalScriptingDefines:
   - FRONTEND_PLAYER_BUILD
-  - NETCODE_DEBUG
   ClientTarget: 0

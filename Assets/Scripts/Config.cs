@@ -12,7 +12,8 @@ namespace Opencraft
         public const int HALF_AREA_COLUMN_HEIGHT = 4;
         
         #region DO NOT CHANGE THESE!
-        
+
+        public const float CAMERA_Y_OFFSET = 0.5f;
         
         public const int AREA_POW_2 = AREA_POW << 1;
         public const int AREA_MASK = (1 << AREA_POW_2) - 1;

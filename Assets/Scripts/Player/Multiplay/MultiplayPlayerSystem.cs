@@ -27,6 +27,7 @@ namespace Opencraft.Player.Multiplay
                 .WithAllRW<Authoring.Player>()
                 .WithAll<NewPlayer>()
                 .Build(this);
+            RequireForUpdate<PlayerSpawner>();
         }
         protected override void OnUpdate()
         {
@@ -36,7 +37,7 @@ namespace Opencraft.Player.Multiplay
             var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
             NativeArray<Authoring.Player> playerData = playerQuery.ToComponentDataArray<Authoring.Player>(Allocator.Temp);
             NativeArray<Entity> newPlayerEntities = playerQuery.ToEntityArray(Allocator.Temp);
-
+            var playerSpawner = SystemAPI.GetSingleton<PlayerSpawner>();
             foreach (var (connID, playerObj) in multiplay.connectionPlayerObjects)
             {
                 var playerController = playerObj.GetComponent<MultiplayPlayerController>();
@@ -72,6 +73,8 @@ namespace Opencraft.Player.Multiplay
                                 multiplayConnectionID = builder.CreateBlobAssetReference<BlobString>(Allocator.Persistent)
                             });
                             builder.Dispose();
+                            // Create a new block outline entity. Used by the HighlightSelectedBlockSystem on clients
+                            commandBuffer.Instantiate(playerSpawner.BlockOutline);
                             commandBuffer.SetComponentEnabled<NewPlayer>(playerEntity, false);
                             // Color the player red since it is locally controlled
                             commandBuffer.SetComponent(playerEntity,

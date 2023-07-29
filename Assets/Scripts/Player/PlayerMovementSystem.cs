@@ -24,21 +24,24 @@ namespace Opencraft.Player
     // Adapted from https://github.com/Unity-Technologies/EntityComponentSystemSamples/blob/master/NetcodeSamples/Assets/Samples/HelloNetcode/2_Intermediate/01_CharacterController/CharacterControllerSystem.cs
     partial struct PlayerMovementSystem : ISystem
     {
-        const float k_DefaultTau = 0.4f;
-        const float k_DefaultDamping = 0.9f;
-        const float k_DefaultSkinWidth = 0f;
-        const float k_DefaultContactTolerance = 0.1f;
-        const float k_DefaultMaxSlope = 60f;
-        const float k_DefaultMaxMovementSpeed = 10f;
-        const int k_DefaultMaxIterations = 10;
-        const float k_DefaultMass = 1f;
+        const float  gravity = 9.82f;
+        const float  jumpspeed = 5;
+        const float  speed = 5;
 
         private ProfilerMarker m_MarkerGroundCheck;
         private ProfilerMarker m_MarkerStep;
 
         private BufferLookup<TerrainBlocks> _terrainBlockLookup;
+        private ComponentLookup<TerrainNeighbors> _terrainNeighborLookup;
         private NativeArray<Entity> terrainAreasEntities;
-        private NativeArray<LocalTransform> terrainAreaTransforms;
+        //private NativeArray<LocalTransform> terrainAreaTransforms;
+        private NativeArray<TerrainArea> terrainAreas;
+        private NativeHashSet<float3> _playerSupportOffsets;
+        private NativeHashSet<float3> _playerCollisionOffsets;
+        
+        // Reusable block search input/output structs
+        private TerrainUtilities.BlockSearchInput BSI;
+        private TerrainUtilities.BlockSearchOutput BSO;
 
         public void OnCreate(ref SystemState state)
         {
@@ -50,6 +53,31 @@ namespace Opencraft.Player
             m_MarkerGroundCheck = new ProfilerMarker("GroundCheck");
             m_MarkerStep = new ProfilerMarker("CollisionStep");
             _terrainBlockLookup = state.GetBufferLookup<TerrainBlocks>(true);
+            _terrainNeighborLookup = state.GetComponentLookup<TerrainNeighbors>(true);
+            float d = 0.25f;
+            _playerSupportOffsets = new NativeHashSet<float3>(4, Allocator.Persistent);
+            _playerSupportOffsets .Add(new float3(d,-1.1f,d));
+            _playerSupportOffsets .Add(new float3(d,-1.1f,-d));
+            _playerSupportOffsets .Add(new float3(-d,-1.1f,-d));
+            _playerSupportOffsets .Add(new float3(-d,-1.1f,d));
+            _playerCollisionOffsets= new NativeHashSet<float3>(8, Allocator.Persistent);
+            _playerCollisionOffsets.Add(new float3(d,0f,d));
+            _playerCollisionOffsets.Add(new float3(d,0f,-d));
+            _playerCollisionOffsets.Add(new float3(-d,0f,-d));
+            _playerCollisionOffsets.Add(new float3(-d,0f,d));
+            _playerCollisionOffsets.Add(new float3(d,-1.0f,d));
+            _playerCollisionOffsets.Add(new float3(d,-1.0f,-d));
+            _playerCollisionOffsets.Add(new float3(-d,-1.0f,-d));
+            _playerCollisionOffsets.Add(new float3(-d,-1.0f,d));
+            
+            TerrainUtilities.BlockSearchInput.DefaultBlockSearchInput(ref BSI);
+            TerrainUtilities.BlockSearchOutput.DefaultBlockSearchOutput(ref BSO);
+        }
+
+        public void OnDestroy(ref SystemState state)
+        {
+            _playerSupportOffsets.Dispose();
+            _playerCollisionOffsets.Dispose();
         }
 
         [BurstCompile]
@@ -65,9 +93,11 @@ namespace Opencraft.Player
             var networkTime = SystemAPI.GetSingleton<NetworkTime>();
 
             _terrainBlockLookup.Update(ref state);
+            _terrainNeighborLookup.Update(ref state);
             var terrainAreasQuery = SystemAPI.QueryBuilder().WithAll<TerrainArea, LocalTransform>().Build();
             terrainAreasEntities = terrainAreasQuery.ToEntityArray(state.WorldUpdateAllocator);
-            terrainAreaTransforms = terrainAreasQuery.ToComponentDataArray<LocalTransform>(state.WorldUpdateAllocator);
+            terrainAreas = terrainAreasQuery.ToComponentDataArray<TerrainArea>(state.WorldUpdateAllocator);
+            //terrainAreaTransforms = terrainAreasQuery.ToComponentDataArray<LocalTransform>(state.WorldUpdateAllocator);
 
             foreach (var player in SystemAPI.Query<PlayerAspect>().WithAll<Simulate>())
             {
@@ -76,29 +106,6 @@ namespace Opencraft.Player
                     player.Velocity.Linear = float3.zero;
                     return;
                 }
-
-                //var playerConfig = SystemAPI.GetComponent<PlayerConfig>(player.Player.PlayerConfig);
-                //var playerCollider = SystemAPI.GetComponent<PhysicsCollider>(player.Player.PlayerConfig);
-                var gravity = 9.82f;
-                var jumpspeed = 5;
-                var speed = 5;
-                // Character step input
-                PlayerUtilities.PlayerStepInput stepInput = new PlayerUtilities.PlayerStepInput
-                {
-                    PhysicsWorldSingleton = physicsWorldSingleton,
-                    DeltaTime = SystemAPI.Time.DeltaTime,
-                    Up = new float3(0, 1, 0),
-                    Gravity = new float3(0, -gravity, 0),
-                    MaxIterations = k_DefaultMaxIterations,
-                    Tau = k_DefaultTau,
-                    Damping = k_DefaultDamping,
-                    SkinWidth = k_DefaultSkinWidth,
-                    ContactTolerance = k_DefaultContactTolerance,
-                    MaxSlope = math.radians(k_DefaultMaxSlope),
-                    RigidBodyIndex = physicsWorldSingleton.PhysicsWorld.GetRigidBodyIndex(player.Self),
-                    CurrentVelocity = player.Player.Velocity,
-                    MaxMovementSpeed = k_DefaultMaxMovementSpeed
-                };
 
                 //Using local position here is fine, because the character controller does not have any parent.
                 //Using the Position is wrong because it is not up to date. (the LocalTransform is synchronized but
@@ -109,17 +116,24 @@ namespace Opencraft.Player
                     rot = quaternion.identity
                 };
 
+
                 m_MarkerGroundCheck.Begin();
                 // Check the terrain areas underneath the player
-                PlayerUtilities.PlayerSupportState supportState = CheckPlayerSupported(ccTransform);
-                /*PlayerUtilities.CheckSupport(
-                    in physicsWorldSingleton,
-                    ref playerCollider,
-                    stepInput,
-                    ccTransform,
-                    out PlayerUtilities.PlayerSupportState supportState,
-                    out _,
-                    out _);*/
+                int containingAreaIndex = GetPlayerContainingArea(ref player.Player, ccTransform, out int3 containingAreaLoc);
+                PlayerUtilities.PlayerSupportState supportState = PlayerUtilities.PlayerSupportState.Unsupported;
+                if (containingAreaIndex != -1)
+                {
+                    player.Player.ContainingArea = terrainAreasEntities[containingAreaIndex];
+                    player.Player.ContainingAreaLocation = containingAreaLoc;
+                    supportState =
+                        CheckPlayerSupported(ref player.Player, containingAreaLoc, ccTransform);
+                }
+                else
+                {
+                    player.Player.ContainingArea = Entity.Null;
+                    player.Player.ContainingAreaLocation = new int3(-1);
+                }
+
                 m_MarkerGroundCheck.End();
 
                 float2 input = player.Input.Movement;
@@ -130,12 +144,12 @@ namespace Opencraft.Player
 
                 float3 wantedVelocity = wantedMove / SystemAPI.Time.DeltaTime;
                 wantedVelocity.y = player.Player.Velocity.y;
-
+                player.Player.Velocity = wantedVelocity;
+                
                 if (supportState == PlayerUtilities.PlayerSupportState.Supported)
                 {
                     player.Player.JumpStart = NetworkTick.Invalid;
                     player.Player.OnGround = 1;
-                    player.Player.Velocity = wantedVelocity;
                     // Allow jump and stop falling when grounded
                     if (player.Input.Jump.IsSet)
                     {
@@ -155,7 +169,7 @@ namespace Opencraft.Player
                 m_MarkerStep.Begin();
                 // Ok because affect bodies is false so no impulses are written
                 // todo add collision distance integration
-                MovePlayerCheckCollisions(stepInput, ref ccTransform, ref player.Player.Velocity);
+                MovePlayerCheckCollisions(SystemAPI.Time.DeltaTime, ref ccTransform, ref player.Player, containingAreaLoc);
                 //NativeStream.Writer deferredImpulseWriter = default;
                 //PlayerUtilities.CollideAndIntegrate(stepInput, k_DefaultMass, false, ref playerCollider, ref ccTransform, ref player.Player.Velocity, ref deferredImpulseWriter);
                 m_MarkerStep.End();
@@ -176,96 +190,91 @@ namespace Opencraft.Player
         {
             return physicsWorldSingleton.PhysicsWorld.Bodies is { IsCreated: true, Length: > 0 };
         }
+        
+        [BurstCompile]
+        // Checks if the blocks under a player exist in the terrain
+        private int GetPlayerContainingArea(ref Authoring.Player player, RigidTransform transform, out int3 containingAreaLoc)
+        {
+            var playerAreaLoc = TerrainUtilities.GetContainingAreaLocation(ref transform.pos);
+            
+            if (!TerrainUtilities.GetTerrainAreaByPosition(ref playerAreaLoc, in terrainAreas, out int containingAreaIndex))
+            {
+                //Debug.LogWarning($"Player {player.Username} at {transform.pos} corresponding to {playerAreaLoc} not contained in an area!");
+                containingAreaLoc = new int3(-1);
+                return -1;
+            }
+
+            containingAreaLoc = playerAreaLoc;
+            return containingAreaIndex;
+            
+        }
 
         [BurstCompile]
         // Checks if the blocks under a player exist in the terrain
-        private PlayerUtilities.PlayerSupportState CheckPlayerSupported(RigidTransform transform)
+        private PlayerUtilities.PlayerSupportState CheckPlayerSupported(ref Authoring.Player player, int3 containingAreaLoc, RigidTransform transform)
         {
+            // Setup search inputs
+            TerrainUtilities.BlockSearchInput.DefaultBlockSearchInput(ref BSI);
+            BSI.basePos = transform.pos;
+            BSI.areaEntity = player.ContainingArea;
+            BSI.terrainAreaPos = containingAreaLoc;
             // Check corners under player
-            float offset = 0.5f;
-            NativeHashSet<float3> set = new NativeHashSet<float3>(4, Allocator.Temp);
-            set.Add(new float3(
-                transform.pos.x + offset,
-                transform.pos.y - 1.1f,
-                transform.pos.z + offset));
-            set.Add(new float3(
-                transform.pos.x + offset,
-                transform.pos.y - 1.1f,
-                transform.pos.z - offset));
-            set.Add(new float3(
-                transform.pos.x - offset,
-                transform.pos.y - 1.1f,
-                transform.pos.z - offset));
-            set.Add(new float3(
-                transform.pos.x - offset,
-                transform.pos.y - 1.1f,
-                transform.pos.z + offset));
-            
-            foreach (var pos in set)
+            foreach (var offset in _playerSupportOffsets)
             {
-                if (TerrainUtilities.GetBlockAtPosition(pos,
-                        ref terrainAreasEntities,
-                        ref terrainAreaTransforms,
-                        ref _terrainBlockLookup,
-                        out BlockType _))
+                TerrainUtilities.BlockSearchOutput.DefaultBlockSearchOutput(ref BSO);
+                BSI.offset = offset;
+                
+                if (TerrainUtilities.GetBlockAtPositionByOffset(in BSI, ref BSO,
+                        ref _terrainNeighborLookup, ref _terrainBlockLookup))
                 {
-                    return PlayerUtilities.PlayerSupportState.Supported;
+                    if(BSO.blockType != BlockType.Air)
+                        return PlayerUtilities.PlayerSupportState.Supported;
                 }
 
-               
-                
             }
-
             return PlayerUtilities.PlayerSupportState.Unsupported;
+
         }
 
 
         [BurstCompile]
         // Checks if there are blocks in the way of the player's movement
-        private void MovePlayerCheckCollisions(PlayerUtilities.PlayerStepInput stepInput, ref RigidTransform transform,
-            ref float3 linearVelocity)
+        private void MovePlayerCheckCollisions(float deltaTime, ref RigidTransform transform,
+            ref Authoring.Player player, int3 containingAreaLoc)
         {
-            float deltaTime = stepInput.DeltaTime;
-            float3 newPosition = transform.pos + deltaTime * linearVelocity;
+            float3 newPosition = transform.pos + deltaTime * player.Velocity;
+            // Setup search inputs
+            TerrainUtilities.BlockSearchInput.DefaultBlockSearchInput(ref BSI);
+            BSI.basePos = newPosition;
+            BSI.areaEntity = player.ContainingArea;
+            BSI.terrainAreaPos = containingAreaLoc;
 
+            if (player.ContainingArea == Entity.Null)
+            {
+                transform.pos = newPosition;
+                return;
+            }
+            
+            foreach (var offset in _playerCollisionOffsets)
+            {
+                TerrainUtilities.BlockSearchOutput.DefaultBlockSearchOutput(ref BSO);
+                BSI.offset = offset;
 
-            float3 newVelocity = linearVelocity;
-            float3 norm = math.normalize(linearVelocity);
-
-            float offset = 0.5f;
-            NativeHashSet<float3> set = new NativeHashSet<float3>(4, Allocator.Temp);
-            set.Add(new float3(
-                newPosition.x + offset,
-                newPosition.y - 1.0f,
-                newPosition.z + offset));
-            set.Add(new float3(
-                newPosition.x + offset,
-                newPosition.y - 1.0f,
-                newPosition.z - offset));
-            set.Add(new float3(
-                newPosition.x - offset,
-                newPosition.y - 1.0f,
-                newPosition.z - offset));
-            set.Add(new float3(
-                newPosition.x - offset,
-                newPosition.y - 1.0f,
-                newPosition.z + offset));
-
-            foreach (var pos in set)
-                if (TerrainUtilities.GetBlockAtPosition(pos,
-                        ref terrainAreasEntities,
-                        ref terrainAreaTransforms,
-                        ref _terrainBlockLookup,
-                        out BlockType _))
+                if (TerrainUtilities.GetBlockAtPositionByOffset(in BSI, ref BSO,
+                        ref _terrainNeighborLookup, ref _terrainBlockLookup))
                 {
-                    linearVelocity = new float3(0, 0, 0);
-                    return;
+                    if (BSO.blockType != BlockType.Air)
+                    {
+                        newPosition = transform.pos + deltaTime * new float3(0, player.Velocity.y, 0);
+                        transform.pos = newPosition;
+                        return;
+                    }
                 }
 
-
+            }
+            
             transform.pos = newPosition;
-            linearVelocity = newVelocity;
-
+            
         }
     }
 }

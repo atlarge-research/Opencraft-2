@@ -14,9 +14,7 @@ namespace Opencraft.Player
     [UpdateInGroup(typeof(GhostInputSystemGroup))]
     public partial struct SamplePlayerInput : ISystem
     {
-
-        private static float3 _cameraOffset = new(0, 2, -5);
-
+        private static float3 _cameraOffset = new float3(0.0f,Env.CAMERA_Y_OFFSET,0.0f);
         public void OnUpdate(ref SystemState state)
         {
             Multiplay.Multiplay multiplay = MultiplaySingleton.Instance;
@@ -62,8 +60,8 @@ namespace Opencraft.Player
                 // Sync camera to look
                 playerObj.transform.rotation = math.mul(quaternion.RotateY(input.ValueRO.Yaw),
                     quaternion.RotateX(-input.ValueRO.Pitch));
-                var offset = math.rotate(playerObj.transform.rotation, _cameraOffset);
-                playerObj.transform.position = localToWorld.ValueRO.Position + offset;
+                //var offset = math.rotate(playerObj.transform.rotation, new float3(0)/*_cameraOffset*/);
+                playerObj.transform.position = localToWorld.ValueRO.Position + _cameraOffset;
                 
                 // Action buttons
                 if (playerController.inputPrimaryAction)

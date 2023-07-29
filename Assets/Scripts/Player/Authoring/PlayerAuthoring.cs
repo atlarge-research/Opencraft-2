@@ -17,6 +17,8 @@ namespace Opencraft.Player.Authoring
         public Entity PlayerConfig;
         // Link to containing area
         public Entity ContainingArea;
+        // Link to containing area
+        public int3 ContainingAreaLocation;
         // Movement variables
         [GhostField(Quantization = 1000)] public float3 Velocity;
         [GhostField] public byte OnGround;
@@ -30,9 +32,9 @@ namespace Opencraft.Player.Authoring
     // Neighbor block refers to the block neighbor of the selected block closest to this entity
     public struct SelectedBlock : IComponentData
     {
-        public int terrainAreaIndex;
+        public Entity terrainArea;
         public int3 blockLoc;
-        public int neighborTerrainAreaIndex;
+        public Entity neighborTerrainArea;
         public int3 neighborBlockLoc;
     }
 
@@ -79,7 +81,6 @@ namespace Opencraft.Player.Authoring
     public class PlayerAuthoring : MonoBehaviour
     {
         public PlayerConfigAuthoring playerConfig;
-
         class Baker : Baker<PlayerAuthoring>
         {
             public override void Bake(PlayerAuthoring authoring)
@@ -88,8 +89,7 @@ namespace Opencraft.Player.Authoring
                 AddComponent(entity, new PlayerInput());
                 AddComponent(entity, new Player
                 {
-                    PlayerConfig = GetEntity(authoring.playerConfig.gameObject, TransformUsageFlags.Dynamic)
-                });
+                    PlayerConfig = GetEntity(authoring.playerConfig.gameObject, TransformUsageFlags.Dynamic)});
                 AddComponent(entity, new NewPlayer());
                 AddComponent(entity, new SelectedBlock());
             }

@@ -20,6 +20,7 @@ namespace Opencraft.Player
         private BufferLookup<TerrainColMinY> _terrainColumnMinBufferLookup;
         private BufferLookup<TerrainColMaxY> _terrainColumnMaxBufferLookup;
         private NativeArray<Entity> terrainAreasEntities;
+        private ComponentLookup<TerrainArea> _terrainAreaLookup;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
@@ -31,6 +32,7 @@ namespace Opencraft.Player
             _terrainBlocksBufferLookup = state.GetBufferLookup<TerrainBlocks>(false);
             _terrainColumnMinBufferLookup= state.GetBufferLookup<TerrainColMinY>(false);
             _terrainColumnMaxBufferLookup= state.GetBufferLookup<TerrainColMaxY>(false);
+            _terrainAreaLookup = state.GetComponentLookup<TerrainArea>(isReadOnly: true);
 
         }
 
@@ -41,16 +43,17 @@ namespace Opencraft.Player
             _terrainBlocksBufferLookup.Update(ref state);
             _terrainColumnMinBufferLookup.Update(ref state);
             _terrainColumnMaxBufferLookup.Update(ref state);
+            _terrainAreaLookup.Update(ref state);
             var terrainAreasQuery = SystemAPI.QueryBuilder().WithAll<TerrainArea, LocalTransform>().Build();
             terrainAreasEntities = terrainAreasQuery.ToEntityArray(state.WorldUpdateAllocator);
 
             foreach (var player in SystemAPI.Query<PlayerAspect>().WithAll<Simulate>())
             {
                 // Destroy block action
-                if (player.Input.PrimaryAction.IsSet && player.SelectedBlock.terrainAreaIndex != -1)
+                if (player.Input.PrimaryAction.IsSet && player.SelectedBlock.terrainArea != Entity.Null)
                 {
                     
-                    Entity terrainAreaEntity = terrainAreasEntities[player.SelectedBlock.terrainAreaIndex];
+                    Entity terrainAreaEntity = player.SelectedBlock.terrainArea;
                     if(_terrainBlocksBufferLookup.TryGetBuffer(terrainAreaEntity, out DynamicBuffer<TerrainBlocks> terrainBlocks))
                     {
                         int3 blockLoc = player.SelectedBlock.blockLoc;
@@ -108,9 +111,9 @@ namespace Opencraft.Player
                     
                 }
                 // Place block action, using the neighbor of selected block
-                if (player.Input.SecondaryAction.IsSet && player.SelectedBlock.neighborTerrainAreaIndex != -1)
+                if (player.Input.SecondaryAction.IsSet && player.SelectedBlock.neighborTerrainArea != Entity.Null)
                 {
-                    Entity terrainAreaEntity = terrainAreasEntities[player.SelectedBlock.neighborTerrainAreaIndex];
+                    Entity terrainAreaEntity = player.SelectedBlock.neighborTerrainArea;
                     if(_terrainBlocksBufferLookup.TryGetBuffer(terrainAreaEntity, out DynamicBuffer<TerrainBlocks> terrainBlocks))
                     {
                         int3 blockLoc = player.SelectedBlock.neighborBlockLoc;

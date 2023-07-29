@@ -8,6 +8,7 @@ namespace Opencraft.Player.Authoring
     public struct PlayerSpawner : IComponentData, ISingleton
     {
         public Entity Player;
+        public Entity BlockOutline;
     }
     
     public struct SpawnPlayerRequest : IRpcCommand
@@ -25,6 +26,7 @@ namespace Opencraft.Player.Authoring
     public class PlayerSpawnerAuthoring : MonoBehaviour
     {
         public GameObject Player;
+        public GameObject BlockOutline;
 
 
         class Baker : Baker<PlayerSpawnerAuthoring>
@@ -33,6 +35,7 @@ namespace Opencraft.Player.Authoring
             {
                 PlayerSpawner component = default(PlayerSpawner);
                 component.Player = GetEntity(authoring.Player, TransformUsageFlags.Dynamic);
+                component.BlockOutline = GetEntity(authoring.BlockOutline, TransformUsageFlags.Dynamic);
 
                 var entity = GetEntity(TransformUsageFlags.Dynamic);
                 AddComponent(entity, component);

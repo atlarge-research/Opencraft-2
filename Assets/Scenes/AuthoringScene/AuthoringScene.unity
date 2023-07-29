@@ -430,3 +430,5 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Player: {fileID: 5163976656310040455, guid: 38fc23ac3d47d1547bdbd6f366c8478c, type: 3}
+  BlockOutline: {fileID: 7033343383934113372, guid: 8484361e0b2cbd54f812f3557b632e20,
+    type: 3}

@@ -5,12 +5,12 @@ Shader "Custom/VoxelShader"
         _ColourTextures ("Textures", 2DArray) = "" {}
         [MainColor]   _BaseColor("Base Color", Color) = (1, 1, 1, 1)
 
-        _Cutoff("Alpha Clipping", Range(0.0, 1.0)) = 0.5
+        //_Cutoff("Alpha Clipping", Range(0.0, 1.0)) = 0.5
 
-        _Smoothness("Smoothness", Range(0.0, 1.0)) = 0.5
+        //_Smoothness("Smoothness", Range(0.0, 1.0)) = 0.5
         _SpecColor("Specular Color", Color) = (0.5, 0.5, 0.5, 0.5)
         _SpecGlossMap("Specular Map", 2D) = "white" {}
-        _SmoothnessSource("Smoothness Source", Float) = 0.0
+        //_SmoothnessSource("Smoothness Source", Float) = 0.0
         _SpecularHighlights("Specular Highlights", Float) = 1.0
 
         [HideInInspector] _BumpScale("Scale", Float) = 1.0
@@ -23,7 +23,7 @@ Shader "Custom/VoxelShader"
         _Surface("__surface", Float) = 0.0
         _Blend("__blend", Float) = 0.0
         _Cull("__cull", Float) = 2.0
-        [ToggleUI] _AlphaClip("__clip", Float) = 0.0
+        //[ToggleUI] _AlphaClip("__clip", Float) = 0.0
         [HideInInspector] _SrcBlend("__src", Float) = 1.0
         [HideInInspector] _DstBlend("__dst", Float) = 0.0
         [HideInInspector] _SrcBlendAlpha("__srcA", Float) = 1.0
@@ -240,5 +240,5 @@ Shader "Custom/VoxelShader"
             ENDHLSL
         }
     }
-    //FallBack "Diffuse"
+    FallBack "Diffuse"
 }
