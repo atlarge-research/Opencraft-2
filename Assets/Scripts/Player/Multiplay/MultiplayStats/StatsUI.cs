@@ -83,7 +83,7 @@ namespace Opencraft.Player.Multiplay.MultiplayStats
         private IEnumerator CollectStats()
         {
             // Sampling period
-            var waitSec = new WaitForSeconds(1);
+            var waitSec = new WaitForSeconds(0.5f);
 
             while (true)
             {
@@ -316,7 +316,7 @@ namespace Opencraft.Player.Multiplay.MultiplayStats
                         builder.AppendLine($"Decoder: {inboundStats.decoderImplementation}");
                         builder.AppendLine($"Resolution: {inboundStats.frameWidth}x{inboundStats.frameHeight}");
                         builder.AppendLine($"Framerate: {inboundStats.framesPerSecond}");
-                        
+                        MultiplayStatistics.MultiplayFPS.Value = inboundStats.framesPerSecond;
                     }
 
                     if (lastReport.TryGetValue(inboundStats.Id, out var lastStats) &&
@@ -325,6 +325,7 @@ namespace Opencraft.Player.Multiplay.MultiplayStats
                         var duration = (double)(inboundStats.Timestamp - lastInboundStats.Timestamp) / 1000000;
                         var bitrate = (8 * (inboundStats.bytesReceived - lastInboundStats.bytesReceived) / duration) / 1000;
                         builder.AppendLine($"Bitrate: {bitrate:F2} kbit/sec");
+                        MultiplayStatistics.MultiplayBitRate.Value = bitrate;
                     }
                 }
                 else if (stats is RTCOutboundRTPStreamStats outboundStats)
@@ -381,24 +382,28 @@ namespace Opencraft.Player.Multiplay.MultiplayStats
                     
                     if (rttm> 0)
                     {
+                        double rtt = trtt / rttm;
                         builder.AppendLine(
-                            $"Avg RTT: {trtt/rttm}");
+                            $"Avg RTT: {rtt}");
+                        MultiplayStatistics.MultiplayRoundTripTime.Value = rtt * 1000; // ms
                     }
                     builder.AppendLine(
                         $"Packet Loss: {fl}");
+                    MultiplayStatistics.MultiplayPacketLoss.Value = fl;
                 }
                 else if (stats is RTCRemoteInboundRtpStreamStats remoteInboundStats)
                 {
                     builder.AppendLine($"{remoteInboundStats.kind} receiving remote stream stats");
                     if (remoteInboundStats.roundTripTimeMeasurements > 0)
                     {
-                        builder.AppendLine(
-                            $"Avg RTT: {remoteInboundStats.totalRoundTripTime / remoteInboundStats.roundTripTimeMeasurements}");
+                        double rtt = remoteInboundStats.totalRoundTripTime /
+                                     remoteInboundStats.roundTripTimeMeasurements;
+                        builder.AppendLine($"Avg RTT: {rtt}");
+                        MultiplayStatistics.MultiplayRoundTripTime.Value = rtt * 1000; // ms
                     }
                     builder.AppendLine(
                         $"Packet Loss: {remoteInboundStats.fractionLost}");
-                    //builder.AppendLine($"Resolution: {inboundStats.frameWidth}x{inboundStats.frameHeight}");
-                    //builder.AppendLine($"Framerate: {inboundStats.framesPerSecond}");
+                    MultiplayStatistics.MultiplayPacketLoss.Value = remoteInboundStats.fractionLost;
                 }
             }
 

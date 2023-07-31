@@ -1,9 +1,13 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.InputSystem;
 using System.Linq;
+using Opencraft.Statistics;
 using Unity.Entities;
+using Unity.Profiling;
 using Unity.RenderStreaming;
 using UnityEngine.UI;
+using Random = UnityEngine.Random;
 
 namespace Opencraft.Player.Multiplay
 {
@@ -25,11 +29,23 @@ namespace Opencraft.Player.Multiplay
 
         public Text debugText;
         public Text tooltipText;
+        
+        private ProfilerRecorder _numAreasRecorder;
 
         protected void Awake()
         {
             playerInput.onDeviceChange += OnDeviceChange;
             username = Random.Range(0, 99999);
+        }
+
+        private void OnEnable()
+        {
+            _numAreasRecorder = ProfilerRecorder.StartNew(GameStatistics.GameStatisticsCategory, GameStatistics.NumTerrainAreasClientName);
+        }
+
+        private void OnDestroy()
+        {
+            _numAreasRecorder.Dispose();
         }
 
         void OnDeviceChange(InputDevice device, InputDeviceChange change)
@@ -63,7 +79,7 @@ namespace Opencraft.Player.Multiplay
 
         private void Update()
         {
-            debugText.text = $"NumAreas: {DebugStats.numAreas}\n";
+            debugText.text = $"NumAreas: {_numAreasRecorder.LastValue}\n";
             tooltipText.enabled = !playerEntityRequestSent && !playerEntityExists;
         }
 
