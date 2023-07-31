@@ -22,6 +22,8 @@ namespace Opencraft.Player.Multiplay
         public StatsUI statsUI;
         public GameObject defaultCamera;
 
+        private bool guestConnected = false;
+
         private List<string> connectionIds = new List<string>();
         private List<Component> streams = new List<Component>();
         public HashSet<string> disconnectedIds = new HashSet<string>();
@@ -41,6 +43,10 @@ namespace Opencraft.Player.Multiplay
 
         public override IEnumerable<Component> Streams => streams;
 
+        public bool IsGuestConnected()
+        {
+            return guestConnected;
+        }
 
         // On delete or disconnect, simply mark this connection for destruction. Handle destruction in MultiplayPlayerSystem
         public void OnDeletedConnection(SignalingEventData eventData)
@@ -166,6 +172,7 @@ namespace Opencraft.Player.Multiplay
                 renderStreaming.SetSignalingSettings(settings.SignalingSettings);
             renderStreaming.Run(handlers: new SignalingHandlerBase[] { handler });
             
+            
             // Enable the video output
             videoImage.gameObject.SetActive(true);
             var receiveVideoViewer = guestPlayer.GetComponent<VideoStreamReceiver>();
@@ -176,9 +183,10 @@ namespace Opencraft.Player.Multiplay
             
             //todo hacky wait for the signalling server to connect 
             yield return new WaitForSeconds(1f);
-             
+
             handler.CreateConnection(connectionId);
             yield return new WaitUntil(() => handler.IsConnected(connectionId));
+            guestConnected = true;
         }
     }
 

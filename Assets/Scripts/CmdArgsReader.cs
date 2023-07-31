@@ -66,6 +66,15 @@ namespace Opencraft
                 }
             }
             
+            if (args.TryGetValue("-emulation_file", out string emulationFile))
+            {
+                CmdArgs.EmulationFile = emulationFile;
+            }
+            else
+            {
+                CmdArgs.EmulationFile= Application.persistentDataPath + '\\' +"recordedInputs.inputtrace";
+            }
+            
             // Seed
             if (args.TryGetValue("-seed", out string seed))
             {

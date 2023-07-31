@@ -41,6 +41,7 @@ namespace Opencraft
 
         public static bool DebugEnabled =  false;
         public static bool EmulationEnabled =  false;
+        public static string EmulationFile =  "";
         public static EmulationType emulationType = EmulationType.None;
         public static int seed = -1;
 

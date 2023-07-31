@@ -671,7 +671,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1d8c509f1d3f4dcaab72eb2f27f779b7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  inputFile: recordedInputs.csv
+  filename: recordedInputs.inputtrace
   inputRecorder: {fileID: 955198409}
   emulationType: 2
 --- !u!114 &955198407
@@ -904,7 +904,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8bf58c69bf424fe194d229f05ce07072, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  editorArgs: -streaming_type host -emulation disabled
+  editorArgs: -streaming_type host -emulation none
 --- !u!1 &2101193216
 GameObject:
   m_ObjectHideFlags: 0

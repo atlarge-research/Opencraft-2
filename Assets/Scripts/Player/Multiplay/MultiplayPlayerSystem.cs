@@ -109,14 +109,17 @@ namespace Opencraft.Player.Multiplay
                 var playerController = multiplay.connectionPlayerObjects[connectionId]
                     .GetComponent<MultiplayPlayerController>();
 
-                Debug.Log($"Creating DestroyPlayer RPC for entity {playerController.playerEntity} on {connectionId}");
-                foreach (var (_, entity) in SystemAPI.Query<RefRO<NetworkId>>().WithAll<NetworkStreamInGame>().WithEntityAccess())
+                if (playerController.playerEntityExists)
                 {
-                    var req = commandBuffer.CreateEntity();
-                    DestroyPlayerRequest destroyPlayerRequest = new DestroyPlayerRequest
-                        { Player = playerController.playerEntity };
-                    commandBuffer.AddComponent(req, destroyPlayerRequest);
-                    commandBuffer.AddComponent(req, new SendRpcCommandRequest { TargetConnection = entity });
+                    Debug.Log($"Creating DestroyPlayer RPC for entity {playerController.playerEntity} on {connectionId}");
+                    foreach (var (_, entity) in SystemAPI.Query<RefRO<NetworkId>>().WithAll<NetworkStreamInGame>().WithEntityAccess())
+                    {
+                        var req = commandBuffer.CreateEntity();
+                        DestroyPlayerRequest destroyPlayerRequest = new DestroyPlayerRequest
+                            { Player = playerController.playerEntity };
+                        commandBuffer.AddComponent(req, destroyPlayerRequest);
+                        commandBuffer.AddComponent(req, new SendRpcCommandRequest { TargetConnection = entity });
+                    }
                 }
                 multiplay.DestroyMultiplayConnection(connectionId);
             }

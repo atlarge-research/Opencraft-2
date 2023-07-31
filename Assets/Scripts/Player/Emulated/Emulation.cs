@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using Opencraft.Player.Emulated.InputPlayback;
 using UnityEngine;
 
@@ -6,7 +7,7 @@ namespace Opencraft.Player.Emulated
 {
     public class Emulation : MonoBehaviour
     {
-        public string inputFile = "recordedInputs.inputtrace";
+        public string filename = "recordedInputs.inputtrace";
         public InputRecorder inputRecorder;
         public EmulationType emulationType = EmulationType.None;
         
@@ -19,9 +20,17 @@ namespace Opencraft.Player.Emulated
 
         public void initializePlayback()
         {
-            Debug.Log("Starting input playback!");
-            //inputRecorder.gameObject.SetActive(true);
-            inputRecorder.LoadCaptureFromFile(Application.persistentDataPath + '/' +inputFile);
+            try
+            {
+                inputRecorder.LoadCaptureFromFile(CmdArgs.EmulationFile);
+            }
+            catch (Exception ex)
+            {
+                Debug.Log("Failed to load input playback file with error:");
+                Debug.LogError(ex);
+                return;
+            } 
+            Debug.Log($"Starting input playback from {CmdArgs.EmulationFile}");
             inputRecorder.StartReplay();
         }
         
@@ -36,9 +45,9 @@ namespace Opencraft.Player.Emulated
         {
             if (emulationType == EmulationType.RecordInput)
             {
-                Debug.Log("Saving capture file!");
+                Debug.Log($"Saving capture file to {Application.persistentDataPath + '/' +filename}");
                 inputRecorder.StopCapture();
-                inputRecorder.SaveCaptureToFile(Application.persistentDataPath + '/' + inputFile);
+                inputRecorder.SaveCaptureToFile(Application.persistentDataPath + '/' + filename);
             }
 
             if (emulationType == EmulationType.InputPlayback)
