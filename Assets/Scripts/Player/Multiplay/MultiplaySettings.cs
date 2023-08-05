@@ -7,8 +7,7 @@ namespace Opencraft.Player.Multiplay
     public enum SignalingType
     {
         WebSocket,
-        Http,
-        Furioos
+        Http
     }
 
     // Multiplay settings class, has the default values
@@ -62,14 +61,6 @@ namespace Opencraft.Player.Multiplay
             {
                 switch (signalingType)
                 {
-                    case SignalingType.Furioos:
-                    {
-                        var schema = signalingSecured ? "https" : "http";
-                        return new FurioosSignalingSettings
-                        (
-                            url: $"{schema}://{signalingAddress}"
-                        );
-                    }
                     case SignalingType.WebSocket:
                     {
                         var schema = signalingSecured ? "wss" : "ws";

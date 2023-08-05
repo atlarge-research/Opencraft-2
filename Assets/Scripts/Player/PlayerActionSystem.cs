@@ -21,6 +21,7 @@ namespace Opencraft.Player
         private BufferLookup<TerrainColMaxY> _terrainColumnMaxBufferLookup;
         private NativeArray<Entity> terrainAreasEntities;
         private ComponentLookup<TerrainArea> _terrainAreaLookup;
+        
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)

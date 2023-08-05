@@ -14,17 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   automaticStreaming: 0
   signalingSettings:
-    rid: 4836565036935675904
+    rid: 4584853665536016384
   references:
     version: 2
     RefIds:
-    - rid: 4836565036935675904
+    - rid: 4584853665536016384
       type: {class: WebSocketSignalingSettings, ns: Unity.RenderStreaming, asm: Unity.RenderStreaming}
       data:
         m_url: ws://127.0.0.1:7980
-        m_iceServers:
-        - m_urls:
-          - stun:stun.l.google.com:19302
-          m_username: 
-          m_credentialType: 0
-          m_credential: 
+        m_iceServers: []

@@ -6,6 +6,7 @@ using Opencraft.Statistics;
 using Unity.Entities;
 using Unity.Profiling;
 using Unity.RenderStreaming;
+using Unity.Serialization;
 using UnityEngine.UI;
 using Random = UnityEngine.Random;
 
@@ -15,17 +16,16 @@ namespace Opencraft.Player.Multiplay
     public class MultiplayPlayerController : MonoBehaviour
     {
         [SerializeField] InputReceiver playerInput;
-        public int username;
-
-        public Vector2 inputMovement;
-        public Vector2 inputLook;
-        public bool inputJump;
-        public bool inputStart;
-        public bool inputPrimaryAction;
-        public bool inputSecondaryAction;
-        public bool playerEntityExists;
-        public bool playerEntityRequestSent;
-        public Entity playerEntity;
+        [DontSerialize] public int username;
+        [DontSerialize]public Vector2 inputMovement;
+        [DontSerialize]public Vector2 inputLook;
+        [DontSerialize]public bool inputJump;
+        [DontSerialize]public bool inputStart;
+        [DontSerialize]public bool inputPrimaryAction;
+        [DontSerialize]public bool inputSecondaryAction;
+        [DontSerialize]public bool playerEntityExists;
+        [DontSerialize]public bool playerEntityRequestSent;
+        [DontSerialize]public Entity playerEntity;
 
         public Text debugText;
         public Text tooltipText;
