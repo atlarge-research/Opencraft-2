@@ -57,7 +57,6 @@ namespace Opencraft.Terrain.Authoring
         public Material TerrainMaterial;
         public float[] TerrainMaterialUVSizing= new float[] { 1.0f,1.0f, 1.0f,1.0f, 1.0f,1.0f, 1.0f,1.0f,1.0f,1.0f};
         public LayerCollection layerCollection = null;
-        public int seed = 42;
         public int initialColumnsX = 3;
         public int initialColumnsZ = 3;
         public int playerViewRange = 5;
@@ -74,7 +73,7 @@ namespace Opencraft.Terrain.Authoring
                 {
                     TerrainArea = GetEntity(authoring.TerrainArea, TransformUsageFlags.Dynamic),
                     maxColumnSpawnsPerTick = authoring.maxColumnSpawnsPerTick,
-                    seed = CmdArgs.seed != -1 ? CmdArgs.seed : authoring.seed,
+                    seed = Config.Seed,
                     playerViewRange = authoring.playerViewRange,
                     terrainSpawnRange = authoring.terrainSpawnRange
                 };

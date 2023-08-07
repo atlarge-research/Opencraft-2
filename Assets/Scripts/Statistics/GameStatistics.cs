@@ -1,5 +1,7 @@
 ﻿using Unity.Profiling;
+#if UNITY_EDITOR
 using Unity.Profiling.Editor;
+#endif
 
 namespace Opencraft.Statistics
 {
@@ -15,7 +17,7 @@ namespace Opencraft.Statistics
             new ProfilerCounterValue<int>(GameStatisticsCategory, NumTerrainAreasServerName, ProfilerMarkerDataUnit.Count);
         
     }
-    
+#if UNITY_EDITOR
     [System.Serializable]
     [ProfilerModuleMetadata("Game Statistics")] 
     public class GameProfilerModule : ProfilerModule
@@ -36,4 +38,5 @@ namespace Opencraft.Statistics
         // Pass the auto-enabled category names to the base constructor.
         public GameProfilerModule() : base(k_Counters, autoEnabledCategoryNames: k_AutoEnabledCategoryNames) { }
     }
+#endif
 }

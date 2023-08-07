@@ -16,4 +16,5 @@ MonoBehaviour:
     ExcludedBakingSystemAssemblies: []
   AdditionalScriptingDefines:
   - FRONTEND_PLAYER_BUILD
-  ClientTarget: 0
+  - ' #UNITY_DISABLE_AUTOMATIC_SYSTEM_BOOTSTRAP'
+  ClientTarget: 1

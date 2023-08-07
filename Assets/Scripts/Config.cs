@@ -1,41 +1,37 @@
-﻿using Unity.Mathematics;
+﻿using System.IO;
+using Opencraft.Bootstrap;
+using Opencraft.Player.Emulated;
+using Opencraft.Player.Multiplay;
+using Unity.Logging;
+using Unity.NetCode;
+using UnityEditor;
+using UnityEngine;
 
 namespace Opencraft
 {
-    public static class Env
+    /// <summary>
+    /// Static global class holding configuration parameters. Filled by <see cref="CmdArgsReader"/>
+    /// </summary>
+    public static class Config
     {
-        //! Size of chunk's side
-        public const int AREA_POW = 4;
+        // ================== SIGNALING ==================
+        public static string SignalingUrl;
+        public static bool ConfigFromSignaling;
         
-        //! How many terrain areas from world bottom to world top
-        public const int AREA_COLUMN_HEIGHT = 4;
-        public const int HALF_AREA_COLUMN_HEIGHT = 4;
-        
-        #region DO NOT CHANGE THESE!
+        // ================== APPLICATION ==================
+        public static bool DebugEnabled;
+        public static int Seed;
+        public static GameBootstrap.BootstrapPlayType PlayType;
+        public static string ServerUrl;
+        public static int ServerPort;
 
-        public const float CAMERA_Y_OFFSET = 0.5f;
+        // ================== MULTIPLAY ==================
+        public static MultiplayStreamingRole MultiplayStreamingRole;
         
-        public const int AREA_POW_2 = AREA_POW << 1;
-        public const int AREA_MASK = (1 << AREA_POW_2) - 1;
+        // ================== EMULATION ==================
+        public static EmulationType EmulationType;
+        public static string EmulationFilePath;
+        public static int NumThinClientPlayers;
         
-        public const int AREA_PADDING = 1;
-        public const int AREA_PADDING_2 = AREA_PADDING * 2;
-
-        //! Visible chunk size
-        public const int AREA_SIZE = 1 << AREA_POW;
-        public const int AREA_SIZE_1 = AREA_SIZE - 1;
-        public const int AREA_SIZE_POW_2 = AREA_SIZE * AREA_SIZE;
-        public const int AREA_SIZE_POW_3 = AREA_SIZE * AREA_SIZE_POW_2;
-        public const int AREA_SIZE_SHIFTED = (AREA_SIZE & 255) << 8;
-
-        //! Internal chunk size (visible size + padding)
-        public const int AREA_SIZE_PLUS_PADDING = AREA_SIZE + AREA_PADDING;
-        public const int AREA_SIZE_WITH_PADDING = AREA_SIZE + AREA_PADDING * 2;
-        public const int AREA_SIZE_WITH_PADDING_POW_2 = AREA_SIZE_WITH_PADDING * AREA_SIZE_WITH_PADDING;
-        public const int AREA_SIZE_WITH_PADDING_POW_3 = AREA_SIZE_WITH_PADDING * AREA_SIZE_WITH_PADDING_POW_2;
-        
-        public const int WORLD_HEIGHT = AREA_COLUMN_HEIGHT * AREA_SIZE;
-
-        #endregion
     }
 }

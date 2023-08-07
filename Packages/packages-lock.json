@@ -1,5 +1,13 @@
 {
   "dependencies": {
+    "com.extend.entities": {
+      "version": "file:com.extend.entities",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.entities": "1.0.11"
+      }
+    },
     "com.extend.netcode": {
       "version": "file:com.extend.netcode",
       "depth": 0,

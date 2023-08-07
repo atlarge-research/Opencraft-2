@@ -21,7 +21,7 @@ namespace Opencraft.Rendering
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<TerrainArea>();
-            if (!CmdArgs.DebugEnabled)
+            if (!Config.DebugEnabled)
             {
                 state.Enabled = false;
             }

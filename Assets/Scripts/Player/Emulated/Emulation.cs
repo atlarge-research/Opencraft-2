@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using Opencraft.Player.Emulated.InputPlayback;
+using Unity.Serialization;
 using UnityEngine;
 
 namespace Opencraft.Player.Emulated
@@ -9,7 +10,7 @@ namespace Opencraft.Player.Emulated
     {
         public string filename = "recordedInputs.inputtrace";
         public InputRecorder inputRecorder;
-        public EmulationType emulationType = EmulationType.None;
+        [DontSerialize]public EmulationType emulationType = EmulationType.None;
         
         
         // Behaviour script
@@ -22,7 +23,7 @@ namespace Opencraft.Player.Emulated
         {
             try
             {
-                inputRecorder.LoadCaptureFromFile(CmdArgs.EmulationFile);
+                inputRecorder.LoadCaptureFromFile(Config.EmulationFilePath);
             }
             catch (Exception ex)
             {
@@ -30,7 +31,7 @@ namespace Opencraft.Player.Emulated
                 Debug.LogError(ex);
                 return;
             } 
-            Debug.Log($"Starting input playback from {CmdArgs.EmulationFile}");
+            Debug.Log($"Starting input playback from {Config.EmulationFilePath}");
             inputRecorder.StartReplay();
         }
         

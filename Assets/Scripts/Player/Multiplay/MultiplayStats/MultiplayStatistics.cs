@@ -1,5 +1,8 @@
 ﻿using Unity.Profiling;
+
+#if UNITY_EDITOR
 using Unity.Profiling.Editor;
+#endif
 
 
 // Defines profiler counters for collection and display by profiler module
@@ -26,6 +29,7 @@ namespace Opencraft.Player.Multiplay.MultiplayStats
             new ProfilerCounterValue<double>(MultiplayCategory ,"PacketLoss" , ProfilerMarkerDataUnit.Percent);
     }
     
+#if UNITY_EDITOR
     [System.Serializable]
     [ProfilerModuleMetadata("Multiplay Statistics")] 
     public class MultiplayProfilerModule : ProfilerModule
@@ -48,4 +52,5 @@ namespace Opencraft.Player.Multiplay.MultiplayStats
         // Pass the auto-enabled category names to the base constructor.
         public MultiplayProfilerModule() : base(k_Counters, autoEnabledCategoryNames: k_AutoEnabledCategoryNames) { }
     }
+#endif
 }

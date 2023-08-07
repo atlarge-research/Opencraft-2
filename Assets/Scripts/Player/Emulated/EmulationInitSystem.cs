@@ -28,7 +28,7 @@ namespace Opencraft.Player.Emulated
             if (emulation.IsUnityNull() || multiplay.IsUnityNull())
                 return;
             // Wait for either clientworld to be connected to the server, or for this guest client to be connected
-            if (CmdArgs.ClientStreamingRole == CmdArgs.StreamingRole.Guest)
+            if (Config.MultiplayStreamingRole == MultiplayStreamingRole.Guest)
             {
                 if(!multiplay.IsGuestConnected())
                     return;
@@ -40,11 +40,11 @@ namespace Opencraft.Player.Emulated
             }
             Enabled = false;
 
-            emulation.emulationType = CmdArgs.emulationType;
+            emulation.emulationType = Config.EmulationType;
             Debug.Log($"Emulation type is {emulation.emulationType}");
             
             // Multiplay guest emulation only supports input playback
-            if (CmdArgs.ClientStreamingRole == CmdArgs.StreamingRole.Guest && emulation.emulationType == EmulationType.BehaviourProfile)
+            if (Config.MultiplayStreamingRole == MultiplayStreamingRole.Guest && emulation.emulationType == EmulationType.BehaviourProfile)
             {
                 Debug.LogWarning("Multiplay guest emulation only supports input playback, switching to it.");
                 emulation.emulationType = EmulationType.InputPlayback;
