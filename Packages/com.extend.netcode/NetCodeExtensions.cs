@@ -11,9 +11,72 @@ namespace Unity.NetCode
     /// </summary>
     public static class BootstrappingConfig
     {
+        public static ICustomBootstrap BootStrapClass; // Reference to the ICustomBootstrap
         public static ushort ServerPort = 7979;
         public static NetworkEndpoint ClientConnectAddress = NetworkEndpoint.LoopbackIpv4.WithPort(ServerPort);
         public static NetworkEndpoint ServerListenAddress = NetworkEndpoint.AnyIpv4.WithPort(ServerPort);
+        public static ushort DeploymentPort = 7980;
+        public static NetworkEndpoint DeploymentClientConnectAddress = NetworkEndpoint.LoopbackIpv4.WithPort(ServerPort);
+        public static NetworkEndpoint DeploymentServerListenAddress = NetworkEndpoint.AnyIpv4.WithPort(ServerPort);
+    }
+    
+    /// <summary>
+    /// Specify additional traits a <see cref="World"/> can have.
+    /// </summary>
+    [Flags]
+    public enum WorldFlagsExtension : int
+    {
+        /// <summary>
+        /// Deployment worlds <see cref="World"/> for remote configuration
+        /// </summary>
+        DeploymentClient = 1 << 11 | WorldFlags.GameClient,
+        DeploymentServer = 1 << 12 | WorldFlags.GameServer,
+    }
+    
+    /// <summary>
+    /// Netcode specific extension methods for deployment worlds.
+    /// </summary>
+    public static class DeploymentWorldExtensions
+    {
+        /// <summary>
+        /// Check if a world is a deployment server.
+        /// </summary>
+        /// <param name="world">A <see cref="World"/> instance</param>
+        /// <returns></returns>
+        public static bool IsDeploymentServer(this World world)
+        {
+            return ((WorldFlagsExtension)world.Flags & WorldFlagsExtension.DeploymentServer) == WorldFlagsExtension.DeploymentServer;
+        }
+        
+        /// <summary>
+        /// Check if an unmanaged world is a deployment server.
+        /// </summary>
+        /// <param name="world">A <see cref="WorldUnmanaged"/> instance</param>
+        /// <returns></returns>
+        public static bool IsDeploymentServer(this WorldUnmanaged world)
+        {
+            return ((WorldFlagsExtension)world.Flags & WorldFlagsExtension.DeploymentServer) == WorldFlagsExtension.DeploymentServer;
+        }
+        
+        /// <summary>
+        /// Check if a world is a deployment server.
+        /// </summary>
+        /// <param name="world">A <see cref="World"/> instance</param>
+        /// <returns></returns>
+        public static bool IsDeploymentClient(this World world)
+        {
+            return ((WorldFlagsExtension)world.Flags & WorldFlagsExtension.DeploymentClient) == WorldFlagsExtension.DeploymentClient;
+        }
+        
+        /// <summary>
+        /// Check if an unmanaged world is a deployment server.
+        /// </summary>
+        /// <param name="world">A <see cref="WorldUnmanaged"/> instance</param>
+        /// <returns></returns>
+        public static bool IsDeploymentClient(this WorldUnmanaged world)
+        {
+            return ((WorldFlagsExtension)world.Flags & WorldFlagsExtension.DeploymentClient) == WorldFlagsExtension.DeploymentClient;
+        }
     }
 
     /// <summary>
@@ -21,12 +84,12 @@ namespace Unity.NetCode
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
     [CreateAfter(typeof(NetworkStreamReceiveSystem))]
-    internal partial struct CustomConfigureServerWorldSystem : ISystem
+    public partial struct CustomConfigureServerWorldSystem : ISystem
     {
         public void OnCreate(ref SystemState state)
         {
-            if (!state.World.IsServer())
-                throw new InvalidOperationException("Server worlds must be created with the WorldFlags.GameServer flag");
+            if (!state.World.IsServer() && !state.World.IsDeploymentServer() )
+                throw new InvalidOperationException("Server worlds must be created with the WorldFlags.GameServer or WorldFlagsExtension.DeploymentServer flag");
             var simulationGroup = state.World.GetExistingSystemManaged<SimulationSystemGroup>();
             simulationGroup.SetRateManagerCreateAllocator(new NetcodeServerRateManager(simulationGroup));
 
@@ -37,7 +100,14 @@ namespace Unity.NetCode
             ++ClientServerBootstrap.WorldCounts.Data.serverWorlds;
             
             // Call Listen on the server
-            SystemAPI.GetSingletonRW<NetworkStreamDriver>().ValueRW.Listen(BootstrappingConfig.ServerListenAddress);
+            
+            NetworkEndpoint endpoint;
+            if (state.World.IsDeploymentServer())
+                endpoint = BootstrappingConfig.DeploymentServerListenAddress;
+            else
+                endpoint = BootstrappingConfig.ServerListenAddress;
+            SystemAPI.GetSingletonRW<NetworkStreamDriver>().ValueRW.Listen(endpoint);
+            Debug.Log($"Calling Listen on server at {endpoint}");   
             
             state.Enabled = false;
         }
@@ -52,12 +122,12 @@ namespace Unity.NetCode
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [CreateAfter(typeof(NetworkStreamReceiveSystem))]
-    internal partial struct CustomConfigureClientWorldSystem : ISystem
+    public partial struct CustomConfigureClientWorldSystem : ISystem
     {
         public void OnCreate(ref SystemState state)
         {
-            if (!state.World.IsClient() && !state.World.IsThinClient())
-                throw new InvalidOperationException("Client worlds must be created with the WorldFlags.GameClient flag");
+            if (!state.World.IsClient() && !state.World.IsThinClient() && !state.World.IsDeploymentClient())
+                throw new InvalidOperationException("Client worlds must be created with the WorldFlags.GameClient or WorldFlagsExtension.DeploymentClient flag");
             var simulationGroup = state.World.GetExistingSystemManaged<SimulationSystemGroup>();
             simulationGroup.RateManager = new NetcodeClientRateManager(simulationGroup);
 
@@ -67,7 +137,13 @@ namespace Unity.NetCode
             ++ClientServerBootstrap.WorldCounts.Data.clientWorlds;
             
             // Call connect on client
-            SystemAPI.GetSingletonRW<NetworkStreamDriver>().ValueRW.Connect(state.EntityManager, BootstrappingConfig.ClientConnectAddress);
+            NetworkEndpoint endpoint;
+            if (state.World.IsDeploymentClient())
+                endpoint = BootstrappingConfig.DeploymentClientConnectAddress;
+            else
+                endpoint = BootstrappingConfig.ClientConnectAddress;
+            SystemAPI.GetSingletonRW<NetworkStreamDriver>().ValueRW.Connect(state.EntityManager, endpoint);
+            Debug.Log($"Calling connect on new client at {endpoint}");    
             
             state.Enabled = false;
         }
@@ -83,7 +159,7 @@ namespace Unity.NetCode
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ThinClientSimulation)]
     [CreateAfter(typeof(NetworkStreamReceiveSystem))]
-    internal partial struct CustomConfigureThinClientWorldSystem : ISystem
+    public partial struct CustomConfigureThinClientWorldSystem : ISystem
     {
         public void OnCreate(ref SystemState state)
         {
@@ -94,6 +170,7 @@ namespace Unity.NetCode
 
             ++ClientServerBootstrap.WorldCounts.Data.clientWorlds;
             // Call connect on thin client
+            Debug.Log($"Calling connect on thin client at {BootstrappingConfig.ClientConnectAddress}");
             SystemAPI.GetSingletonRW<NetworkStreamDriver>().ValueRW.Connect(state.EntityManager, BootstrappingConfig.ClientConnectAddress);
 
             state.Enabled = false;

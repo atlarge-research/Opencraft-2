@@ -1,49 +1,128 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using Opencraft.Deployment;
 using Opencraft.Networking;
 using Opencraft.Player.Emulated;
 using Opencraft.Player.Multiplay;
-using Unity.Burst;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.NetCode;
 using Unity.Networking.Transport;
+using Unity.Scenes;
 using UnityEngine;
-using WebSocketSharp;
-
 
 
 namespace Opencraft.Bootstrap
 {
-    // Reads configuration locally or from remote and sets ups worlds accordingly
+    /// <summary>
+    /// Reads configuration locally or from remote and sets ups deployment or game worlds accordingly
+    /// </summary>
     [UnityEngine.Scripting.Preserve]
     public class GameBootstrap : ICustomBootstrap
     {
 
         public bool Initialize(string defaultWorldName)
         {
+            // Get the global command line reader class
             CmdArgsReader cmdArgsReader = (CmdArgsReader)GameObject.FindFirstObjectByType(typeof(CmdArgsReader));
             if (!cmdArgsReader.ParseCmdArgs())
             {
                 Application.Quit();
+                return false;
             }
-            // If signaling server URL is given, wait for it to connect with a timeout and receive configuration from it
-            if (!Config.SignalingUrl.IsNullOrEmpty() && Config.ConfigFromSignaling)
-            {
-                // Wait for connection to signaling server and get config from it, else quit
-            }
+            // Pre world creation initialization
+            BootstrappingConfig.BootStrapClass = this;
+            NetworkStreamReceiveSystem.DriverConstructor = new NetCodeDriverConstructor();
             
+            // Deployment world handles both requesting and answering configuration requests
+            if (Config.GetRemoteConfig || Config.isDeploymentService)
+                SetupDeploymentServiceWorld();
+
+            // If we are fetching configuration from a deployment service, SetupWorlds will be set up by that service
+            if (Config.GetRemoteConfig)
+                return true;
+            
+            SetupWorldsFromConfig();
+            
+            return true;
+        }
+    
+        /// <summary>
+        /// Creates a world with a minimal set of systems necessary for Netcode for Entities to connect, and the
+        /// Deployment systems <see cref="DeploymentReceiveSystem"/> and <see cref="DeploymentServiceSystem"/>.
+        /// </summary>
+        /// <returns></returns>
+        private World SetupDeploymentServiceWorld()
+        {
+            // Configure bootstrap with deployment server network endpoints
+            NetworkEndpoint.TryParse(Config.DeploymentURL, Config.DeploymentPort, out NetworkEndpoint deploymentEndpoint,
+                NetworkFamily.Ipv4);
+            BootstrappingConfig.DeploymentClientConnectAddress = deploymentEndpoint;
+            BootstrappingConfig.DeploymentPort = deploymentEndpoint.Port;
+            BootstrappingConfig.DeploymentServerListenAddress = NetworkEndpoint.AnyIpv4.WithPort(BootstrappingConfig.DeploymentPort);
+            
+            // Create the world
+            WorldFlagsExtension flags =  Config.GetRemoteConfig ? WorldFlagsExtension.DeploymentClient : WorldFlagsExtension.DeploymentServer;
+            var world = new World("DeploymentWorld", (WorldFlags)flags);
+            
+            // Fetch all editor and package (but not user-added) systems
+            WorldSystemFilterFlags filterFlags =  Config.GetRemoteConfig ? WorldSystemFilterFlags.ClientSimulation : WorldSystemFilterFlags.ServerSimulation;
+            NativeList<SystemTypeIndex> systems = TypeManager.GetUnitySystemsTypeIndices(filterFlags);
+            
+            // Remove built-in NetCode world initialization 
+            NativeList<SystemTypeIndex> filteredSystems = new NativeList<SystemTypeIndex>(64, Allocator.Temp);
+            foreach (var system in systems)
+            {
+                var systemName = TypeManager.GetSystemName(system);
+                if( systemName.Contains((FixedString64Bytes)"ConfigureThinClientWorldSystem")
+                    ||  systemName.Contains((FixedString64Bytes)"ConfigureClientWorldSystem")
+                    ||  systemName.Contains((FixedString64Bytes)"ConfigureServerWorldSystem"))
+                    continue;
+                filteredSystems.Add(system);
+            }
+
+            // Add custom initialization and deployment systems
+            if (Config.GetRemoteConfig)
+            {
+                filteredSystems.Add(TypeManager.GetSystemTypeIndex(typeof(CustomConfigureClientWorldSystem)));
+                filteredSystems.Add(TypeManager.GetSystemTypeIndex(typeof(DeploymentReceiveSystem)));
+            }
+            else
+            {
+                filteredSystems.Add(TypeManager.GetSystemTypeIndex(typeof(CustomConfigureServerWorldSystem)));
+                filteredSystems.Add(TypeManager.GetSystemTypeIndex(typeof(DeploymentServiceSystem)));
+            }
+            // Add Unity Scene System for managing GUIDs
+            filteredSystems.Add(TypeManager.GetSystemTypeIndex(typeof(SceneSystem)));
+            // Add NetCode monitor
+            filteredSystems.Add(TypeManager.GetSystemTypeIndex(typeof(ConnectionMonitorSystem)));
+            
+            // Re-sort the systems
+            TypeManager.SortSystemTypesInCreationOrder(filteredSystems);
+            
+            DefaultWorldInitialization.AddSystemsToRootLevelSystemGroups(world, filteredSystems);
+            
+            ScriptBehaviourUpdateOrder.AppendWorldToCurrentPlayerLoop(world);
+
+            if (World.DefaultGameObjectInjectionWorld == null)
+                World.DefaultGameObjectInjectionWorld = world;
+
+            return world;
+        }
+
+        /// <summary>
+        /// Sets up bootstrapping details and creates local worlds based on configuration.
+        /// </summary>
+        public void SetupWorldsFromConfig()
+        {
             // Configure server network endpoints for server and clients
             NetworkEndpoint.TryParse(Config.ServerUrl, (ushort)Config.ServerPort, out NetworkEndpoint serverEndpoint,
                 NetworkFamily.Ipv4);
             BootstrappingConfig.ClientConnectAddress = serverEndpoint;
             BootstrappingConfig.ServerPort = serverEndpoint.Port;
             BootstrappingConfig.ServerListenAddress = NetworkEndpoint.AnyIpv4.WithPort(BootstrappingConfig.ServerPort);
-            NetworkStreamReceiveSystem.DriverConstructor = new NetCodeDriverConstructor();
-            //Debug.Log($"Servers listening on {BootstrappingConfig.ServerListenAddress}");
-            //Debug.Log($"Clients connecting on {BootstrappingConfig.ClientConnectAddress}");
 
-            // Start worlds based on config
+            // ================== SETUP WORLDS ==================
             // Streamed guest
             if (Config.MultiplayStreamingRole == MultiplayStreamingRole.Guest)
             {
@@ -99,11 +178,8 @@ namespace Opencraft.Bootstrap
                 }
                 CreateServerWorld("ServerWorld", WorldFlags.GameServer, filteredServerSystems );
             }
-
-            return true;
         }
-
-
+        
         /// <summary>
         /// Utility method for creating new client worlds.
         /// </summary>

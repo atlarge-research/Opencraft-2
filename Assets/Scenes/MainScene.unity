@@ -529,6 +529,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   editorArgs: 
+  useDeploymentConfig: 1
+  deploymentConfig: "{\n\"nodes\":[\n{\n\"nodeID\":0,\n\"ip\":\"127.0.0.1\",\n\"isClient\":true,\n\"isThinClient\":false,\n\"isServer\":false,\n\"services\":[\"1\",\"2\"]
+    \n}\n]\n}"
 --- !u!1 &827113861
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Opencraft.Player.Emulated;
 using Opencraft.Player.Multiplay;
 using Unity.NetCode;
@@ -10,14 +11,43 @@ using UnityEngine;
 namespace Opencraft.Bootstrap
 {
     /// <summary>
-    /// Represents valid Json file configuration parameters
+    /// Represents valid command line arguments from Json file 
     /// </summary>
     [Serializable]
-    internal struct JsonConfigArgs
+    internal struct JsonCmdArgs
     {
         //public string signalingType;
         public string signalingUrl;
         //public RTCIceServer[] iceServers;
+    }
+    
+    /// <summary>
+    /// Represents valid deployment configuration from Json file
+    /// </summary>
+    [Serializable]
+    public struct JsonDeploymentConfig
+    {
+        public JsonDeploymentNode[] nodes;
+
+        public override string ToString() =>
+            string.Join(", ", nodes.Select(m => m.ToString().ToArray()));
+    }
+    
+    /// <summary>
+    /// Represents a deployment node
+    /// </summary>
+    [Serializable]
+    public struct JsonDeploymentNode
+    {
+        public int nodeID;
+        public string ip;
+        public bool isClient;
+        public bool isThinClient;
+        public bool isServer;
+        public string[] services;
+        
+        public override string ToString() =>
+            $"[nodeID: {nodeID}; ip: {ip}; isClient: {isClient}; isThinClient: {isThinClient}; isServer: {isServer}; services: {services};]";
     }
 
     /// <summary>
@@ -25,19 +55,25 @@ namespace Opencraft.Bootstrap
     /// </summary>
     static class CommandLineParser
     {
+        // ================== DEPLOYMENT ==================
+        internal static readonly JsonFileArgument<JsonDeploymentConfig> ImportDeploymentConfig = new JsonFileArgument<JsonDeploymentConfig>("-deploymentJson");
+        internal static IntArgument DeploymentID = new IntArgument("-deploymentID");
+        internal static readonly FlagArgument GetRemoteConfig = new FlagArgument("-remoteConfig");
+        internal static readonly StringArgument DeploymentURL = new StringArgument("-deploymentURL");
+        internal static readonly IntArgument DeploymentPort = new IntArgument("-deploymentPort");
+        
         // ================== APPLICATION ==================
-        internal static readonly StringArgument DebugEnabled = new StringArgument("-debug");
+        internal static readonly FlagArgument DebugEnabled = new FlagArgument("-debug");
         internal static readonly StringArgument Seed = new StringArgument("-seed");
         internal static readonly EnumArgument<GameBootstrap.BootstrapPlayType> PlayType = new EnumArgument<GameBootstrap.BootstrapPlayType>("-playType");
         internal static readonly StringArgument ServerUrl = new StringArgument("-serverUrl");
         internal static readonly IntArgument ServerPort = new IntArgument("-serverPort");
-        internal static readonly JsonFileArgument<JsonConfigArgs> ImportConfigJson = new JsonFileArgument<JsonConfigArgs>("-configJson");
+        internal static readonly JsonFileArgument<JsonCmdArgs> ImportConfigJson = new JsonFileArgument<JsonCmdArgs>("-localConfigJson");
 
         
         // ================== SIGNALING ==================
         internal static readonly StringArgument SignalingUrl = new StringArgument("-signalingUrl");
-        internal static readonly StringArgument ConfigFromSignaling = new StringArgument("-configFromSignaling");
-        
+
         // We only use WebSocket
         //internal static readonly StringArgument SignalingType = new StringArgument("-signalingType");
         
@@ -51,7 +87,7 @@ namespace Opencraft.Bootstrap
         
         // ================== EMULATION ==================
         internal static readonly EnumArgument<EmulationType> EmulationType = new EnumArgument<EmulationType>("-emulationType");
-        internal static readonly FilePathArgument EmulationFile = new FilePathArgument("-emulationFile");
+        internal static readonly FilePathArgument EmulationFile = new FilePathArgument("-emulationConfigFile");
         internal static readonly IntArgument NumThinClientPlayers = new IntArgument("-numThinClientPlayers");
 
         
@@ -59,8 +95,9 @@ namespace Opencraft.Bootstrap
 
         static readonly List<IArgument> options = new List<IArgument>()
         {
+            ImportDeploymentConfig, DeploymentID, GetRemoteConfig, DeploymentURL, DeploymentPort,
             DebugEnabled, Seed, PlayType, ServerUrl, ServerPort, ImportConfigJson,
-            SignalingUrl, ConfigFromSignaling,
+            SignalingUrl,
             MultiplayStreamingRole,
             EmulationType, EmulationFile, NumThinClientPlayers,
         };
@@ -70,6 +107,7 @@ namespace Opencraft.Bootstrap
         internal interface IArgument
         {
             bool TryParse(string[] arguments);
+            string GetArgumentName();
         }
 
         internal abstract class BaseArgument<T> : IArgument
@@ -95,8 +133,8 @@ namespace Opencraft.Bootstrap
             /// </summary>
             public T Value => m_value;
 
-            public bool m_defined;
-            public T m_value;
+            protected bool m_defined;
+            protected T m_value;
             readonly TryParseDelegate<T> m_parser;
 
             protected abstract bool DefaultParser(string[] arguments, string argumentName, out T parsedResult);
@@ -107,6 +145,11 @@ namespace Opencraft.Bootstrap
                     m_parser != null &&
                     m_parser(arguments, ArgumentName, out m_value);
                 return m_defined;
+            }
+
+            public string GetArgumentName()
+            {
+                return ArgumentName;
             }
 
             internal BaseArgument(string argumentName, bool required = false)
@@ -160,6 +203,15 @@ namespace Opencraft.Bootstrap
             internal IntArgument(string argumentName, bool required = false) : base(argumentName, required) { }
 
             public static implicit operator int?(IntArgument argument) => !argument.Defined ? null : argument.Value;
+        }
+        
+        internal class FlagArgument : BaseArgument<bool?>
+        {
+            protected override bool DefaultParser(string[] arguments, string argumentName, out bool? parsedResult) => TryParseFlagArgument(arguments, argumentName, out parsedResult, Required);
+
+            internal FlagArgument(string argumentName, bool required = false) : base(argumentName, required) { }
+
+            public static implicit operator bool?(FlagArgument argument) => !argument.Defined ? null : argument.Value;
         }
 
         internal class JsonFileArgument<T> : BaseArgument<T?> where T : struct
@@ -240,6 +292,16 @@ namespace Opencraft.Bootstrap
             argumentValue = result;
             return true;
         }
+        
+        static bool TryParseFlagArgument(string[] arguments, string argumentName, out bool? argumentValue, bool required = false)
+        {
+            var startIndex = System.Array.FindIndex(arguments, x => x == argumentName);
+            if (startIndex < 0)
+                argumentValue = false;
+            else
+                argumentValue = true;
+            return true;
+        }
 
         static bool TryParseStringArrayArgument(string[] arguments, string argumentName, out string[] argumentValue, bool required = false)
         {
@@ -315,7 +377,10 @@ namespace Opencraft.Bootstrap
             foreach (var option in options)
             {
                 if (!option.TryParse(arguments))
+                {
+                    Debug.LogWarning($"Failed to read argument {option.GetArgumentName()}");
                     return false;
+                }
             }
             return true;
         }

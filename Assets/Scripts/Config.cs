@@ -14,16 +14,23 @@ namespace Opencraft
     /// </summary>
     public static class Config
     {
+        // ================== DEPLOYMENT ==================
+        public static JsonDeploymentConfig DeploymentConfig;
+        public static int DeploymentID;
+        public static bool GetRemoteConfig;
+        public static bool isDeploymentService;
+        public static string DeploymentURL;
+        public static ushort DeploymentPort;
+
         // ================== SIGNALING ==================
         public static string SignalingUrl;
-        public static bool ConfigFromSignaling;
-        
+
         // ================== APPLICATION ==================
         public static bool DebugEnabled;
         public static int Seed;
         public static GameBootstrap.BootstrapPlayType PlayType;
         public static string ServerUrl;
-        public static int ServerPort;
+        public static ushort ServerPort;
 
         // ================== MULTIPLAY ==================
         public static MultiplayStreamingRole MultiplayStreamingRole;

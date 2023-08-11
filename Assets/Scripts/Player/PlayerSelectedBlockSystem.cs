@@ -13,7 +13,6 @@ using UnityEngine;
 namespace Opencraft.Player
 {
     [UpdateInGroup(typeof(SimulationSystemGroup))]
-    [UpdateAfter(typeof(PlayerMovementSystem))]
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation | WorldSystemFilterFlags.ClientSimulation)]
     [BurstCompile]
     // For every player, calculate what block, if any, they have selected
