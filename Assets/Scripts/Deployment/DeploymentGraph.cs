@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using Opencraft.Bootstrap;
-using Unity.Collections;
+using Opencraft.Player.Emulated;
+using Opencraft.Player.Multiplay;
 using Unity.Entities;
 using Unity.Networking.Transport;
 using Unity.VisualScripting;
@@ -83,9 +84,62 @@ namespace Opencraft.Deployment
                 return Nodes[nodeID];
             return null;
         }
-        
-        
-        
+
+        /// <summary>
+        /// Creates and fills a <see cref="ConfigRPC"/> from a Node.
+        /// </summary>
+        /// <param name="nodeID"> The ID of the node to fill the ConfigRPC</param>
+        /// <returns><see cref="ConfigRPC"/></returns>
+        public ConfigRPC NodeToConfigRPC(int nodeID)
+        {
+            ConfigRPC cRPC = new ConfigRPC();
+            if (NodeExists(nodeID))
+            {
+                var node = Nodes[nodeID];
+                cRPC.nodeID =  node.id;
+                cRPC.worldTypes =  (int)node.worldTypes;
+                cRPC.numThinClients =  node.numThinClients;
+                // Set cRPC server ip
+                if(node.serverNodeID == node.id)
+                    cRPC.serverIP = "127.0.0.1";
+                else
+                    if (NodeExists(node.serverNodeID))
+                    {
+                        var serverNode = Nodes[node.serverNodeID];
+                        // Get server node address without port
+                        NetworkEndpoint endpoint = serverNode.endpoint.WithPort(0);
+                        string address = endpoint.Address;
+                        cRPC.serverIP = address.Substring(0, address.Length - 2);
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"Node {nodeID} has nonexistent server node id: {node.serverNodeID}!");
+                    }
+                // Give the same server port to all nodes
+                cRPC.serverPort = Config.ServerPort;
+                // There is only one global signalling service, likely to be co-deployed with this deployment service
+                if (!Config.SignalingUrl.IsNullOrEmpty())
+                    cRPC.signallingIP = Config.SignalingUrl;
+                else
+                    cRPC.signallingIP = "";
+                cRPC.signallingPort = Config.SignalingPort;
+                // Player emulation
+                cRPC.emulationBehaviours = node.emulationBehaviours;
+                //Debug.Log($"NODE {node} -> CRPC {cRPC}");
+
+            }
+            else
+            {
+                Debug.LogWarning("NodeToConfig called with nonexistent nodeID!");
+                cRPC.nodeID = -1;
+            }
+            
+            
+            return cRPC;
+        }
+
+
+
         /// <summary>
         /// Constructs the deployment graph from a Json file
         /// </summary>
@@ -97,9 +151,21 @@ namespace Opencraft.Deployment
                 JsonDeploymentNode jsonNode = jsonNodes[i];
                 DeploymentNode newNode = new DeploymentNode();
                 newNode.id = jsonNode.nodeID;
-                newNode.isClient = jsonNode.isClient;
-                newNode.isThinClient = jsonNode.isThinClient;
-                newNode.isServer = jsonNode.isServer;
+                
+                newNode.worldTypes = WorldTypes.None;
+                if (jsonNode.playTypes is GameBootstrap.BootstrapPlayTypes.Client or GameBootstrap.BootstrapPlayTypes.ClientAndServer )
+                    newNode.worldTypes |= WorldTypes.Client;
+                if (jsonNode.playTypes == GameBootstrap.BootstrapPlayTypes.StreamedClient || jsonNode.streamingRoles == MultiplayStreamingRoles.Guest)
+                    newNode.worldTypes |= WorldTypes.StreamGuest;
+                if (jsonNode.streamingRoles == MultiplayStreamingRoles.Host)
+                    newNode.worldTypes |= WorldTypes.StreamHost;
+                if (jsonNode.playTypes is GameBootstrap.BootstrapPlayTypes.Server or GameBootstrap.BootstrapPlayTypes.ClientAndServer )
+                    newNode.worldTypes |= WorldTypes.Server;
+
+                newNode.serverNodeID = jsonNode.serverNodeID;
+                
+                newNode.numThinClients = jsonNode.numThinClients;
+                
                 newNode.connected = false;
                 // Node ip can either be unknown or known in advance
                 if (jsonNode.ip.IsNullOrEmpty())
@@ -137,12 +203,15 @@ namespace Opencraft.Deployment
                     }
                     newNode.services.Add(serviceType);
                 }
+                
+                // Player emulation
+                newNode.emulationBehaviours = jsonNode.emulationBehaviours;
 
                 Nodes.Add(newNode.id, newNode);
-
+                //Debug.Log($"JSON {jsonNode} -> NODE {newNode}");
             }
         }
-        
+
         // Generic solution, from https://stackoverflow.com/questions/20008503/get-type-by-name
         private static Type GetTypeByName(string name)
         {
@@ -159,23 +228,37 @@ namespace Opencraft.Deployment
         }
     }
 
+    [Flags]
+    [Serializable]
+    public enum WorldTypes : int
+    {
+        None        = 0,
+        Client      = 1,
+        Server      = 1 << 1,
+        StreamGuest = 1 << 2,
+        StreamHost  = 1 << 3
+    }
+    
     public struct DeploymentNode : IEquatable<DeploymentNode>
     {
         // ID of the node, used for equality
         public int id;
+        // Set when this node has communicated with deployment service
+        public bool connected;
         
         // Network location of this node
         public NetworkEndpoint endpoint;
-        // Client type
-        public bool isClient;
-        public bool isThinClient;
-        // Server type
-        public bool isServer;
+        // Client/Server details
+        public WorldTypes worldTypes;
+        public int numThinClients;
+
+        public int serverNodeID; // What node the game will connect to
+        
         // Server services
         public List<Type> services;
         
-        // Connected
-        public bool connected;
+        // Player emulation
+        public EmulationBehaviours emulationBehaviours;
         
         public bool Equals(DeploymentNode other)
         {
@@ -191,6 +274,10 @@ namespace Opencraft.Deployment
         {
             return id;
         }
+        
+        public override string ToString() =>
+            $"[nodeID: {id};  endpoint: { endpoint}; worldTypes: {worldTypes}; numThinClients: {numThinClients};" +
+            $"serverNodeID: {serverNodeID}; services: {services}; emulationBehaviours: {emulationBehaviours}; ]";
     }
 
 }

@@ -9,6 +9,7 @@
     "com.unity.ide.vscode": "1.2.5",
     "com.unity.logging": "1.0.11",
     "com.unity.netcode": "1.0.12",
+    "com.unity.nuget.newtonsoft-json": "3.2.1",
     "com.unity.performance.profile-analyzer": "1.2.2",
     "com.unity.physics": "1.0.10",
     "com.unity.render-pipelines.universal": "14.0.8",

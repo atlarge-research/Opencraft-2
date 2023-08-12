@@ -16,8 +16,8 @@ namespace Unity.NetCode
         public static NetworkEndpoint ClientConnectAddress = NetworkEndpoint.LoopbackIpv4.WithPort(ServerPort);
         public static NetworkEndpoint ServerListenAddress = NetworkEndpoint.AnyIpv4.WithPort(ServerPort);
         public static ushort DeploymentPort = 7980;
-        public static NetworkEndpoint DeploymentClientConnectAddress = NetworkEndpoint.LoopbackIpv4.WithPort(ServerPort);
-        public static NetworkEndpoint DeploymentServerListenAddress = NetworkEndpoint.AnyIpv4.WithPort(ServerPort);
+        public static NetworkEndpoint DeploymentClientConnectAddress = NetworkEndpoint.LoopbackIpv4.WithPort(DeploymentPort);
+        public static NetworkEndpoint DeploymentServerListenAddress = NetworkEndpoint.AnyIpv4.WithPort(DeploymentPort);
     }
     
     /// <summary>
@@ -101,11 +101,7 @@ namespace Unity.NetCode
             
             // Call Listen on the server
             
-            NetworkEndpoint endpoint;
-            if (state.World.IsDeploymentServer())
-                endpoint = BootstrappingConfig.DeploymentServerListenAddress;
-            else
-                endpoint = BootstrappingConfig.ServerListenAddress;
+            NetworkEndpoint endpoint = state.World.IsDeploymentServer() ? BootstrappingConfig.DeploymentServerListenAddress : BootstrappingConfig.ServerListenAddress;
             SystemAPI.GetSingletonRW<NetworkStreamDriver>().ValueRW.Listen(endpoint);
             Debug.Log($"Calling Listen on server at {endpoint}");   
             
@@ -137,11 +133,7 @@ namespace Unity.NetCode
             ++ClientServerBootstrap.WorldCounts.Data.clientWorlds;
             
             // Call connect on client
-            NetworkEndpoint endpoint;
-            if (state.World.IsDeploymentClient())
-                endpoint = BootstrappingConfig.DeploymentClientConnectAddress;
-            else
-                endpoint = BootstrappingConfig.ClientConnectAddress;
+            NetworkEndpoint endpoint = state.World.IsDeploymentClient() ? BootstrappingConfig.DeploymentClientConnectAddress : BootstrappingConfig.ClientConnectAddress;
             SystemAPI.GetSingletonRW<NetworkStreamDriver>().ValueRW.Connect(state.EntityManager, endpoint);
             Debug.Log($"Calling connect on new client at {endpoint}");    
             

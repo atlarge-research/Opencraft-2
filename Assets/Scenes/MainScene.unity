@@ -528,10 +528,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8bf58c69bf424fe194d229f05ce07072, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  editorArgs: 
+  editorArgs: -deploymentID 1
   useDeploymentConfig: 1
-  deploymentConfig: "{\n\"nodes\":[\n{\n\"nodeID\":0,\n\"ip\":\"127.0.0.1\",\n\"isClient\":true,\n\"isThinClient\":false,\n\"isServer\":false,\n\"services\":[\"1\",\"2\"]
-    \n}\n]\n}"
+  deploymentConfig: "{\r\n\t\"nodes\":[\r\n\t{\r\n\t\t\"nodeID\":0,\r\n\t\t\"ip\":\"127.0.0.1\",\r\n\t\t\"playTypes\":\"StreamedClient\",\r\n\t\t\"streamingRoles\":\"Guest\",\r\n\t\t\"serverNodeID\":1,\r\n\t\t\"numThinClients\":0,\r\n\t\t\"services\":[\"1\",\"2\"],\r\n\t\t\"emulationBehaviours\":
+    \"None\"\r\n\t},\r\n\t{\r\n\t\t\"nodeID\":1,\r\n\t\t\"ip\":\"127.0.0.1\",\r\n\t\t\"playTypes\":\"ServerAndClient\",\r\n\t\t\"streamingRoles\":\"Host\",\r\n\t\t\"serverNodeID\":1,\r\n\t\t\"numThinClients\":0,\r\n\t\t\"services\":[],\r\n\t\t\"emulationBehaviours\":
+    \"None\"\r\n\t}\r\n\t]\r\n}"
 --- !u!1 &827113861
 GameObject:
   m_ObjectHideFlags: 0

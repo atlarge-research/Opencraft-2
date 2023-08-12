@@ -10,7 +10,7 @@ namespace Opencraft.Player.Emulated
     {
         public string filename = "recordedInputs.inputtrace";
         public InputRecorder inputRecorder;
-        [DontSerialize]public EmulationType emulationType = EmulationType.None;
+        [DontSerialize]public EmulationBehaviours emulationType = EmulationBehaviours.None;
         
         
         // Behaviour script
@@ -44,25 +44,25 @@ namespace Opencraft.Player.Emulated
         
         private void OnApplicationQuit()
         {
-            if (emulationType == EmulationType.RecordInput)
+            if ((emulationType & EmulationBehaviours.Record) == EmulationBehaviours.Record)
             {
                 Debug.Log($"Saving capture file to {Application.persistentDataPath + '/' +filename}");
                 inputRecorder.StopCapture();
                 inputRecorder.SaveCaptureToFile(Application.persistentDataPath + '/' + filename);
             }
 
-            if (emulationType == EmulationType.InputPlayback)
+            if ((emulationType & EmulationBehaviours.Playback) == EmulationBehaviours.Playback)
             {
                 inputRecorder.StopReplay();
             }
         }
     }
 
-    public enum EmulationType
+    /*public enum EmulationType
     {
         None,
         InputPlayback,
         RecordInput,
         BehaviourProfile
-    }
+    }*/
 }

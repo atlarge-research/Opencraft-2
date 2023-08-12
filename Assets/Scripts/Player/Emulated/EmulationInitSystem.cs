@@ -1,4 +1,5 @@
-﻿using Opencraft.Player.Multiplay;
+﻿using System;
+using Opencraft.Player.Multiplay;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.NetCode;
@@ -28,7 +29,7 @@ namespace Opencraft.Player.Emulated
             if (emulation.IsUnityNull() || multiplay.IsUnityNull())
                 return;
             // Wait for either clientworld to be connected to the server, or for this guest client to be connected
-            if (Config.MultiplayStreamingRole == MultiplayStreamingRole.Guest)
+            if (Config.multiplayStreamingRoles == MultiplayStreamingRoles.Guest)
             {
                 if(!multiplay.IsGuestConnected())
                     return;
@@ -44,27 +45,19 @@ namespace Opencraft.Player.Emulated
             Debug.Log($"Emulation type is {emulation.emulationType}");
             
             // Multiplay guest emulation only supports input playback
-            if (Config.MultiplayStreamingRole == MultiplayStreamingRole.Guest && emulation.emulationType == EmulationType.BehaviourProfile)
+            if (Config.multiplayStreamingRoles == MultiplayStreamingRoles.Guest && (emulation.emulationType & EmulationBehaviours.Simulation) == EmulationBehaviours.Simulation)
             {
                 Debug.LogWarning("Multiplay guest emulation only supports input playback, switching to it.");
-                emulation.emulationType = EmulationType.InputPlayback;
+                emulation.emulationType ^= EmulationBehaviours.Simulation;
+                emulation.emulationType |= EmulationBehaviours.Playback;
             }
-
-            switch (emulation.emulationType)
-            {
-                case EmulationType.RecordInput:
-                    emulation.initializeRecording();
-                    break;
-                case EmulationType.InputPlayback:
-                    emulation.initializePlayback();
-                    break;
-                case EmulationType.BehaviourProfile:
-                case EmulationType.None:
-                default:
-                    break;
-            }
-
+            
+            if((emulation.emulationType & EmulationBehaviours.Record) == EmulationBehaviours.Record)
+                emulation.initializeRecording();
+            if((emulation.emulationType & EmulationBehaviours.Playback) == EmulationBehaviours.Playback)
+                emulation.initializePlayback();
+            if ((emulation.emulationType & EmulationBehaviours.Simulation) == EmulationBehaviours.Simulation)
+                throw new NotImplementedException(); // TODO
         }
-
     }
 }

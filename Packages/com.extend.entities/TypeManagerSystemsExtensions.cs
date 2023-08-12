@@ -26,8 +26,9 @@ namespace Unity.Entities
             LookupFlags lookupFlags = new LookupFlags() { OptionalFlags = filterFlags, RequiredFlags = requiredFlags };
 
             
-            if (s_SystemFilterTypeMap.TryGetValue(lookupFlags, out var systemTypeIndices))
-                return systemTypeIndices;
+            // Don't fetch/cache the results in the global systemfiltermap since we are using a different filter than GetSystemsTypeIndices
+            //if (s_SystemFilterTypeMap.TryGetValue(lookupFlags, out var systemTypeIndices))
+            //    return systemTypeIndices;
 
             // Use a temp list since we don't know how many systems will be filtered out yet
             var tempFilteredSystemTypes = new NativeList<SystemTypeIndex>(s_SystemTypes.Count-1, Allocator.Temp);
@@ -52,7 +53,7 @@ namespace Unity.Entities
             var persistentSystemList = new NativeList<SystemTypeIndex>(tempFilteredSystemTypes.Length, Allocator.Persistent);
             persistentSystemList.CopyFrom(tempFilteredSystemTypes);
 
-            s_SystemFilterTypeMap[lookupFlags] = persistentSystemList;
+            //s_SystemFilterTypeMap[lookupFlags] = persistentSystemList;
             return persistentSystemList;
         }
     }

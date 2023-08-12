@@ -1,0 +1,24 @@
+{
+	"nodes":[
+	{
+		"nodeID":0,
+		"ip":"127.0.0.1",
+		"playTypes":"StreamedClient",
+		"streamingRoles":"Guest",
+		"serverNodeID":1,
+		"numThinClients":0,
+		"services":["1","2"],
+		"emulationBehaviours": "None"
+	},
+	{
+		"nodeID":1,
+		"ip":"127.0.0.1",
+		"playTypes":"ServerAndClient",
+		"streamingRoles":"Host",
+		"serverNodeID":1,
+		"numThinClients":0,
+		"services":[],
+		"emulationBehaviours": "None"
+	}
+	]
+}

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Newtonsoft.Json;
 using Opencraft.Player.Emulated;
 using Opencraft.Player.Multiplay;
 using Unity.NetCode;
@@ -28,9 +29,7 @@ namespace Opencraft.Bootstrap
     public struct JsonDeploymentConfig
     {
         public JsonDeploymentNode[] nodes;
-
-        public override string ToString() =>
-            string.Join(", ", nodes.Select(m => m.ToString().ToArray()));
+        
     }
     
     /// <summary>
@@ -41,13 +40,16 @@ namespace Opencraft.Bootstrap
     {
         public int nodeID;
         public string ip;
-        public bool isClient;
-        public bool isThinClient;
-        public bool isServer;
+        public GameBootstrap.BootstrapPlayTypes playTypes;
+        public MultiplayStreamingRoles streamingRoles;
+        public int serverNodeID;
+        public int numThinClients;
         public string[] services;
+        public EmulationBehaviours emulationBehaviours;
         
         public override string ToString() =>
-            $"[nodeID: {nodeID}; ip: {ip}; isClient: {isClient}; isThinClient: {isThinClient}; isServer: {isServer}; services: {services};]";
+            $"[nodeID: {nodeID}; ip: {ip}; playType: {playTypes}; streamingRole: {streamingRoles};" +
+            $"serverNodeID: {serverNodeID}; services: {services}; emulationBehaviours: {emulationBehaviours}; ]";
     }
 
     /// <summary>
@@ -65,7 +67,7 @@ namespace Opencraft.Bootstrap
         // ================== APPLICATION ==================
         internal static readonly FlagArgument DebugEnabled = new FlagArgument("-debug");
         internal static readonly StringArgument Seed = new StringArgument("-seed");
-        internal static readonly EnumArgument<GameBootstrap.BootstrapPlayType> PlayType = new EnumArgument<GameBootstrap.BootstrapPlayType>("-playType");
+        internal static readonly EnumArgument<GameBootstrap.BootstrapPlayTypes> PlayType = new EnumArgument<GameBootstrap.BootstrapPlayTypes>("-playType");
         internal static readonly StringArgument ServerUrl = new StringArgument("-serverUrl");
         internal static readonly IntArgument ServerPort = new IntArgument("-serverPort");
         internal static readonly JsonFileArgument<JsonCmdArgs> ImportConfigJson = new JsonFileArgument<JsonCmdArgs>("-localConfigJson");
@@ -73,6 +75,7 @@ namespace Opencraft.Bootstrap
         
         // ================== SIGNALING ==================
         internal static readonly StringArgument SignalingUrl = new StringArgument("-signalingUrl");
+        internal static readonly IntArgument SignalingPort = new IntArgument("-signalingPort");
 
         // We only use WebSocket
         //internal static readonly StringArgument SignalingType = new StringArgument("-signalingType");
@@ -83,10 +86,10 @@ namespace Opencraft.Bootstrap
         //internal static readonly StringArgument IceServerCredential = new StringArgument("-iceServerCredential");
         
         // ================== MULTIPLAY ==================
-        internal static readonly EnumArgument<MultiplayStreamingRole> MultiplayStreamingRole = new EnumArgument<MultiplayStreamingRole>("-multiplayRole");
+        internal static readonly EnumArgument<MultiplayStreamingRoles> MultiplayStreamingRole = new EnumArgument<MultiplayStreamingRoles>("-multiplayRole");
         
         // ================== EMULATION ==================
-        internal static readonly EnumArgument<EmulationType> EmulationType = new EnumArgument<EmulationType>("-emulationType");
+        internal static readonly EnumArgument<EmulationBehaviours> EmulationType = new EnumArgument<EmulationBehaviours>("-emulationType");
         internal static readonly FilePathArgument EmulationFile = new FilePathArgument("-emulationConfigFile");
         internal static readonly IntArgument NumThinClientPlayers = new IntArgument("-numThinClientPlayers");
 
@@ -97,7 +100,7 @@ namespace Opencraft.Bootstrap
         {
             ImportDeploymentConfig, DeploymentID, GetRemoteConfig, DeploymentURL, DeploymentPort,
             DebugEnabled, Seed, PlayType, ServerUrl, ServerPort, ImportConfigJson,
-            SignalingUrl,
+            SignalingUrl, SignalingPort,
             MultiplayStreamingRole,
             EmulationType, EmulationFile, NumThinClientPlayers,
         };
@@ -335,7 +338,8 @@ namespace Opencraft.Bootstrap
                 string text = File.ReadAllText(value);
                 try
                 {
-                    argumentValue = JsonUtility.FromJson<T>(text);
+                    //argumentValue = JsonUtility.FromJson<T>(text);
+                    argumentValue = JsonConvert.DeserializeObject<T>(text);
                     return true;
                 }
                 catch (Exception)

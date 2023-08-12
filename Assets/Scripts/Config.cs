@@ -24,19 +24,20 @@ namespace Opencraft
 
         // ================== SIGNALING ==================
         public static string SignalingUrl;
+        public static ushort SignalingPort;
 
         // ================== APPLICATION ==================
         public static bool DebugEnabled;
         public static int Seed;
-        public static GameBootstrap.BootstrapPlayType PlayType;
+        public static GameBootstrap.BootstrapPlayTypes playTypes;
         public static string ServerUrl;
         public static ushort ServerPort;
 
         // ================== MULTIPLAY ==================
-        public static MultiplayStreamingRole MultiplayStreamingRole;
+        public static MultiplayStreamingRoles multiplayStreamingRoles;
         
         // ================== EMULATION ==================
-        public static EmulationType EmulationType;
+        public static EmulationBehaviours EmulationType;
         public static string EmulationFilePath;
         public static int NumThinClientPlayers;
         

@@ -37,12 +37,9 @@ namespace Opencraft.Bootstrap
             // Deployment world handles both requesting and answering configuration requests
             if (Config.GetRemoteConfig || Config.isDeploymentService)
                 SetupDeploymentServiceWorld();
-
-            // If we are fetching configuration from a deployment service, SetupWorlds will be set up by that service
-            if (Config.GetRemoteConfig)
-                return true;
-            
-            SetupWorldsFromConfig();
+            else
+                // Use only local configuration
+                SetupWorldsFromConfig();
             
             return true;
         }
@@ -58,7 +55,7 @@ namespace Opencraft.Bootstrap
             NetworkEndpoint.TryParse(Config.DeploymentURL, Config.DeploymentPort, out NetworkEndpoint deploymentEndpoint,
                 NetworkFamily.Ipv4);
             BootstrappingConfig.DeploymentClientConnectAddress = deploymentEndpoint;
-            BootstrappingConfig.DeploymentPort = deploymentEndpoint.Port;
+            BootstrappingConfig.DeploymentPort = Config.DeploymentPort;
             BootstrappingConfig.DeploymentServerListenAddress = NetworkEndpoint.AnyIpv4.WithPort(BootstrappingConfig.DeploymentPort);
             
             // Create the world
@@ -124,14 +121,14 @@ namespace Opencraft.Bootstrap
 
             // ================== SETUP WORLDS ==================
             // Streamed guest
-            if (Config.MultiplayStreamingRole == MultiplayStreamingRole.Guest)
+            if (Config.multiplayStreamingRoles == MultiplayStreamingRoles.Guest)
             {
                 var systems = new List<Type> { typeof(MultiplayInitSystem), typeof(EmulationInitSystem) };
                 CreateClientWorld("StreamingGuestWorld", WorldFlags.Game, systems);
             }
             
             //Client
-            if (Config.PlayType == BootstrapPlayType.Client || Config.PlayType == BootstrapPlayType.ClientAndServer)
+            if (Config.playTypes == BootstrapPlayTypes.Client || Config.playTypes == BootstrapPlayTypes.ClientAndServer)
             {
                 var clientSystems = DefaultWorldInitialization.GetAllSystems(WorldSystemFilterFlags.ClientSimulation |
                                                                        WorldSystemFilterFlags.Presentation);
@@ -165,17 +162,31 @@ namespace Opencraft.Bootstrap
             }
             
             // Server
-            if (Config.PlayType == BootstrapPlayType.Server || Config.PlayType == BootstrapPlayType.ClientAndServer)
+            if (Config.playTypes == BootstrapPlayTypes.Server || Config.playTypes == BootstrapPlayTypes.ClientAndServer)
             {
                 // todo: specify what systems in the server world
                 var serverSystems = DefaultWorldInitialization.GetAllSystems(WorldSystemFilterFlags.ServerSimulation);
                 var filteredServerSystems = new List<Type>();
+                bool streamSystemFound = false;
                 foreach (var system in serverSystems)
                 {
+                    if (system.Name.Contains("StartGameStreamServerSystem"))
+                    {
+                        Debug.Log($"StartGameStreamServerSystem found");
+                        streamSystemFound = true;
+                    }
+
                     if(system.Name == "ConfigureServerWorldSystem")
                         continue;
                     filteredServerSystems.Add(system);
                 }
+
+                if (!streamSystemFound)
+                {
+                    Debug.LogWarning($"Initialization of server world failed, missing StartGameStreamServerSystem. Adding it manually.");
+                    filteredServerSystems.Add(typeof(StartGameStreamServerSystem));
+                }
+
                 CreateServerWorld("ServerWorld", WorldFlags.GameServer, filteredServerSystems );
             }
         }
@@ -240,7 +251,8 @@ namespace Opencraft.Bootstrap
 #endif
         }
 
-        public enum BootstrapPlayType
+        [Serializable]
+        public enum BootstrapPlayTypes
         {
             /// <summary>
             /// The application can run as client, server or both. By default, both client and server world are created
@@ -250,6 +262,9 @@ namespace Opencraft.Bootstrap
             /// </para>
             /// </summary>
             ClientAndServer = 0,
+            ServerAndClient = 0, // Aliases
+            ClientServer    = 0,
+            ServerClient    = 0,
             /// <summary>
             /// The application run as a client. Only clients worlds are created and the application should connect to
             /// a server.
@@ -264,7 +279,9 @@ namespace Opencraft.Bootstrap
             /// The application run as a thin client. Only connections to a server and input emulation are performed.
             /// No frontend systems are run. 
             /// </summary>
-            ThinClient=3
+            StreamedClient=3,
+            StreamClient=3,
+            GuestClient=3
         }
     }
     

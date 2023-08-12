@@ -18,17 +18,17 @@ namespace Opencraft.Player.Multiplay
             // No need to run this  more than once
             Enabled = false;
 
-            switch (Config.MultiplayStreamingRole)
+            switch (Config.multiplayStreamingRoles)
             {
-                case MultiplayStreamingRole.Disabled:
+                case MultiplayStreamingRoles.Disabled:
                     Debug.Log("Multiplay is disabled.");
                     multiplay.SetUpLocalPlayer();
                     break;
-                case MultiplayStreamingRole.Host:
+                case MultiplayStreamingRoles.Host:
                     Debug.Log("Setting up multiplay host!");
                     multiplay.SetUpHost();
                     break;
-                case MultiplayStreamingRole.Guest:
+                case MultiplayStreamingRoles.Guest:
                     Debug.Log("Setting up multiplay guest!");
                     multiplay.SetUpGuest();
                     break;
