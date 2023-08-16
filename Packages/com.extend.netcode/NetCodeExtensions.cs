@@ -78,102 +78,110 @@ namespace Unity.NetCode
             return ((WorldFlagsExtension)world.Flags & WorldFlagsExtension.DeploymentClient) == WorldFlagsExtension.DeploymentClient;
         }
     }
-
+    
+    
     /// <summary>
-    /// Initializes server world by calling Listen with the parameters in BootstrappingConfig
+    /// Autoconnect system
     /// </summary>
-    [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
+    [WorldSystemFilter(WorldSystemFilterFlags.ThinClientSimulation | WorldSystemFilterFlags.ClientSimulation | WorldSystemFilterFlags.ServerSimulation)]
     [CreateAfter(typeof(NetworkStreamReceiveSystem))]
-    public partial struct CustomConfigureServerWorldSystem : ISystem
+    public partial struct CustomAutoconnectSystem : ISystem
     {
         public void OnCreate(ref SystemState state)
         {
-            if (!state.World.IsServer() && !state.World.IsDeploymentServer() )
-                throw new InvalidOperationException("Server worlds must be created with the WorldFlags.GameServer or WorldFlagsExtension.DeploymentServer flag");
-            var simulationGroup = state.World.GetExistingSystemManaged<SimulationSystemGroup>();
-            simulationGroup.SetRateManagerCreateAllocator(new NetcodeServerRateManager(simulationGroup));
+            if (!SystemAPI.TryGetSingleton<NetworkStreamDriver>(out NetworkStreamDriver netDriver))
+            {
+                Debug.LogError($"AutoConnect system cannot find a NetworkStreamDriver!");
+                return;
+            }
+                
+            if(state.World.IsServer())
+            {
+                if (state.World.IsDeploymentServer())
+                {
+                    netDriver.Listen(BootstrappingConfig.DeploymentServerListenAddress);
+                    Debug.Log($"Calling Listen on deployment server at {BootstrappingConfig.DeploymentServerListenAddress}");   
+                }
+                else
+                {
+                    netDriver.Listen(BootstrappingConfig.ServerListenAddress);
+                    Debug.Log($"Calling Listen on server at {BootstrappingConfig.ServerListenAddress}"); 
+                }
+            }
 
-            var predictionGroup = state.World.GetExistingSystemManaged<PredictedSimulationSystemGroup>();
-            predictionGroup.RateManager = new NetcodeServerPredictionRateManager(predictionGroup);
-
-            // Still update the default bootstrap for maintaining functionality of editor window and debugging
-            ++ClientServerBootstrap.WorldCounts.Data.serverWorlds;
-            
-            // Call Listen on the server
-            
-            NetworkEndpoint endpoint = state.World.IsDeploymentServer() ? BootstrappingConfig.DeploymentServerListenAddress : BootstrappingConfig.ServerListenAddress;
-            SystemAPI.GetSingletonRW<NetworkStreamDriver>().ValueRW.Listen(endpoint);
-            Debug.Log($"Calling Listen on server at {endpoint}");   
-            
+            if (state.World.IsClient() || state.World.IsThinClient())
+            {
+                if (state.World.IsDeploymentClient())
+                {
+                    netDriver.Connect(state.EntityManager, BootstrappingConfig.DeploymentClientConnectAddress);
+                    Debug.Log($"Calling connect on deployment client at {BootstrappingConfig.DeploymentClientConnectAddress}");
+                }
+                else
+                {
+                    netDriver.Connect(state.EntityManager, BootstrappingConfig.ClientConnectAddress);
+                    Debug.Log($"Calling connect on client at {BootstrappingConfig.ClientConnectAddress}");
+                }
+            }
             state.Enabled = false;
-        }
-
-        public void OnDestroy(ref SystemState state)
-        {
-            --ClientServerBootstrap.WorldCounts.Data.serverWorlds;
-        }
-    }
-    /// <summary>
-    /// Initializes client world by calling connect with the parameters in BootstrappingConfig
-    /// </summary>
-    [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
-    [CreateAfter(typeof(NetworkStreamReceiveSystem))]
-    public partial struct CustomConfigureClientWorldSystem : ISystem
-    {
-        public void OnCreate(ref SystemState state)
-        {
-            if (!state.World.IsClient() && !state.World.IsThinClient() && !state.World.IsDeploymentClient())
-                throw new InvalidOperationException("Client worlds must be created with the WorldFlags.GameClient or WorldFlagsExtension.DeploymentClient flag");
-            var simulationGroup = state.World.GetExistingSystemManaged<SimulationSystemGroup>();
-            simulationGroup.RateManager = new NetcodeClientRateManager(simulationGroup);
-
-            var predictionGroup = state.World.GetExistingSystemManaged<PredictedSimulationSystemGroup>();
-            predictionGroup.SetRateManagerCreateAllocator(new NetcodeClientPredictionRateManager(predictionGroup));
-
-            ++ClientServerBootstrap.WorldCounts.Data.clientWorlds;
-            
-            // Call connect on client
-            NetworkEndpoint endpoint = state.World.IsDeploymentClient() ? BootstrappingConfig.DeploymentClientConnectAddress : BootstrappingConfig.ClientConnectAddress;
-            SystemAPI.GetSingletonRW<NetworkStreamDriver>().ValueRW.Connect(state.EntityManager, endpoint);
-            Debug.Log($"Calling connect on new client at {endpoint}");    
-            
-            state.Enabled = false;
-        }
-
-        public void OnDestroy(ref SystemState state)
-        {
-            --ClientServerBootstrap.WorldCounts.Data.clientWorlds;
-        }
-    }
-
-    /// <summary>
-    /// Initializes thin client world by calling connect with the parameters in BootstrappingConfig
-    /// </summary>
-    [WorldSystemFilter(WorldSystemFilterFlags.ThinClientSimulation)]
-    [CreateAfter(typeof(NetworkStreamReceiveSystem))]
-    public partial struct CustomConfigureThinClientWorldSystem : ISystem
-    {
-        public void OnCreate(ref SystemState state)
-        {
-            if (!state.World.IsThinClient())
-                throw new InvalidOperationException("ThinClient worlds must be created with the WorldFlags.GameThinClient flag");
-            var simulationGroup = state.World.GetExistingSystemManaged<SimulationSystemGroup>();
-            simulationGroup.RateManager = new NetcodeClientRateManager(simulationGroup);
-
-            ++ClientServerBootstrap.WorldCounts.Data.clientWorlds;
-            // Call connect on thin client
-            Debug.Log($"Calling connect on thin client at {BootstrappingConfig.ClientConnectAddress}");
-            SystemAPI.GetSingletonRW<NetworkStreamDriver>().ValueRW.Connect(state.EntityManager, BootstrappingConfig.ClientConnectAddress);
-
-            state.Enabled = false;
-        }
-
-        public void OnDestroy(ref SystemState state)
-        {
-            --ClientServerBootstrap.WorldCounts.Data.clientWorlds;
         }
     }
     
+    /// <summary>
+    /// Configure system
+    /// </summary>
+    [WorldSystemFilter(WorldSystemFilterFlags.ThinClientSimulation | WorldSystemFilterFlags.ClientSimulation | WorldSystemFilterFlags.ServerSimulation)]
+    [CreateAfter(typeof(NetworkStreamReceiveSystem))]
+    public partial struct CustomConfigureWorldSystem : ISystem
+    {
+        public void OnCreate(ref SystemState state)
+        {
+            if(state.World.IsServer())
+            {
+                var simulationGroup = state.World.GetExistingSystemManaged<SimulationSystemGroup>();
+                simulationGroup.SetRateManagerCreateAllocator(new NetcodeServerRateManager(simulationGroup));
+
+                var predictionGroup = state.World.GetExistingSystemManaged<PredictedSimulationSystemGroup>();
+                predictionGroup.RateManager = new NetcodeServerPredictionRateManager(predictionGroup);
+
+                ++ClientServerBootstrap.WorldCounts.Data.serverWorlds;
+            }
+
+            if (state.World.IsClient())
+            {
+                var simulationGroup = state.World.GetExistingSystemManaged<SimulationSystemGroup>();
+                simulationGroup.RateManager = new NetcodeClientRateManager(simulationGroup);
+
+                var predictionGroup = state.World.GetExistingSystemManaged<PredictedSimulationSystemGroup>();
+                predictionGroup.SetRateManagerCreateAllocator(new NetcodeClientPredictionRateManager(predictionGroup));
+
+                ++ClientServerBootstrap.WorldCounts.Data.clientWorlds;
+            }
+
+            if (state.World.IsThinClient())
+            {
+                var simulationGroup = state.World.GetExistingSystemManaged<SimulationSystemGroup>();
+                simulationGroup.RateManager = new NetcodeClientRateManager(simulationGroup);
+                // No prediction on thin client
+                
+                ++ClientServerBootstrap.WorldCounts.Data.clientWorlds;
+            }
+            state.Enabled = false;
+        }
+        
+        public void OnDestroy(ref SystemState state)
+        {
+            if(state.World.IsServer())
+            {
+                --ClientServerBootstrap.WorldCounts.Data.serverWorlds;
+            }
+
+            if (state.World.IsClient() || state.World.IsThinClient())
+            {
+                --ClientServerBootstrap.WorldCounts.Data.clientWorlds;
+            }
+        }
+        
+    }
 
 #if UNITY_DOTSRUNTIME
     /// <summary>

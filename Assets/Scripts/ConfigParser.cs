@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
+using Opencraft.Deployment;
 using Opencraft.Player.Emulated;
 using Opencraft.Player.Multiplay;
 using Unity.NetCode;
@@ -39,17 +40,12 @@ namespace Opencraft.Bootstrap
     public struct JsonDeploymentNode
     {
         public int nodeID;
-        public string ip;
-        public GameBootstrap.BootstrapPlayTypes playTypes;
-        public MultiplayStreamingRoles streamingRoles;
-        public int serverNodeID;
-        public int numThinClients;
-        public string[] services;
-        public EmulationBehaviours emulationBehaviours;
-        
-        public override string ToString() =>
+        public string nodeIP;
+        public WorldConfig[] worldConfigs;
+
+        /*public override string ToString() =>
             $"[nodeID: {nodeID}; ip: {ip}; playType: {playTypes}; streamingRole: {streamingRoles};" +
-            $"serverNodeID: {serverNodeID}; services: {services}; emulationBehaviours: {emulationBehaviours}; ]";
+            $"serverNodeID: {serverNodeID}; services: {services}; emulationBehaviours: {emulationBehaviours}; ]";*/
     }
 
     /// <summary>
@@ -71,6 +67,8 @@ namespace Opencraft.Bootstrap
         internal static readonly StringArgument ServerUrl = new StringArgument("-serverUrl");
         internal static readonly IntArgument ServerPort = new IntArgument("-serverPort");
         internal static readonly JsonFileArgument<JsonCmdArgs> ImportConfigJson = new JsonFileArgument<JsonCmdArgs>("-localConfigJson");
+        internal static readonly IntArgument NetworkTickRate = new IntArgument("-networkTickRate");
+        internal static readonly IntArgument SimulationTickRate = new IntArgument("-simulationTickRate");
 
         
         // ================== SIGNALING ==================
@@ -90,7 +88,7 @@ namespace Opencraft.Bootstrap
         
         // ================== EMULATION ==================
         internal static readonly EnumArgument<EmulationBehaviours> EmulationType = new EnumArgument<EmulationBehaviours>("-emulationType");
-        internal static readonly FilePathArgument EmulationFile = new FilePathArgument("-emulationConfigFile");
+        internal static readonly FilePathArgument EmulationFile = new FilePathArgument("-emulationFile");
         internal static readonly IntArgument NumThinClientPlayers = new IntArgument("-numThinClientPlayers");
 
         
@@ -99,7 +97,7 @@ namespace Opencraft.Bootstrap
         static readonly List<IArgument> options = new List<IArgument>()
         {
             ImportDeploymentConfig, DeploymentID, GetRemoteConfig, DeploymentURL, DeploymentPort,
-            DebugEnabled, Seed, PlayType, ServerUrl, ServerPort, ImportConfigJson,
+            DebugEnabled, Seed, PlayType, ServerUrl, ServerPort, ImportConfigJson, NetworkTickRate, SimulationTickRate,
             SignalingUrl, SignalingPort,
             MultiplayStreamingRole,
             EmulationType, EmulationFile, NumThinClientPlayers,

@@ -97,8 +97,8 @@ namespace Opencraft.Terrain
             JobHandle sortHandle = sortJob.Schedule();
 
             // Spawn the terrain area entities
-            int numColumnsToSpawn = columnsToSpawn.Length > terrainSpawner.maxColumnSpawnsPerTick
-                ? terrainSpawner.maxColumnSpawnsPerTick
+            int numColumnsToSpawn = columnsToSpawn.Length > Env.MAX_COL_PER_TICK
+                ?  Env.MAX_COL_PER_TICK
                 : columnsToSpawn.Length;
             NativeArray<Entity> terrainAreaEntities = state.EntityManager.Instantiate(terrainSpawner.TerrainArea,
                 numColumnsToSpawn * Env.AREA_COLUMN_HEIGHT,
@@ -120,7 +120,7 @@ namespace Opencraft.Terrain
                 terrainColMaxLookup = _terrainColMaxLookup,
                 _structuresToSpawnLookup = _structuresToSpawnLookup,
                 columnsToSpawn = columnsToSpawn,
-                noiseSeed = terrainSpawner.seed,
+                noiseSeed = Config.Seed,
                 terrainGenLayers = _terrainGenLayers
             }.Schedule(numColumnsToSpawn, 1, sortHandle); // Each thread gets 1 column
             populateHandle.Complete();
@@ -129,8 +129,8 @@ namespace Opencraft.Terrain
             //localTransforms.Dispose();
 
             // Remove spawned areas from the toSpawn buffer
-            if (chunksColumnsSpawnBuffer.Length > terrainSpawner.maxColumnSpawnsPerTick)
-                chunksColumnsSpawnBuffer.RemoveRange(0, terrainSpawner.maxColumnSpawnsPerTick);
+            if (chunksColumnsSpawnBuffer.Length >  Env.MAX_COL_PER_TICK)
+                chunksColumnsSpawnBuffer.RemoveRange(0,  Env.MAX_COL_PER_TICK);
             else
                 chunksColumnsSpawnBuffer.Clear();
             ecb.Playback(state.EntityManager);

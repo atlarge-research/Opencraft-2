@@ -7,11 +7,11 @@
 			{
 			"worldType":"Client",
 			"initializationMode":"CreateAndConnect",
-			"multiplayStreamingRoles":"Guest",
-			"serverNodeID":-1,
-			"streamingNodeID":1,
+			"multiplayStreamingRoles":"Host",
+			"serverNodeID":1,
+			"streamingNodeID":-1,
 			"numThinClients":0,
-			"services":["1","2"],
+			"services":[],
 			"serviceFilterType":"Includes",
 			"emulationBehaviours":"None"
 			}

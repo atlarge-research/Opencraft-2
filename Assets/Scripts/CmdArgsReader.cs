@@ -3,8 +3,8 @@ using System.Security.Cryptography;
 using System.Text;
 using Newtonsoft.Json;
 using Opencraft.Bootstrap;
+using Opencraft.Deployment;
 using Opencraft.Player.Emulated;
-using Opencraft.Player.Multiplay;
 using Unity.NetCode;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -100,30 +100,46 @@ namespace Opencraft
             // Debug
             Config.DebugEnabled = CommandLineParser.DebugEnabled.Defined;
             // Seed
+            MD5 md5Hasher = MD5.Create();
             if (CommandLineParser.Seed.Value != null)
             {
-                MD5 md5Hasher = MD5.Create();
                 var hashed = md5Hasher.ComputeHash(Encoding.UTF8.GetBytes(CommandLineParser.Seed.Value));
                 var ivalue = BitConverter.ToInt32(hashed, 0);
                 Config.Seed = ivalue;
             }
             else
-                Config.Seed = 42;
+            {
+                var hashed = md5Hasher.ComputeHash(Encoding.UTF8.GetBytes("42"));
+                var ivalue = BitConverter.ToInt32(hashed, 0);
+                Config.Seed = ivalue;
+            }
             // PlayType
             if (CommandLineParser.PlayType.Value != null)
                 Config.playTypes = (GameBootstrap.BootstrapPlayTypes)CommandLineParser.PlayType.Value;
             else
-                Config.playTypes = GameBootstrap.BootstrapPlayTypes.ClientAndServer;
+                Config.playTypes = GameBootstrap.BootstrapPlayTypes.Client;
             // Server url
             if (CommandLineParser.ServerUrl.Value != null)
                 Config.ServerUrl = CommandLineParser.ServerUrl.Value;
             else
-                Config.ServerUrl = "127.0.01";
+                Config.ServerUrl = "127.0.0.1";
             // Server port
             if (CommandLineParser.ServerPort.Value != null)
                 Config.ServerPort = (ushort)CommandLineParser.ServerPort.Value;
             else
                 Config.ServerPort = 7979;
+            
+            // Tick rates
+            if (CommandLineParser.NetworkTickRate.Value != null)
+                Config.NetworkTickRate = (int)CommandLineParser.NetworkTickRate.Value;
+            else
+                Config.NetworkTickRate = 60;
+            if (CommandLineParser.SimulationTickRate.Value != null)
+                Config.SimulationTickRate = (int)CommandLineParser.SimulationTickRate.Value;
+            else
+                Config.SimulationTickRate = 60;
+            
+            
             
             // ================== MULTIPLAY ==================
             // Multiplay role
@@ -151,53 +167,52 @@ namespace Opencraft
                 Config.NumThinClientPlayers = 0;
             
 #if UNITY_EDITOR
-            if (!ClonesManager.IsClone())
-            {
-                Debug.Log("Overriding config with editor vars.");
-                // Override PlayType, NumThinClients, ServerAddress, and ServerPort from editor settings 
-                string s_PrefsKeyPrefix = $"MultiplayerPlayMode_{Application.productName}_";
-                string s_PlayModeTypeKey = s_PrefsKeyPrefix + "PlayMode_Type";
-                string s_RequestedNumThinClientsKey = s_PrefsKeyPrefix + "NumThinClients";
-                string s_AutoConnectionAddressKey = s_PrefsKeyPrefix + "AutoConnection_Address";
-                string s_AutoConnectionPortKey = s_PrefsKeyPrefix + "AutoConnection_Port";
-                // Editor PlayType
-                ClientServerBootstrap.PlayType editorPlayType =
-                    (ClientServerBootstrap.PlayType)EditorPrefs.GetInt(s_PlayModeTypeKey,
-                        (int)ClientServerBootstrap.PlayType.ClientAndServer);
-                if (Config.playTypes != GameBootstrap.BootstrapPlayTypes.StreamedClient)
-                    Config.playTypes = (GameBootstrap.BootstrapPlayTypes)editorPlayType;
-                // Number thin clients
-                int editorNumThinClients = EditorPrefs.GetInt(s_RequestedNumThinClientsKey, 0);
-                Config.NumThinClientPlayers = editorNumThinClients;
-                // Server address
-                string editorServerAddress = EditorPrefs.GetString(s_AutoConnectionAddressKey, "127.0.0.1");
-                Config.ServerUrl = editorServerAddress;
-                //Server port
-                int editorServerPort = EditorPrefs.GetInt(s_AutoConnectionPortKey, 7979);
-                Config.ServerPort = (ushort)editorServerPort;
+           
+            Debug.Log("Overriding config with editor vars.");
+            // Override PlayType, NumThinClients, ServerAddress, and ServerPort from editor settings 
+            string s_PrefsKeyPrefix = $"MultiplayerPlayMode_{Application.productName}_";
+            string s_PlayModeTypeKey = s_PrefsKeyPrefix + "PlayMode_Type";
+            string s_RequestedNumThinClientsKey = s_PrefsKeyPrefix + "NumThinClients";
+            string s_AutoConnectionAddressKey = s_PrefsKeyPrefix + "AutoConnection_Address";
+            string s_AutoConnectionPortKey = s_PrefsKeyPrefix + "AutoConnection_Port";
+            // Editor PlayType
+            ClientServerBootstrap.PlayType editorPlayType =
+                (ClientServerBootstrap.PlayType)EditorPrefs.GetInt(s_PlayModeTypeKey,
+                    (int)ClientServerBootstrap.PlayType.ClientAndServer);
+            if (Config.playTypes != GameBootstrap.BootstrapPlayTypes.StreamedClient)
+                Config.playTypes = (GameBootstrap.BootstrapPlayTypes)editorPlayType;
+            // Number thin clients
+            int editorNumThinClients = EditorPrefs.GetInt(s_RequestedNumThinClientsKey, 0);
+            Config.NumThinClientPlayers = editorNumThinClients;
+            // Server address
+            string editorServerAddress = EditorPrefs.GetString(s_AutoConnectionAddressKey, "127.0.0.1");
+            Config.ServerUrl = editorServerAddress;
+            //Server port
+            int editorServerPort = EditorPrefs.GetInt(s_AutoConnectionPortKey, 7979);
+            Config.ServerPort = (ushort)editorServerPort;
 
-                // Override Deployment Config using this MonoBehaviour's attributes
-                if (useDeploymentConfig)
+            // Override Deployment Config using this MonoBehaviour's attributes
+            if (useDeploymentConfig && !ClonesManager.IsClone())
+            {
+                if (deploymentConfig.IsNullOrEmpty())
                 {
-                    if (deploymentConfig.IsNullOrEmpty())
+                    Debug.LogWarning($"UseDeploymentConfig flag set but deploymentConfig is empty");
+                }
+                else
+                {
+                    //Use Newtonsoft JSON parsing to support enum serialization to/from string
+                    Config.DeploymentConfig = JsonConvert.DeserializeObject<JsonDeploymentConfig>(deploymentConfig);
+                    if (Config.DeploymentConfig.IsUnityNull())
                     {
-                        Debug.LogWarning($"UseDeploymentConfig flag set but deploymentConfig is empty");
+                        Debug.LogWarning($"Json Could not parse deploymentConfig!");
                     }
                     else
                     {
-                        //Use Newtonsoft JSON parsing to support enum serialization to/from string
-                        Config.DeploymentConfig = JsonConvert.DeserializeObject<JsonDeploymentConfig>(deploymentConfig);
-                        if (Config.DeploymentConfig.IsUnityNull())
-                        {
-                            Debug.LogWarning($"JSon Could not parse deploymentConfig!");
-                        }
-                        else
-                        {
-                            Config.isDeploymentService = true;
-                        }
+                        Config.isDeploymentService = true;
                     }
                 }
             }
+            
 #endif
             
             // Sanity checks

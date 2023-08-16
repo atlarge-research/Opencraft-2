@@ -40,7 +40,7 @@ namespace Opencraft.Terrain
 
 
             // Fetch the terrain spawner entity and component
-            var terrainSpawner = SystemAPI.GetSingleton<TerrainSpawner>();
+            //var terrainSpawner = SystemAPI.GetSingleton<TerrainSpawner>();
             Entity terrainSpawnerEntity = SystemAPI.GetSingletonEntity<TerrainSpawner>();
             terrainAreas = _terrainAreasQuery.ToComponentDataArray<TerrainArea>(state.WorldUpdateAllocator);
 
@@ -50,7 +50,7 @@ namespace Opencraft.Terrain
             markerPlayerTerrainGenCheck.Begin();
             // todo - make this parallel
             var areasPlayersCloseTo = new NativeHashSet<int2>(32, Allocator.TempJob);
-            int viewRange = terrainSpawner.terrainSpawnRange;
+            int viewRange = Env.TERRAIN_SPAWN_RANGE;
             foreach (var transform in SystemAPI.Query<LocalTransform>().WithAll<Player.Authoring.Player, Simulate>())
             {
                 var pos = transform.Position;

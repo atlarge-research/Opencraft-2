@@ -1,11 +1,7 @@
-﻿using System.IO;
-using Opencraft.Bootstrap;
+﻿using Opencraft.Bootstrap;
+using Opencraft.Deployment;
 using Opencraft.Player.Emulated;
-using Opencraft.Player.Multiplay;
-using Unity.Logging;
-using Unity.NetCode;
-using UnityEditor;
-using UnityEngine;
+
 
 namespace Opencraft
 {
@@ -32,6 +28,8 @@ namespace Opencraft
         public static GameBootstrap.BootstrapPlayTypes playTypes;
         public static string ServerUrl;
         public static ushort ServerPort;
+        public static int NetworkTickRate;
+        public static int SimulationTickRate;
 
         // ================== MULTIPLAY ==================
         public static MultiplayStreamingRoles multiplayStreamingRoles;
@@ -40,6 +38,7 @@ namespace Opencraft
         public static EmulationBehaviours EmulationType;
         public static string EmulationFilePath;
         public static int NumThinClientPlayers;
+        
         
     }
 }

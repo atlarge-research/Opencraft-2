@@ -20,6 +20,7 @@ namespace Opencraft.Bootstrap
     [UnityEngine.Scripting.Preserve]
     public class GameBootstrap : ICustomBootstrap
     {
+        private List<World> worlds;
 
         public bool Initialize(string defaultWorldName)
         {
@@ -30,17 +31,22 @@ namespace Opencraft.Bootstrap
                 Application.Quit();
                 return false;
             }
+
+            worlds = new List<World>();
+            
             // Pre world creation initialization
             BootstrappingConfig.BootStrapClass = this;
             NetworkStreamReceiveSystem.DriverConstructor = new NetCodeDriverConstructor();
             
             // Deployment world handles both requesting and answering configuration requests
             if (Config.GetRemoteConfig || Config.isDeploymentService)
-                SetupDeploymentServiceWorld();
+                worlds.Add(SetupDeploymentServiceWorld());
             else
+            {
                 // Use only local configuration
-                SetupWorldsFromConfig();
-            
+                SetupWorldsFromLocalConfig();
+            }
+
             return true;
         }
     
@@ -51,6 +57,7 @@ namespace Opencraft.Bootstrap
         /// <returns></returns>
         private World SetupDeploymentServiceWorld()
         {
+            Debug.Log("Creating deployment world");
             // Configure bootstrap with deployment server network endpoints
             NetworkEndpoint.TryParse(Config.DeploymentURL, Config.DeploymentPort, out NetworkEndpoint deploymentEndpoint,
                 NetworkFamily.Ipv4);
@@ -61,7 +68,6 @@ namespace Opencraft.Bootstrap
             // Create the world
             WorldFlagsExtension flags =  Config.GetRemoteConfig ? WorldFlagsExtension.DeploymentClient : WorldFlagsExtension.DeploymentServer;
             var world = new World("DeploymentWorld", (WorldFlags)flags);
-            
             // Fetch all editor and package (but not user-added) systems
             WorldSystemFilterFlags filterFlags =  Config.GetRemoteConfig ? WorldSystemFilterFlags.ClientSimulation : WorldSystemFilterFlags.ServerSimulation;
             NativeList<SystemTypeIndex> systems = TypeManager.GetUnitySystemsTypeIndices(filterFlags);
@@ -78,24 +84,23 @@ namespace Opencraft.Bootstrap
                 filteredSystems.Add(system);
             }
 
-            // Add custom initialization and deployment systems
+            // Add deployment service systems
             if (Config.GetRemoteConfig)
-            {
-                filteredSystems.Add(TypeManager.GetSystemTypeIndex(typeof(CustomConfigureClientWorldSystem)));
                 filteredSystems.Add(TypeManager.GetSystemTypeIndex(typeof(DeploymentReceiveSystem)));
-            }
             else
-            {
-                filteredSystems.Add(TypeManager.GetSystemTypeIndex(typeof(CustomConfigureServerWorldSystem)));
                 filteredSystems.Add(TypeManager.GetSystemTypeIndex(typeof(DeploymentServiceSystem)));
-            }
+
             // Add Unity Scene System for managing GUIDs
             filteredSystems.Add(TypeManager.GetSystemTypeIndex(typeof(SceneSystem)));
             // Add NetCode monitor
             filteredSystems.Add(TypeManager.GetSystemTypeIndex(typeof(ConnectionMonitorSystem)));
             
+            // Add AuthoringSceneLoader
+            filteredSystems.Add(TypeManager.GetSystemTypeIndex(typeof(AuthoringSceneLoaderSystem)));
+            
             // Re-sort the systems
             TypeManager.SortSystemTypesInCreationOrder(filteredSystems);
+           
             
             DefaultWorldInitialization.AddSystemsToRootLevelSystemGroups(world, filteredSystems);
             
@@ -107,90 +112,144 @@ namespace Opencraft.Bootstrap
             return world;
         }
 
-        /// <summary>
-        /// Sets up bootstrapping details and creates local worlds based on configuration.
-        /// </summary>
-        public void SetupWorldsFromConfig()
+        public void SetBootStrapConfig(string serverURL, ushort serverPort )
         {
             // Configure server network endpoints for server and clients
-            NetworkEndpoint.TryParse(Config.ServerUrl, (ushort)Config.ServerPort, out NetworkEndpoint serverEndpoint,
+            NetworkEndpoint.TryParse(serverURL, serverPort, out NetworkEndpoint serverEndpoint,
                 NetworkFamily.Ipv4);
             BootstrappingConfig.ClientConnectAddress = serverEndpoint;
-            BootstrappingConfig.ServerPort = serverEndpoint.Port;
-            BootstrappingConfig.ServerListenAddress = NetworkEndpoint.AnyIpv4.WithPort(BootstrappingConfig.ServerPort);
+            BootstrappingConfig.ServerPort = serverPort;
+            BootstrappingConfig.ServerListenAddress = NetworkEndpoint.AnyIpv4.WithPort(serverPort);
+        }
 
+        public void SetupWorldsFromLocalConfig()
+        {
+            SetBootStrapConfig(Config.ServerUrl, Config.ServerPort);
+            NativeList<WorldUnmanaged> newWorlds = new NativeList<WorldUnmanaged>(Allocator.Temp);
+            SetupWorlds(Config.multiplayStreamingRoles, Config.playTypes, ref newWorlds, Config.NumThinClientPlayers, autoConnect: true);
+        }
+        
+        /// <summary>
+        /// Sets up bootstrapping details and creates local worlds
+        /// </summary>
+        public void SetupWorlds(MultiplayStreamingRoles mRole, BootstrapPlayTypes playTypes, ref NativeList<WorldUnmanaged> newWorlds, int numThinClients, bool autoConnect = true)
+        {
+
+            Debug.Log($"Setting up worlds with playType {playTypes} and streaming role {mRole}");
+            
             // ================== SETUP WORLDS ==================
-            // Streamed guest
-            if (Config.multiplayStreamingRoles == MultiplayStreamingRoles.Guest)
+            if (mRole == MultiplayStreamingRoles.Host)
             {
-                var systems = new List<Type> { typeof(MultiplayInitSystem), typeof(EmulationInitSystem) };
-                CreateClientWorld("StreamingGuestWorld", WorldFlags.Game, systems);
+                Config.multiplayStreamingRoles = MultiplayStreamingRoles.Host;
             }
             
             //Client
-            if (Config.playTypes == BootstrapPlayTypes.Client || Config.playTypes == BootstrapPlayTypes.ClientAndServer)
+            if (playTypes == BootstrapPlayTypes.Client || playTypes == BootstrapPlayTypes.ClientAndServer)
             {
-                var clientSystems = DefaultWorldInitialization.GetAllSystems(WorldSystemFilterFlags.ClientSimulation |
-                                                                       WorldSystemFilterFlags.Presentation);
-                // Disable the default NetCode world configuration
-                var filteredClientSystems = new List<Type>();
-                foreach (var system in clientSystems)
+                if (mRole == MultiplayStreamingRoles.Guest)
                 {
-                    if(system.Name == "ConfigureThinClientWorldSystem" || system.Name == "ConfigureClientWorldSystem")
-                        continue;
-                    filteredClientSystems.Add(system);
+                    Config.multiplayStreamingRoles = MultiplayStreamingRoles.Guest;
+                    var world = CreateStreamedClientWorld(autoConnect);
+                    worlds.Add(world);
+                    newWorlds.Add(world.Unmanaged);
                 }
-                CreateClientWorld("ClientWorld", WorldFlags.GameClient, filteredClientSystems);
+                else
+                {
+                    var world = CreateDefaultClientWorld(autoConnect);
+                    worlds.Add(world);
+                    newWorlds.Add(world.Unmanaged);
+                }
             }
-            
+
             // Thin client
-            if (Config.NumThinClientPlayers > 0)
+            if (playTypes == BootstrapPlayTypes.ThinClient && numThinClients > 0)
             {
-                var thinClientSystems = DefaultWorldInitialization.GetAllSystems(WorldSystemFilterFlags.ThinClientSimulation);
-                // Disable the default NetCode world configuration
-                var filteredThinClientSystems = new List<Type>();
-                foreach (var system in thinClientSystems)
+                var world = CreateThinClientWorlds(numThinClients, autoConnect);
+                worlds.AddRange(world);
+                foreach (var w in world)
                 {
-                    if(system.Name == "ConfigureThinClientWorldSystem" || system.Name == "ConfigureClientWorldSystem")
-                        continue;
-                    filteredThinClientSystems.Add(system);
-                }
-                for (var i = 0; i < Config.NumThinClientPlayers; i++)
-                {
-                    CreateClientWorld("ThinClientWorld", WorldFlags.GameThinClient, filteredThinClientSystems);
+                    newWorlds.Add(w.Unmanaged);
                 }
             }
-            
+
             // Server
-            if (Config.playTypes == BootstrapPlayTypes.Server || Config.playTypes == BootstrapPlayTypes.ClientAndServer)
+            if (playTypes == BootstrapPlayTypes.Server || playTypes == BootstrapPlayTypes.ClientAndServer)
             {
-                // todo: specify what systems in the server world
-                var serverSystems = DefaultWorldInitialization.GetAllSystems(WorldSystemFilterFlags.ServerSimulation);
-                var filteredServerSystems = new List<Type>();
-                bool streamSystemFound = false;
-                foreach (var system in serverSystems)
-                {
-                    if (system.Name.Contains("StartGameStreamServerSystem"))
-                    {
-                        Debug.Log($"StartGameStreamServerSystem found");
-                        streamSystemFound = true;
-                    }
-
-                    if(system.Name == "ConfigureServerWorldSystem")
-                        continue;
-                    filteredServerSystems.Add(system);
-                }
-
-                if (!streamSystemFound)
-                {
-                    Debug.LogWarning($"Initialization of server world failed, missing StartGameStreamServerSystem. Adding it manually.");
-                    filteredServerSystems.Add(typeof(StartGameStreamServerSystem));
-                }
-
-                CreateServerWorld("ServerWorld", WorldFlags.GameServer, filteredServerSystems );
+                var world = CreateDefaultServerWorld(autoConnect);
+                worlds.Add(world);
+                newWorlds.Add(world.Unmanaged);
             }
         }
         
+
+        public static World CreateDefaultClientWorld(bool autoConnect)
+        {
+            var clientSystems = DefaultWorldInitialization.GetAllSystems(WorldSystemFilterFlags.ClientSimulation |
+                                                                         WorldSystemFilterFlags.Presentation);
+            // Disable the default NetCode world configuration
+            var filteredClientSystems = new List<Type>();
+            foreach (var system in clientSystems)
+            {
+                if(system.Name == "ConfigureThinClientWorldSystem" || system.Name == "ConfigureClientWorldSystem")
+                    continue;
+                filteredClientSystems.Add(system);
+            }
+            if(autoConnect)
+                filteredClientSystems.Add(typeof(CustomAutoconnectSystem));
+            return CreateClientWorld("ClientWorld", WorldFlags.GameClient, filteredClientSystems);
+        }
+
+        public static World CreateStreamedClientWorld(bool autoConnect)
+        {
+            var systems = new List<Type> { typeof(MultiplayInitSystem), typeof(EmulationInitSystem) };
+            // TODO Handling autoconnect?
+            return CreateClientWorld("StreamingGuestWorld", WorldFlags.Game, systems);
+        }
+        
+        public static List<World> CreateThinClientWorlds(int numThinClients, bool autoConnect)
+        {
+            List<World> newWorlds = new List<World>();
+            
+            var thinClientSystems = DefaultWorldInitialization.GetAllSystems(WorldSystemFilterFlags.ThinClientSimulation);
+            
+            // Disable the default NetCode world configuration
+            var filteredThinClientSystems = new List<Type>();
+            foreach (var system in thinClientSystems)
+            {
+                if(system.Name == "ConfigureThinClientWorldSystem" || system.Name == "ConfigureClientWorldSystem")
+                    continue;
+                filteredThinClientSystems.Add(system);
+            }
+            
+            if(autoConnect)
+                filteredThinClientSystems.Add(typeof(CustomAutoconnectSystem));
+            
+            for (var i = 0; i < numThinClients; i++)
+            {
+                newWorlds.Add(CreateClientWorld("ThinClientWorld", WorldFlags.GameThinClient, filteredThinClientSystems));
+            }
+
+            return newWorlds;
+        }
+
+        public static World CreateDefaultServerWorld(bool autoConnect)
+        {
+            // todo: specify what systems in the server world
+            var serverSystems = DefaultWorldInitialization.GetAllSystems(WorldSystemFilterFlags.ServerSimulation);
+            
+            var filteredServerSystems = new List<Type>();
+            foreach (var system in serverSystems)
+            {
+                if(system.Name == "ConfigureServerWorldSystem")
+                    continue;
+                filteredServerSystems.Add(system);
+            }
+            if(autoConnect)
+                filteredServerSystems.Add(typeof(CustomAutoconnectSystem));
+
+            return CreateServerWorld("ServerWorld", WorldFlags.GameServer, filteredServerSystems );
+        }
+
         /// <summary>
         /// Utility method for creating new client worlds.
         /// </summary>
@@ -281,7 +340,11 @@ namespace Opencraft.Bootstrap
             /// </summary>
             StreamedClient=3,
             StreamClient=3,
-            GuestClient=3
+            GuestClient=3,
+            /// <summary>
+            /// Minimal client for running player emulation with no frontend, useful for experiments and debugging
+            /// </summary>
+            ThinClient = 4
         }
     }
     

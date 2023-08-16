@@ -328,59 +328,6 @@ MonoBehaviour:
   m_LightCookieSize: {x: 1, y: 1}
   m_LightCookieOffset: {x: 0, y: 0}
   m_SoftShadowQuality: 1
---- !u!1 &439342758
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 439342760}
-  - component: {fileID: 439342759}
-  m_Layer: 0
-  m_Name: AuthoringScene
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &439342759
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 439342758}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 45a335734b1572644a6a5d09d87adc65, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _SceneAsset: {fileID: 102900000, guid: 62561c7118c5bbb46929c6bf65331faa, type: 3}
-  _HierarchyColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
-  AutoLoadScene: 1
-  _SceneGUID:
-    Value:
-      x: 398550310
-      y: 1270570113
-      z: 4218196630
-      w: 2867934038
---- !u!4 &439342760
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 439342758}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &650406532
 GameObject:
   m_ObjectHideFlags: 0
@@ -530,9 +477,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   editorArgs: -deploymentID 1
   useDeploymentConfig: 1
-  deploymentConfig: "{\r\n\t\"nodes\":[\r\n\t{\r\n\t\t\"nodeID\":0,\r\n\t\t\"ip\":\"127.0.0.1\",\r\n\t\t\"playTypes\":\"StreamedClient\",\r\n\t\t\"streamingRoles\":\"Guest\",\r\n\t\t\"serverNodeID\":1,\r\n\t\t\"numThinClients\":0,\r\n\t\t\"services\":[\"1\",\"2\"],\r\n\t\t\"emulationBehaviours\":
-    \"None\"\r\n\t},\r\n\t{\r\n\t\t\"nodeID\":1,\r\n\t\t\"ip\":\"127.0.0.1\",\r\n\t\t\"playTypes\":\"ServerAndClient\",\r\n\t\t\"streamingRoles\":\"Host\",\r\n\t\t\"serverNodeID\":1,\r\n\t\t\"numThinClients\":0,\r\n\t\t\"services\":[],\r\n\t\t\"emulationBehaviours\":
-    \"None\"\r\n\t}\r\n\t]\r\n}"
+  deploymentConfig: "{\r\n\"nodes\":[\r\n\t{\r\n\t\t\"nodeID\":0,\r\n\t\t\"nodeIP\":\"127.0.0.1\",\r\n\t\t\"worldConfigs\":[\r\n\t\t\t{\r\n\t\t\t\"worldType\":\"Client\",\r\n\t\t\t\"initializationMode\":\"CreateAndConnect\",\r\n\t\t\t\"multiplayStreamingRoles\":\"Host\",\r\n\t\t\t\"serverNodeID\":1,\r\n\t\t\t\"streamingNodeID\":-1,\r\n\t\t\t\"numThinClients\":0,\r\n\t\t\t\"services\":[],\r\n\t\t\t\"serviceFilterType\":\"Includes\",\r\n\t\t\t\"emulationBehaviours\":\"None\"\r\n\t\t\t}\r\n\t\t]\r\n\t},\r\n\t{\r\n\t\t\"nodeID\":1,\r\n\t\t\"nodeIP\":\"127.0.0.1\",\r\n\t\t\"worldConfigs\":[\r\n\t\t\t{\r\n\t\t\t\"worldType\":\"Server\",\r\n\t\t\t\"initializationMode\":\"CreateAndConnect\",\r\n\t\t\t\"multiplayStreamingRoles\":\"Disabled\",\r\n\t\t\t\"serverNodeID\":-1,\r\n\t\t\t\"streamingNodeID\":-1,\r\n\t\t\t\"numThinClients\":0,\r\n\t\t\t\"services\":[],\r\n\t\t\t\"serviceFilterType\":\"Includes\",\r\n\t\t\t\"emulationBehaviours\":\"None\"\r\n\t\t\t},\r\n\t\t\t{\r\n\t\t\t\"worldType\":\"Client\",\r\n\t\t\t\"initializationMode\":\"CreateAndConnect\",\r\n\t\t\t\"multiplayStreamingRoles\":\"Host\",\r\n\t\t\t\"serverNodeID\":1,\r\n\t\t\t\"streamingNodeID\":-1,\r\n\t\t\t\"numThinClients\":0,\r\n\t\t\t\"services\":[],\r\n\t\t\t\"serviceFilterType\":\"Includes\",\r\n\t\t\t\"emulationBehaviours\":\"None\"\r\n\t\t\t}\r\n\t\t]\r\n\t}\r\n]\r\n}"
 --- !u!1 &827113861
 GameObject:
   m_ObjectHideFlags: 0
@@ -909,6 +854,59 @@ RectTransform:
     type: 3}
   m_PrefabInstance: {fileID: 2111867266}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1913125884
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1913125886}
+  - component: {fileID: 1913125885}
+  m_Layer: 0
+  m_Name: SceneLoaderScene
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1913125885
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1913125884}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45a335734b1572644a6a5d09d87adc65, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _SceneAsset: {fileID: 102900000, guid: bea83102298cfb741939cdba85abe535, type: 3}
+  _HierarchyColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  AutoLoadScene: 1
+  _SceneGUID:
+    Value:
+      x: 538151659
+      y: 1203751058
+      z: 2883359633
+      w: 1398717016
+--- !u!4 &1913125886
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1913125884}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2101193216
 GameObject:
   m_ObjectHideFlags: 0
@@ -1240,10 +1238,10 @@ SceneRoots:
   m_Roots:
   - {fileID: 410087041}
   - {fileID: 832575519}
-  - {fileID: 439342760}
   - {fileID: 2101193219}
   - {fileID: 650406536}
   - {fileID: 827113865}
   - {fileID: 955198408}
   - {fileID: 989023407}
   - {fileID: 811246997}
+  - {fileID: 1913125886}

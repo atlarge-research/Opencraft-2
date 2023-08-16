@@ -22,11 +22,6 @@ namespace Opencraft.Terrain.Authoring
     public struct TerrainSpawner : IComponentData, ISingleton
     {
         public Entity TerrainArea;
-        public int seed;
-        public int maxColumnSpawnsPerTick;
-        public int2 worldLimitsHeight;
-        public int playerViewRange;
-        public int terrainSpawnRange;
     }
 
     // Manage component of materials used on terrain area meshes
@@ -55,13 +50,7 @@ namespace Opencraft.Terrain.Authoring
     {
         public GameObject TerrainArea;
         public Material TerrainMaterial;
-        public float[] TerrainMaterialUVSizing= new float[] { 1.0f,1.0f, 1.0f,1.0f, 1.0f,1.0f, 1.0f,1.0f,1.0f,1.0f};
         public LayerCollection layerCollection = null;
-        public int initialColumnsX = 3;
-        public int initialColumnsZ = 3;
-        public int playerViewRange = 5;
-        public int terrainSpawnRange = 5;
-        public int maxColumnSpawnsPerTick = 10;
 
         class Baker : Baker<TerrainSpawnerAuthoring>
         {
@@ -72,22 +61,17 @@ namespace Opencraft.Terrain.Authoring
                 TerrainSpawner terrainSpawner = new TerrainSpawner
                 {
                     TerrainArea = GetEntity(authoring.TerrainArea, TransformUsageFlags.Dynamic),
-                    maxColumnSpawnsPerTick = authoring.maxColumnSpawnsPerTick,
-                    seed = Config.Seed,
-                    playerViewRange = authoring.playerViewRange,
-                    terrainSpawnRange = authoring.terrainSpawnRange
                 };
-                authoring.TerrainMaterial.SetFloatArray("_uvSizes", authoring.TerrainMaterialUVSizing);
                 MaterialBank materialBank = new MaterialBank() { TerrainMaterial = authoring.TerrainMaterial };
 
                 // Add to the TerrainSpawner entity a buffer of terrain areas to spawn
                 var columnsToSpawnBuffer = AddBuffer<TerrainColumnsToSpawn>(entity);
                 DynamicBuffer<int2> intBuffer = columnsToSpawnBuffer.Reinterpret<int2>();
-                for (int x = -(int)math.floor(authoring.initialColumnsX / 2.0f);
-                     x < math.ceil(authoring.initialColumnsX / 2.0f);
+                for (int x = -(int)math.floor(Env.INITIAL_COLUMNS_X / 2.0f);
+                     x < math.ceil(Env.INITIAL_COLUMNS_X / 2.0f);
                      x++)
-                    for (int z = -(int)math.floor(authoring.initialColumnsZ / 2.0f);
-                         z < math.ceil(authoring.initialColumnsZ / 2.0f);
+                    for (int z = -(int)math.floor(Env.INITIAL_COLUMNS_Z / 2.0f);
+                         z < math.ceil(Env.INITIAL_COLUMNS_Z / 2.0f);
                          z++)
                         intBuffer.Add(new int2(x, z));
 

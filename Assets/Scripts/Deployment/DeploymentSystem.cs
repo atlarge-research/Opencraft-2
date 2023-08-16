@@ -1,4 +1,6 @@
-﻿using Opencraft.Bootstrap;
+﻿using System;
+using System.Collections.Generic;
+using Opencraft.Bootstrap;
 using Opencraft.Player.Emulated;
 using Opencraft.Player.Multiplay;
 using Unity.Burst;
@@ -14,13 +16,27 @@ namespace Opencraft.Deployment
     {
         public int nodeID;
     }
+    
+    [Serializable]
+    public enum ConfigRPCActions
+    {
+        Initialize,
+        InitializeAndConnect,
+        Connect,
+        Disconnect,
+        Destroy
+    }
 
-    public struct ConfigRPC : IRpcCommand
+    public struct DeploymentConfigRPC : IRpcCommand
     {
         public int nodeID;
-        // World and game details
-        public int worldTypes;
-        public int numThinClients;
+        
+        //What action to apply to these world types
+        public ConfigRPCActions action;
+        
+        public WorldTypes worldType;
+        
+        public MultiplayStreamingRoles multiplayStreamingRoles;
         
         // Game server connection
         public FixedString64Bytes serverIP;
@@ -30,17 +46,21 @@ namespace Opencraft.Deployment
         public FixedString64Bytes signallingIP;
         public ushort signallingPort;
         
-        // Emulation
+        public int numThinClients;
+        
+        // Names of server service Types, handled according to serviceFilterType
+        // public string[] services;
+        // How the service names are handled when instantiating this world
+        // public ServiceFilterType serviceFilterType;
+        // The player emulation behaviour to use on a client world
         public EmulationBehaviours emulationBehaviours;
-        
-        // Services?
-        
-        public override string ToString() =>
+
+        /*public override string ToString() =>
             $"[nodeID: { nodeID};  worldTypes: {(WorldTypes)worldTypes}; numThinClients: {numThinClients};" +
-            $"emulationBehaviours: {emulationBehaviours}; ]";
-        
+            $"emulationBehaviours: {emulationBehaviours}; ]";*/
     }
 
+    [Serializable]
     public enum ConfigErrorType
     {
         UnknownID,
@@ -50,6 +70,7 @@ namespace Opencraft.Deployment
 
     public struct ConfigErrorRPC : IRpcCommand
     {
+        public int nodeID;
         public ConfigErrorType errorType;
     }
     
@@ -61,7 +82,7 @@ namespace Opencraft.Deployment
     }
     
     /// <summary>
-    /// Listens for <see cref="RequestConfigRPC"/> and responds with a <see cref="ConfigRPC"/> containing
+    /// Listens for <see cref="RequestConfigRPC"/> and responds with one or more <see cref="DeploymentConfigRPC"/> containing
     /// configuration set in the <see cref="DeploymentGraph"/> 
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.Disabled)] // Don't automatically add to worlds
@@ -72,16 +93,23 @@ namespace Opencraft.Deployment
         {
             _deploymentGraph = new DeploymentGraph();
             // Check if deployment graph contains configuration for this local node
+            GameBootstrap bootstrap = (GameBootstrap)BootstrappingConfig.BootStrapClass;
             DeploymentNode? node = _deploymentGraph.GetNodeByID(Config.DeploymentID);
             if (node != null)
             {
                 Debug.Log("Overriding local config from deployment graph");
-                ConfigRPC cRPC = _deploymentGraph.NodeToConfigRPC(Config.DeploymentID);
-                DeploymentConfigHelpers.ReadConfigRPC(cRPC);
+                List<DeploymentConfigRPC> cRPCs = _deploymentGraph.NodeToConfigRPCs(Config.DeploymentID);
+                foreach (var cRPC in cRPCs)
+                {
+                    DeploymentConfigHelpers.HandleDeploymentConfigRPC(bootstrap, cRPC, out NativeList<WorldUnmanaged> newWorlds);
+                    // Should not need to use the authoring scene loader as all worlds will be created in the first tick
+                }
             }
-            // Setup worlds from local configuration
-            GameBootstrap bootstrap = (GameBootstrap)BootstrappingConfig.BootStrapClass;
-            bootstrap.SetupWorldsFromConfig();
+            else
+            {
+                // Setup worlds from local configuration
+                bootstrap.SetupWorldsFromLocalConfig();
+            }
         }
         
 
@@ -106,11 +134,13 @@ namespace Opencraft.Deployment
                 if (node == null)
                 {
                     Debug.LogWarning($"Received configuration request from node with unknown ID: {req.ValueRO.nodeID}");
-                    commandBuffer.AddComponent(res, new ConfigErrorRPC{errorType = ConfigErrorType.UnknownID});
+                    commandBuffer.AddComponent(res, new ConfigErrorRPC{nodeID = nodeID, errorType = ConfigErrorType.UnknownID});
+                    commandBuffer.AddComponent(res, new SendRpcCommandRequest { TargetConnection = sourceConn });
                 } else if (node.Value.connected)
                 {
                     Debug.LogWarning($"Received configuration request from node with already connected ID: {req.ValueRO.nodeID}");
-                    commandBuffer.AddComponent(res, new ConfigErrorRPC{errorType = ConfigErrorType.DuplicateID});
+                    commandBuffer.AddComponent(res, new ConfigErrorRPC{nodeID = nodeID, errorType = ConfigErrorType.DuplicateID});
+                    commandBuffer.AddComponent(res, new SendRpcCommandRequest { TargetConnection = sourceConn });
                 }
                 else
                 {
@@ -127,21 +157,36 @@ namespace Opencraft.Deployment
                     }
                     _deploymentGraph.SetEndpoint(nodeID, remoteEndpoint);
                     // Build response with configuration details
-                    ConfigRPC cRPC = _deploymentGraph.NodeToConfigRPC(nodeID);
-                    commandBuffer.AddComponent(res, cRPC);
+                    List<DeploymentConfigRPC> cRPCs = _deploymentGraph.NodeToConfigRPCs(nodeID);
+                    // Create a set of configuration RPCs
+                    foreach (var cRPC in cRPCs)
+                    {
+                        commandBuffer.AddComponent(res, cRPC);
+                        commandBuffer.AddComponent(res, new SendRpcCommandRequest { TargetConnection = sourceConn });
+                        res = commandBuffer.CreateEntity();
+                    }
                 }
                 
-                // Mark we have a response for request, and destroy the request
-                commandBuffer.AddComponent(res, new SendRpcCommandRequest { TargetConnection = sourceConn });
+                // Destroy the request
                 commandBuffer.DestroyEntity(reqEntity);
             }
+            
+            // Handle received configuration error RPC
+            foreach (var (reqSrc, errorRPC, reqEntity) in SystemAPI
+                         .Query<RefRO<ReceiveRpcCommandRequest>, RefRO<ConfigErrorRPC >>()
+                         .WithEntityAccess())
+            {
+                Debug.LogWarning($"Received configuration error response of type: {errorRPC.ValueRO.errorType} from node with ID {errorRPC.ValueRO.nodeID}");
+                commandBuffer.DestroyEntity(reqEntity);
+            }
+            
             commandBuffer.Playback(EntityManager);
         }
 
     }
-    
+
     /// <summary>
-    /// Sends <see cref="RequestConfigRPC"/> and uses the configuration in the response <see cref="ConfigRPC"/>
+    /// Sends <see cref="RequestConfigRPC"/> and uses the configuration in the response <see cref="DeploymentConfigRPC"/>
     /// to create local worlds
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.Disabled)] // Don't automatically add to worlds
@@ -182,28 +227,40 @@ namespace Opencraft.Deployment
                 commandBuffer.DestroyEntity(reqEntity);
             }
             
-            // Handle received configuration answer RPC
-            bool configurationReceived = false;
+            // Handle all received configuration RPCs
             foreach (var (reqSrc, configRPC, reqEntity) in SystemAPI
-                         .Query<RefRO<ReceiveRpcCommandRequest>, RefRO<ConfigRPC>>()
+                         .Query<RefRO<ReceiveRpcCommandRequest>, RefRO<DeploymentConfigRPC>>()
                          .WithEntityAccess())
             {
                 var connection = connectionLookup[reqSrc.ValueRO.SourceConnection];
                 NetworkEndpoint remoteEndpoint = netDriver.GetRemoteEndPoint(connection);
-                Debug.Log($"Received configuration answer from {remoteEndpoint}");
-                configurationReceived = true;
-                ConfigRPC cRPC = configRPC.ValueRO;
-                DeploymentConfigHelpers.ReadConfigRPC(cRPC);
-                Debug.Log($"cRPC with worldtype {(WorldTypes)cRPC.worldTypes} results in config: worldTypes- {Config.playTypes};" +
-                          $" streamingRole- {Config.multiplayStreamingRoles}; emulationType-{Config.EmulationType}");
-                // Setup worlds from received configuration and stop this system
+                
+                DeploymentConfigRPC cRPC = configRPC.ValueRO;
+                
+                Debug.Log($"Received configuration {cRPC.action} RPC on worldType {cRPC.worldType} from {remoteEndpoint}");
+                
                 GameBootstrap bootstrap = (GameBootstrap)BootstrappingConfig.BootStrapClass;
-                bootstrap.SetupWorldsFromConfig();
+                DeploymentConfigHelpers.HandleDeploymentConfigRPC(bootstrap, cRPC, out NativeList<WorldUnmanaged> newWorlds);
+                
+                if(!newWorlds.IsEmpty) 
+                    GenerateAuthoringSceneLoadRequests(commandBuffer, ref newWorlds);
+                
                 commandBuffer.DestroyEntity(reqEntity);
             }
             commandBuffer.Playback(EntityManager);
-            if (configurationReceived)
-                Enabled = false;
+
+        }
+
+        private void GenerateAuthoringSceneLoadRequests(EntityCommandBuffer ecb, ref NativeList<WorldUnmanaged> newWorlds)
+        {
+            foreach (var world in newWorlds)
+            {
+                if (world.IsClient() || world.IsServer() || world.IsThinClient())
+                {
+                    Entity e = ecb.CreateEntity();
+                    ecb.AddComponent(e, new LoadAuthoringSceneRequest{world = world});
+                }
+            }
         }
 
     }
@@ -211,60 +268,36 @@ namespace Opencraft.Deployment
     [BurstCompile]
     internal static class DeploymentConfigHelpers
     {
-        public static void ReadConfigRPC(ConfigRPC cRPC)
+        public static void HandleDeploymentConfigRPC(GameBootstrap bootstrap, DeploymentConfigRPC cRPC, out NativeList<WorldUnmanaged> newWorlds)
         {
-            if (cRPC.nodeID != Config.DeploymentID)
+            newWorlds = new NativeList<WorldUnmanaged>(16, Allocator.Temp);
+            if (cRPC.worldType == WorldTypes.None)
             {
-                Debug.LogWarning(
-                    $"Configuration answer has wrong ID: {cRPC.nodeID} for node {Config.DeploymentID}");
+                Debug.LogWarning($"Received deployment config RPC with no worldtype!");
+                return;
             }
+            GameBootstrap.BootstrapPlayTypes playTypes = GameBootstrap.BootstrapPlayTypes.ServerAndClient;
+            if (cRPC.worldType == WorldTypes.Client)
+                playTypes = GameBootstrap.BootstrapPlayTypes.Client;
+            if (cRPC.worldType == WorldTypes.Server)
+                playTypes = GameBootstrap.BootstrapPlayTypes.Server;
+            if (cRPC.worldType == WorldTypes.ThinClient)
+                playTypes = GameBootstrap.BootstrapPlayTypes.ThinClient;
 
-            //Override playtype and streaming role
-            WorldTypes worldTypes = (WorldTypes)cRPC.worldTypes;
-            Debug.Log($"cRPC has worldtypes {worldTypes}");
-            if ((worldTypes & WorldTypes.Client) == WorldTypes.Client)
+            if (cRPC.action == ConfigRPCActions.InitializeAndConnect)
             {
-
-                if ((worldTypes & WorldTypes.Server) == WorldTypes.Server)
-                    Config.playTypes = GameBootstrap.BootstrapPlayTypes.ClientAndServer;
-                else
-                    Config.playTypes = GameBootstrap.BootstrapPlayTypes.Client;
+                bootstrap.SetBootStrapConfig(cRPC.serverIP.ToString(), cRPC.serverPort);
+                bootstrap.SetupWorlds(cRPC.multiplayStreamingRoles, playTypes, ref newWorlds, cRPC.numThinClients, autoConnect: true );
             }
-            else if ((worldTypes & WorldTypes.Server) == WorldTypes.Server)
-                Config.playTypes = GameBootstrap.BootstrapPlayTypes.Server;
-            
-            if ((worldTypes & WorldTypes.StreamGuest) == WorldTypes.StreamGuest)
+            else if (cRPC.action == ConfigRPCActions.Initialize)
             {
-                Config.playTypes = GameBootstrap.BootstrapPlayTypes.StreamedClient;
-                Config.multiplayStreamingRoles = MultiplayStreamingRoles.Guest;
+                bootstrap.SetBootStrapConfig(cRPC.serverIP.ToString(), cRPC.serverPort);
+                bootstrap.SetupWorlds(cRPC.multiplayStreamingRoles, playTypes, ref newWorlds, cRPC.numThinClients, autoConnect: false );
             }
-            if ((worldTypes & WorldTypes.StreamHost) == WorldTypes.StreamHost)
-                Config.multiplayStreamingRoles = MultiplayStreamingRoles.Host;
-
-            // Game server URL details
-            FixedString64Bytes serverIP = cRPC.serverIP;
-            if (!serverIP.IsEmpty)
-                Config.ServerUrl = serverIP.ToString();
-            ushort serverPort = cRPC.serverPort;
-            if (serverPort != 0)
-                Config.ServerPort = serverPort;
-
-            // Signalling server URL details
-            FixedString64Bytes signalingIP = cRPC.signallingIP;
-            if (!signalingIP.IsEmpty)
-                Config.SignalingUrl = signalingIP.ToString();
-            ushort signalingPort = cRPC.signallingPort;
-            if (signalingPort != 0)
-                Config.SignalingPort = signalingPort;
-
-            // Number of thin clients
-            int numThinClients = cRPC.numThinClients;
-            if (numThinClients > 0)
-                Config.NumThinClientPlayers = numThinClients;
-
-            // Player emulation
-            Config.EmulationType = cRPC.emulationBehaviours;
-
+            else
+            {
+                Debug.LogWarning($"Received unsupported configuration action {cRPC.action}");
+            }
         }
     }
 }

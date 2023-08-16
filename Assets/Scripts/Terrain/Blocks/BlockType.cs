@@ -26,6 +26,13 @@
             (6 & 31) << 24,
             (7 & 31) << 24,
         };
+        
+        // UV sizing > 1 tiles a texture across multiple blocks, currently not done for any block types
+        public static float[] BlockUVSizing= new float[]
+        {
+            1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
+        };
     }
+    
     
 }

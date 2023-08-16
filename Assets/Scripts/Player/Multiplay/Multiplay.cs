@@ -9,19 +9,11 @@ using UnityEngine.UI;
 
 namespace Opencraft.Player.Multiplay
 {
-    
-    [Serializable]
-    public enum MultiplayStreamingRoles
-    {
-        Disabled,
-        Host,
-        Guest
-    }
-
-
-    // Render stream connection manager, responsible for creating and destroying input and video streams on both
-    // host and guest.
-    // Adapted from RenderStreaming package Multiplay sample.
+    /// <summary>
+    /// Render stream connection manager, responsible for creating and destroying input and video streams on both
+    /// host and guest.
+    /// Adapted from RenderStreaming package Multiplay sample.
+    /// </summary>
     public class Multiplay : SignalingHandlerBase,
         IOfferHandler, IAddChannelHandler, IDisconnectHandler, IDeletedConnectionHandler
     {
