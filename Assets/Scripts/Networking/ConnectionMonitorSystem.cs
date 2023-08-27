@@ -58,7 +58,7 @@ namespace Opencraft.Networking
             Entities.WithName("HandleDisconnect").WithNone<NetworkStreamConnection>().ForEach(
                 (Entity entity, in ConnectionState state) =>
                 {
-                    UnityEngine.Debug.Log(
+                    Debug.Log(
                         $"[{worldName}] Connection disconnected ID:{state.NetworkId} Reason:{DisconnectReasonEnumToString.Convert((int)state.DisconnectReason)}");
                     ecb.RemoveComponent<ConnectionState>(entity);
                 }).Run();

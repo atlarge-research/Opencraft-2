@@ -3,7 +3,7 @@
 namespace Unity.Entities
 {
     /// <summary>
-    /// Calls CustomWorldInitialization on game start, before a scene completes loading. Replaces by <see cref="AutomaticWorldBootstrap"/>
+    /// Calls CustomWorldInitialization on game start, before a scene completes loading. Replaces <see cref="AutomaticWorldBootstrap"/>
     /// </summary>
     static class CustomAutomaticWorldBootstrap
     {

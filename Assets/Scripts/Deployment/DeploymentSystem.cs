@@ -93,7 +93,6 @@ namespace Opencraft.Deployment
         {
             _deploymentGraph = new DeploymentGraph();
             // Check if deployment graph contains configuration for this local node
-            GameBootstrap bootstrap = (GameBootstrap)BootstrappingConfig.BootStrapClass;
             DeploymentNode? node = _deploymentGraph.GetNodeByID(Config.DeploymentID);
             if (node != null)
             {
@@ -101,14 +100,14 @@ namespace Opencraft.Deployment
                 List<DeploymentConfigRPC> cRPCs = _deploymentGraph.NodeToConfigRPCs(Config.DeploymentID);
                 foreach (var cRPC in cRPCs)
                 {
-                    DeploymentConfigHelpers.HandleDeploymentConfigRPC(bootstrap, cRPC, out NativeList<WorldUnmanaged> newWorlds);
+                    DeploymentConfigHelpers.HandleDeploymentConfigRPC(cRPC, out NativeList<WorldUnmanaged> newWorlds);
                     // Should not need to use the authoring scene loader as all worlds will be created in the first tick
                 }
             }
             else
             {
                 // Setup worlds from local configuration
-                bootstrap.SetupWorldsFromLocalConfig();
+                BootstrapInstance.instance.SetupWorldsFromLocalConfig();
             }
         }
         
@@ -125,6 +124,7 @@ namespace Opencraft.Deployment
             {
                 var sourceConn = reqSrc.ValueRO.SourceConnection;
                 commandBuffer.AddComponent<ConfigurationSent>(sourceConn); // Mark this connection as request received
+                //commandBuffer.AddComponent<NetworkStreamInGame>(sourceConn);
                 
                 var res = commandBuffer.CreateEntity();
                 int nodeID = req.ValueRO.nodeID;
@@ -212,6 +212,7 @@ namespace Opencraft.Deployment
             foreach (var (netID, entity) in SystemAPI.Query<RefRO<NetworkId>>().WithEntityAccess().WithNone<ConfigurationSent>())
             {
                 commandBuffer.AddComponent<ConfigurationSent>(entity);
+                //commandBuffer.AddComponent<NetworkStreamInGame>(entity);
                 var req = commandBuffer.CreateEntity();
                 commandBuffer.AddComponent(req, new RequestConfigRPC{nodeID = Config.DeploymentID});
                 commandBuffer.AddComponent(req, new SendRpcCommandRequest { TargetConnection = entity });
@@ -239,8 +240,7 @@ namespace Opencraft.Deployment
                 
                 Debug.Log($"Received configuration {cRPC.action} RPC on worldType {cRPC.worldType} from {remoteEndpoint}");
                 
-                GameBootstrap bootstrap = (GameBootstrap)BootstrappingConfig.BootStrapClass;
-                DeploymentConfigHelpers.HandleDeploymentConfigRPC(bootstrap, cRPC, out NativeList<WorldUnmanaged> newWorlds);
+                DeploymentConfigHelpers.HandleDeploymentConfigRPC(cRPC, out NativeList<WorldUnmanaged> newWorlds);
                 
                 if(!newWorlds.IsEmpty) 
                     GenerateAuthoringSceneLoadRequests(commandBuffer, ref newWorlds);
@@ -255,7 +255,7 @@ namespace Opencraft.Deployment
         {
             foreach (var world in newWorlds)
             {
-                if (world.IsClient() || world.IsServer() || world.IsThinClient())
+                if ((world.IsClient() || world.IsServer() || world.IsThinClient()) && !world.IsStreamedClient())
                 {
                     Entity e = ecb.CreateEntity();
                     ecb.AddComponent(e, new LoadAuthoringSceneRequest{world = world});
@@ -268,7 +268,7 @@ namespace Opencraft.Deployment
     [BurstCompile]
     internal static class DeploymentConfigHelpers
     {
-        public static void HandleDeploymentConfigRPC(GameBootstrap bootstrap, DeploymentConfigRPC cRPC, out NativeList<WorldUnmanaged> newWorlds)
+        public static void HandleDeploymentConfigRPC(DeploymentConfigRPC cRPC, out NativeList<WorldUnmanaged> newWorlds)
         {
             newWorlds = new NativeList<WorldUnmanaged>(16, Allocator.Temp);
             if (cRPC.worldType == WorldTypes.None)
@@ -283,16 +283,27 @@ namespace Opencraft.Deployment
                 playTypes = GameBootstrap.BootstrapPlayTypes.Server;
             if (cRPC.worldType == WorldTypes.ThinClient)
                 playTypes = GameBootstrap.BootstrapPlayTypes.ThinClient;
-
+            
+            /*NetworkEndpoint.TryParse(cRPC.serverIP.ToString(), cRPC.serverPort,
+                out NetworkEndpoint gameEndpoint, NetworkFamily.Ipv4);
+            Debug.Log($"Game {cRPC.serverIP.ToString()}:{cRPC.serverPort} endpoint is {gameEndpoint}");
+            NetworkEndpoint.TryParse(cRPC.signallingIP.ToString(), cRPC.signallingPort,
+                out NetworkEndpoint streamEndpoint, NetworkFamily.Ipv4);*/
+            
             if (cRPC.action == ConfigRPCActions.InitializeAndConnect)
             {
-                bootstrap.SetBootStrapConfig(cRPC.serverIP.ToString(), cRPC.serverPort);
-                bootstrap.SetupWorlds(cRPC.multiplayStreamingRoles, playTypes, ref newWorlds, cRPC.numThinClients, autoConnect: true );
+                BootstrapInstance.instance.SetupWorlds(cRPC.multiplayStreamingRoles, playTypes, ref newWorlds, cRPC.numThinClients,
+                    autoConnect: true,cRPC.serverIP.ToString(), cRPC.serverPort,cRPC.signallingIP.ToString(), cRPC.signallingPort);
             }
             else if (cRPC.action == ConfigRPCActions.Initialize)
             {
-                bootstrap.SetBootStrapConfig(cRPC.serverIP.ToString(), cRPC.serverPort);
-                bootstrap.SetupWorlds(cRPC.multiplayStreamingRoles, playTypes, ref newWorlds, cRPC.numThinClients, autoConnect: false );
+                BootstrapInstance.instance.SetupWorlds(cRPC.multiplayStreamingRoles, playTypes, ref newWorlds, cRPC.numThinClients,
+                    autoConnect: false, cRPC.serverIP.ToString(), cRPC.serverPort,cRPC.signallingIP.ToString(), cRPC.signallingPort);
+            }
+            else if (cRPC.action == ConfigRPCActions.Connect)
+            {
+                BootstrapInstance.instance.ConnectWorlds(cRPC.multiplayStreamingRoles, playTypes,
+                    cRPC.serverIP.ToString(), cRPC.serverPort,cRPC.signallingIP.ToString(), cRPC.signallingPort);
             }
             else
             {

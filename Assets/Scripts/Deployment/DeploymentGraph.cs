@@ -4,7 +4,9 @@ using System.Linq;
 using Opencraft.Bootstrap;
 using Opencraft.Player.Emulated;
 using Opencraft.Player.Multiplay;
+using Unity.Collections;
 using Unity.Entities;
+using Unity.NetCode;
 using Unity.Networking.Transport;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -128,11 +130,24 @@ namespace Opencraft.Deployment
                     }
                     // Give the same server port to all nodes
                     cRPC.serverPort = Config.ServerPort;
-                    // There is only one global signalling service, likely to be co-deployed with this deployment service
-                    if (!Config.SignalingUrl.IsNullOrEmpty())
-                        cRPC.signallingIP = Config.SignalingUrl;
+
+                    // Find and set signaling/streaming URL
+                    if(worldConfig.streamingNodeID == node.id)
+                        cRPC.signallingIP  = "127.0.0.1";
                     else
-                        cRPC.signallingIP = "";
+                    if (NodeExists(worldConfig.streamingNodeID))
+                    {
+                        var serverNode = Nodes[worldConfig.streamingNodeID];
+                        // Get server node address without port
+                        NetworkEndpoint endpoint = serverNode.endpoint.WithPort(0);
+                        string address = endpoint.Address;
+                        cRPC.signallingIP = address.Substring(0, address.Length - 2);
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"Node {nodeID} World {worldConfig.worldType} has nonexistent streaming node id: {worldConfig.streamingNodeID}!");
+                    }
+                    
                     cRPC.signallingPort = Config.SignalingPort;
                     
                     cRPC.emulationBehaviours = worldConfig.emulationBehaviours;
@@ -169,7 +184,7 @@ namespace Opencraft.Deployment
                 if (jsonNode.nodeIP.IsNullOrEmpty())
                 {
                     // IP not known yet, update when we receive communication from this node
-                    newNode.endpoint = NetworkEndpoint.AnyIpv4; 
+                    newNode.endpoint = NetworkEndpoint.LoopbackIpv4; 
                 }
                 else
                 {
@@ -181,7 +196,7 @@ namespace Opencraft.Deployment
                     else
                     {
                         Debug.LogWarning($"Node deployment IP: {jsonNode.nodeIP} cannot be parsed!");
-                        newNode.endpoint = NetworkEndpoint.AnyIpv4; 
+                        newNode.endpoint = NetworkEndpoint.LoopbackIpv4; 
                     }
                 }
                 

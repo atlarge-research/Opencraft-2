@@ -1,5 +1,8 @@
 using Opencraft.Deployment;
+using Unity.Collections;
 using Unity.Entities;
+using Unity.NetCode;
+using Unity.Networking.Transport;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -10,30 +13,49 @@ namespace Opencraft.Player.Multiplay
     [UpdateInGroup(typeof(InitializationSystemGroup))]
     public partial class MultiplayInitSystem : SystemBase
     {
+        private EntityQuery _requestQuery;
+        protected override void OnCreate()
+        {
+            _requestQuery = GetEntityQuery(ComponentType.ReadOnly<NetworkStreamRequestConnect>());
+        }
+        
         protected override void OnUpdate()
         {
+
             // Begin multiplay hosts in OnUpdate to ensure the GameObjects it references are properly initialized
             Multiplay multiplay = MultiplaySingleton.Instance;
             if (multiplay.IsUnityNull())
                 return;
-            // No need to run this  more than once
-            Enabled = false;
+            multiplay.InitSettings();
 
-            switch (Config.multiplayStreamingRoles)
+            if (World.Unmanaged.IsStreamedClient())
             {
-                case MultiplayStreamingRoles.Disabled:
-                    Debug.Log("Multiplay is disabled.");
-                    multiplay.SetUpLocalPlayer();
-                    break;
-                case MultiplayStreamingRoles.Host:
-                    Debug.Log("Setting up multiplay host!");
-                    multiplay.SetUpHost();
-                    break;
-                case MultiplayStreamingRoles.Guest:
-                    Debug.Log("Setting up multiplay guest!");
-                    multiplay.SetUpGuest();
-                    break;
+                // Check for connection requests
+                if (!_requestQuery.IsEmpty)
+                {
+                    var requests = _requestQuery.ToComponentDataArray<NetworkStreamRequestConnect>(Allocator.Temp);
+                    if(requests.Length > 1)
+                        Debug.LogWarning($"Render streaming guest has multiple connection requests! Ignoring all but the first...");
+                    NetworkEndpoint endpoint = requests[0].Endpoint;
+                    Debug.Log($"Got multiplay guest endpoint of {endpoint}");
+                    multiplay.SetUpGuest(endpoint);
+                    EntityManager.DestroyEntity(_requestQuery);
+                }
+                // Return regardless of connections
+                return;
             }
+            else if (World.Unmanaged.IsHostClient())
+            {
+                multiplay.SetUpHost();
+            }
+            else
+            {
+                Debug.Log("Multiplay is disabled.");
+                multiplay.SetUpLocalPlayer();
+            }
+            // Only need to run once if Multiplay disabled or on a host 
+            Enabled = false;
+            
         }
 
     }

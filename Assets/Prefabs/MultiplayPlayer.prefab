@@ -180,6 +180,23 @@ MonoBehaviour:
         m_CallState: 2
     m_ActionId: cded7730-b8f6-4797-9655-63d192ed9ee0
     m_ActionName: Player Controls/SecondaryAction[/Mouse/rightButton,/XInputControllerWindows/buttonWest]
+  - m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 3403226978593572324}
+        m_TargetAssemblyTypeName: Opencraft.Player.Multiplay.MultiplayPlayerController,
+          Assembly-CSharp
+        m_MethodName: OnEscapeAction
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+    m_ActionId: 52bd4c51-0503-4ffb-b405-5a778b3906fc
+    m_ActionName: Player Controls/Exit[/Keyboard/escape]
   m_DefaultActionMap: Player Controls
 --- !u!20 &3141172503242693401
 Camera:
@@ -324,6 +341,7 @@ MonoBehaviour:
   inputStart: 0
   inputPrimaryAction: 0
   inputSecondaryAction: 0
+  inputEscapeAction: 0
   playerEntityExists: 0
   playerEntityRequestSent: 0
   debugText: {fileID: 6289289848544400366}

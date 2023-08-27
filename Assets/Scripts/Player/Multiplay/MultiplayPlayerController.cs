@@ -2,11 +2,13 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using System.Linq;
+using System.Net.Mime;
 using Opencraft.Statistics;
 using Unity.Entities;
 using Unity.Profiling;
 using Unity.RenderStreaming;
 using Unity.Serialization;
+using UnityEditor;
 using UnityEngine.UI;
 using Random = UnityEngine.Random;
 
@@ -20,9 +22,9 @@ namespace Opencraft.Player.Multiplay
         [DontSerialize]public Vector2 inputMovement;
         [DontSerialize]public Vector2 inputLook;
         [DontSerialize]public bool inputJump;
-        [DontSerialize]public bool inputStart;
-        [DontSerialize]public bool inputPrimaryAction;
-        [DontSerialize]public bool inputSecondaryAction;
+        [DontSerialize]public bool inputStart = false;
+        [DontSerialize]public bool inputPrimaryAction = false;
+        [DontSerialize]public bool inputSecondaryAction = false;
         [DontSerialize]public bool playerEntityExists;
         [DontSerialize]public bool playerEntityRequestSent;
         [DontSerialize]public Entity playerEntity;
@@ -135,6 +137,19 @@ namespace Opencraft.Player.Multiplay
             if (value.performed)
             {
                 inputSecondaryAction = true;
+            }
+        }
+        
+        public void OnEscapeAction(InputAction.CallbackContext value)
+        {
+            if (value.performed)
+            {
+                Debug.Log("Exiting game!");
+#if UNITY_EDITOR
+                EditorApplication.ExitPlaymode();
+#else
+                Application.Quit();
+#endif
             }
         }
     }

@@ -472,12 +472,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 811246996}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8bf58c69bf424fe194d229f05ce07072, type: 3}
+  m_Script: {fileID: 11500000, guid: 7670ed7fdc2d435abe14606c6942102a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   editorArgs: -deploymentID 1
   useDeploymentConfig: 1
-  deploymentConfig: "{\r\n\"nodes\":[\r\n\t{\r\n\t\t\"nodeID\":0,\r\n\t\t\"nodeIP\":\"127.0.0.1\",\r\n\t\t\"worldConfigs\":[\r\n\t\t\t{\r\n\t\t\t\"worldType\":\"Client\",\r\n\t\t\t\"initializationMode\":\"CreateAndConnect\",\r\n\t\t\t\"multiplayStreamingRoles\":\"Host\",\r\n\t\t\t\"serverNodeID\":1,\r\n\t\t\t\"streamingNodeID\":-1,\r\n\t\t\t\"numThinClients\":0,\r\n\t\t\t\"services\":[],\r\n\t\t\t\"serviceFilterType\":\"Includes\",\r\n\t\t\t\"emulationBehaviours\":\"None\"\r\n\t\t\t}\r\n\t\t]\r\n\t},\r\n\t{\r\n\t\t\"nodeID\":1,\r\n\t\t\"nodeIP\":\"127.0.0.1\",\r\n\t\t\"worldConfigs\":[\r\n\t\t\t{\r\n\t\t\t\"worldType\":\"Server\",\r\n\t\t\t\"initializationMode\":\"CreateAndConnect\",\r\n\t\t\t\"multiplayStreamingRoles\":\"Disabled\",\r\n\t\t\t\"serverNodeID\":-1,\r\n\t\t\t\"streamingNodeID\":-1,\r\n\t\t\t\"numThinClients\":0,\r\n\t\t\t\"services\":[],\r\n\t\t\t\"serviceFilterType\":\"Includes\",\r\n\t\t\t\"emulationBehaviours\":\"None\"\r\n\t\t\t},\r\n\t\t\t{\r\n\t\t\t\"worldType\":\"Client\",\r\n\t\t\t\"initializationMode\":\"CreateAndConnect\",\r\n\t\t\t\"multiplayStreamingRoles\":\"Host\",\r\n\t\t\t\"serverNodeID\":1,\r\n\t\t\t\"streamingNodeID\":-1,\r\n\t\t\t\"numThinClients\":0,\r\n\t\t\t\"services\":[],\r\n\t\t\t\"serviceFilterType\":\"Includes\",\r\n\t\t\t\"emulationBehaviours\":\"None\"\r\n\t\t\t}\r\n\t\t]\r\n\t}\r\n]\r\n}"
+  deploymentConfig: "{\r\n\"nodes\":[\r\n\t{\r\n\t\t\"nodeID\":0,\r\n\t\t\"nodeIP\":\"127.0.0.1\",\r\n\t\t\"worldConfigs\":[\r\n\t\t\t{\r\n\t\t\t\"worldType\":\"Client\",\r\n\t\t\t\"initializationMode\":\"CreateAndConnect\",\r\n\t\t\t\"multiplayStreamingRoles\":\"Guest\",\r\n\t\t\t\"serverNodeID\":-1,\r\n\t\t\t\"streamingNodeID\":1,\r\n\t\t\t\"numThinClients\":0,\r\n\t\t\t\"services\":[\"1\",\"2\"],\r\n\t\t\t\"serviceFilterType\":\"Includes\",\r\n\t\t\t\"emulationBehaviours\":\"None\"\r\n\t\t\t}\r\n\t\t]\r\n\t},\r\n\t{\r\n\t\t\"nodeID\":1,\r\n\t\t\"nodeIP\":\"127.0.0.1\",\r\n\t\t\"worldConfigs\":[\r\n\t\t\t{\r\n\t\t\t\"worldType\":\"Server\",\r\n\t\t\t\"initializationMode\":\"CreateAndConnect\",\r\n\t\t\t\"multiplayStreamingRoles\":\"Disabled\",\r\n\t\t\t\"serverNodeID\":-1,\r\n\t\t\t\"streamingNodeID\":-1,\r\n\t\t\t\"numThinClients\":0,\r\n\t\t\t\"services\":[],\r\n\t\t\t\"serviceFilterType\":\"Includes\",\r\n\t\t\t\"emulationBehaviours\":\"None\"\r\n\t\t\t},\r\n\t\t\t{\r\n\t\t\t\"worldType\":\"Client\",\r\n\t\t\t\"initializationMode\":\"CreateAndConnect\",\r\n\t\t\t\"multiplayStreamingRoles\":\"Host\",\r\n\t\t\t\"serverNodeID\":1,\r\n\t\t\t\"streamingNodeID\":-1,\r\n\t\t\t\"numThinClients\":0,\r\n\t\t\t\"services\":[],\r\n\t\t\t\"serviceFilterType\":\"Includes\",\r\n\t\t\t\"emulationBehaviours\":\"None\"\r\n\t\t\t}\r\n\t\t]\r\n\t}\r\n]\r\n}"
 --- !u!1 &827113861
 GameObject:
   m_ObjectHideFlags: 0
@@ -511,25 +511,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_useDefault: 1
-  signalingSettingsObject: {fileID: 0}
+  signalingSettingsObject: {fileID: 11400000, guid: 32d88f48fbfcc52499ffe7d9f5e52dc0,
+    type: 2}
   signalingSettings:
-    rid: 4836565149909254144
+    rid: 4584854005595504641
   handlers: []
   runOnAwake: 0
   evaluateCommandlineArguments: 1
   references:
     version: 2
     RefIds:
-    - rid: 4836565149909254144
+    - rid: 4584854005595504641
       type: {class: WebSocketSignalingSettings, ns: Unity.RenderStreaming, asm: Unity.RenderStreaming}
       data:
         m_url: ws://127.0.0.1
-        m_iceServers:
-        - m_urls:
-          - stun:stun.l.google.com:19302
-          m_username: 
-          m_credentialType: 0
-          m_credential: 
+        m_iceServers: []
 --- !u!114 &827113863
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -907,6 +903,50 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1924636146
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1924636148}
+  - component: {fileID: 1924636147}
+  m_Layer: 0
+  m_Name: Statistics
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1924636147
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1924636146}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 24e5d83552a44dc9a3dc6c2a7a6f8dae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!4 &1924636148
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1924636146}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2101193216
 GameObject:
   m_ObjectHideFlags: 0
@@ -1245,3 +1285,4 @@ SceneRoots:
   - {fileID: 989023407}
   - {fileID: 811246997}
   - {fileID: 1913125886}
+  - {fileID: 1924636148}

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Opencraft.Player.Multiplay.MultiplayStats;
+using Unity.Networking.Transport;
 using Unity.RenderStreaming;
 using UnityEngine;
 using UnityEngine.UI;
@@ -23,6 +24,7 @@ namespace Opencraft.Player.Multiplay
         public RawImage videoImage;
         public StatsUI statsUI;
         public GameObject defaultCamera;
+        private bool _initialized = false;
 
         private bool guestConnected = false;
 
@@ -36,11 +38,14 @@ namespace Opencraft.Player.Multiplay
         
         private Vector3 initialPosition = new Vector3(0, 40, -4);
 
-        void Awake()
+        public void InitSettings()
         {
+            if(_initialized)
+                return;
             // Fetch the settings on awake
             MultiplaySettingsManager.Instance.Initialize();
             settings = MultiplaySettingsManager.Instance.Settings;
+            _initialized = true;
         }
 
         public override IEnumerable<Component> Streams => streams;
@@ -135,6 +140,8 @@ namespace Opencraft.Player.Multiplay
         public void SetUpLocalPlayer()
         {
             defaultCamera.SetActive(false);
+            Cursor.lockState = CursorLockMode.Locked;
+            
             // We need to setup local input devices on local players
             var hostPlayerObj = Instantiate(playerPrefab, initialPosition, Quaternion.identity);
             var playerController = hostPlayerObj.GetComponent<MultiplayPlayerController>();
@@ -147,17 +154,31 @@ namespace Opencraft.Player.Multiplay
         public void SetUpHost()
         {
             SetUpLocalPlayer();
-
-            if (settings != null)
-                renderStreaming.useDefaultSettings = settings.UseDefaultSettings;
-            if (settings?.SignalingSettings != null)
-                renderStreaming.SetSignalingSettings(settings.SignalingSettings);
+            if (!settings.MultiplayEnabled)
+            {
+                Debug.Log("SetUpHost called but Multiplay disabled.");
+                return;
+            }
+                
+            renderStreaming.useDefaultSettings = false;
+            Debug.Log($"Setting up multiplay host with signaling at {settings.SignalingAddress}:{settings.SignalingPort}");
+            renderStreaming.SetSignalingSettings(settings.SignalingSettings);
             statsUI.AddSignalingHandler(this);
             renderStreaming.Run(handlers: new SignalingHandlerBase[] { this });
         }
 
-        public void SetUpGuest()
+        public void SetUpGuest(NetworkEndpoint endpoint)
         {
+            if (!settings.MultiplayEnabled)
+            {
+                Debug.Log("SetUpGuest called but Multiplay disabled.");
+                return;
+            }
+
+            Debug.Log($"Set up guest got endpoint {endpoint}");
+            settings.SignalingPort = endpoint.Port;
+            string address = endpoint.WithPort(0).ToString();
+            settings.SignalingAddress = address.Substring(0,address.Length - 2);
             StartCoroutine(ConnectGuest());
         }
 
@@ -168,10 +189,9 @@ namespace Opencraft.Player.Multiplay
             var handler = guestPlayer.GetComponent<SingleConnection>();
             statsUI.AddSignalingHandler(handler);
             
-            if (settings != null)
-                renderStreaming.useDefaultSettings = settings.UseDefaultSettings;
-            if (settings?.SignalingSettings != null)
-                renderStreaming.SetSignalingSettings(settings.SignalingSettings);
+            renderStreaming.useDefaultSettings = false;
+            renderStreaming.SetSignalingSettings(settings.SignalingSettings);
+            Debug.Log($"Setting up multiplay guest with signaling at {settings.SignalingAddress}:{settings.SignalingPort}");
             renderStreaming.Run(handlers: new SignalingHandlerBase[] { handler });
             
             
@@ -182,6 +202,8 @@ namespace Opencraft.Player.Multiplay
             
             if (settings != null)
                 receiveVideoViewer.SetCodec(settings.ReceiverVideoCodec);
+            
+            Cursor.lockState = CursorLockMode.Locked;
             
             //todo hacky wait for the signalling server to connect 
             yield return new WaitForSeconds(1f);

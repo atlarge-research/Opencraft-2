@@ -16,44 +16,45 @@ using UnityEditor;
 
 namespace Opencraft
 {
-    /// <summary>
-    /// Reads configuration from application environment (args or config file), ParrelSync, or an editor GameObject.
-    /// </summary>
-    public class CmdArgsReader : MonoBehaviour
+    public static class CmdArgsReader
     {
-        public string editorArgs;
-        public bool useDeploymentConfig = false;
-        [Multiline(10)]public string deploymentConfig;
-        
+#if UNITY_EDITOR
+        private static EditorCmdArgs editorArgs;
+#endif
         // Returns the string array of cmd line arguments from environment, ParrelSync, or an editor GameObject
-        private string[] GetCommandlineArgs()
+        private static string[] GetCommandlineArgs()
         {
             string[] args = new[] { "" };
 #if UNITY_EDITOR
             // ParrelSync clones can have arguments passed to them in the Clones Manager window
+            editorArgs = (EditorCmdArgs)GameObject.FindFirstObjectByType(typeof(EditorCmdArgs));
             if (ClonesManager.IsClone())
             {
                 // Get the custom arguments for this clone project.  
                 args = ClonesManager.GetArgument().Split(' ');
-            } else {
-                // Otherwise, use arguments in this MonoBehaviour 
-                args = editorArgs.Split(' ');
+            }
+            else
+            {
+                // Otherwise, use arguments in editor MonoBehaviour 
+                args = editorArgs.editorArgs.Split(' ');
             }
 #else
+            // Read from normal command line application arguments
             args = Environment.GetCommandLineArgs();
 #endif
             return args;
         }
-
-        public bool ParseCmdArgs()
+        
+        public static bool ParseCmdArgs()
         {
             var arguments = GetCommandlineArgs();
-            Debug.Log($"Parsing args: {String.Join(" ", arguments)}");
+            Debug.Log($"Parsing args: {String.Join(", ", arguments)}");
             if (!CommandLineParser.TryParse(arguments))
             {
                 Debug.LogError("Parsing command line arguments failed!");
                 return false;
             }
+
             // ================== DEPLOYMENT ==================
             // Deployment configuration file, used to construct the Deployment Graph
             if (CommandLineParser.ImportDeploymentConfig.Value != null)
@@ -71,7 +72,7 @@ namespace Opencraft
                 Config.DeploymentID = (int)CommandLineParser.DeploymentID.Value;
             else
                 Config.DeploymentID = -1;
-            
+
             // Get remote config flag
             if (CommandLineParser.GetRemoteConfig.Value != null)
                 Config.GetRemoteConfig = (bool)CommandLineParser.GetRemoteConfig.Value;
@@ -79,17 +80,20 @@ namespace Opencraft
             // Deployment service URL
             if (CommandLineParser.DeploymentURL.Value != null)
                 Config.DeploymentURL = CommandLineParser.DeploymentURL.Value;
-            
+
             // Deployment port
             if (CommandLineParser.DeploymentPort.Value != null)
                 Config.DeploymentPort = (ushort)CommandLineParser.DeploymentPort.Value;
             else
                 Config.DeploymentPort = 7980;
-            
+
             // ================== SIGNALING ==================
             // Signaling URL
             if (CommandLineParser.SignalingUrl.Value != null)
                 Config.SignalingUrl = CommandLineParser.SignalingUrl.Value;
+            else
+                Config.SignalingUrl = "127.0.0.1";
+            // Signaling port
             if (CommandLineParser.SignalingPort.Value != null)
                 Config.SignalingPort = (ushort)CommandLineParser.SignalingPort.Value;
             else
@@ -113,6 +117,7 @@ namespace Opencraft
                 var ivalue = BitConverter.ToInt32(hashed, 0);
                 Config.Seed = ivalue;
             }
+
             // PlayType
             if (CommandLineParser.PlayType.Value != null)
                 Config.playTypes = (GameBootstrap.BootstrapPlayTypes)CommandLineParser.PlayType.Value;
@@ -128,7 +133,7 @@ namespace Opencraft
                 Config.ServerPort = (ushort)CommandLineParser.ServerPort.Value;
             else
                 Config.ServerPort = 7979;
-            
+
             // Tick rates
             if (CommandLineParser.NetworkTickRate.Value != null)
                 Config.NetworkTickRate = (int)CommandLineParser.NetworkTickRate.Value;
@@ -138,16 +143,17 @@ namespace Opencraft
                 Config.SimulationTickRate = (int)CommandLineParser.SimulationTickRate.Value;
             else
                 Config.SimulationTickRate = 60;
-            
-            
-            
+
+
+
             // ================== MULTIPLAY ==================
             // Multiplay role
             if (CommandLineParser.MultiplayStreamingRole.Value != null)
-                Config.multiplayStreamingRoles = (MultiplayStreamingRoles)CommandLineParser.MultiplayStreamingRole.Value;
+                Config.multiplayStreamingRoles =
+                    (MultiplayStreamingRoles)CommandLineParser.MultiplayStreamingRole.Value;
             else
                 Config.multiplayStreamingRoles = MultiplayStreamingRoles.Disabled;
-            
+
             // ================== EMULATION ==================
             // Emulation type
             if (CommandLineParser.EmulationType.Value != null)
@@ -159,15 +165,15 @@ namespace Opencraft
                 Config.EmulationFilePath = CommandLineParser.EmulationFile.Value;
             else
                 Config.EmulationFilePath = Application.persistentDataPath + '\\' + "recordedInputs.inputtrace";
-            
+
             // Number of thin clients
             if (CommandLineParser.NumThinClientPlayers.Value != null)
                 Config.NumThinClientPlayers = (int)CommandLineParser.NumThinClientPlayers.Value;
             else
                 Config.NumThinClientPlayers = 0;
-            
+
 #if UNITY_EDITOR
-           
+
             Debug.Log("Overriding config with editor vars.");
             // Override PlayType, NumThinClients, ServerAddress, and ServerPort from editor settings 
             string s_PrefsKeyPrefix = $"MultiplayerPlayMode_{Application.productName}_";
@@ -189,19 +195,20 @@ namespace Opencraft
             Config.ServerUrl = editorServerAddress;
             //Server port
             int editorServerPort = EditorPrefs.GetInt(s_AutoConnectionPortKey, 7979);
-            Config.ServerPort = (ushort)editorServerPort;
+            if (editorServerPort != 0)
+                Config.ServerPort = (ushort)editorServerPort;
 
             // Override Deployment Config using this MonoBehaviour's attributes
-            if (useDeploymentConfig && !ClonesManager.IsClone())
+            if (editorArgs.useDeploymentConfig && !ClonesManager.IsClone())
             {
-                if (deploymentConfig.IsNullOrEmpty())
+                if (editorArgs.deploymentConfig.IsNullOrEmpty())
                 {
                     Debug.LogWarning($"UseDeploymentConfig flag set but deploymentConfig is empty");
                 }
                 else
                 {
                     //Use Newtonsoft JSON parsing to support enum serialization to/from string
-                    Config.DeploymentConfig = JsonConvert.DeserializeObject<JsonDeploymentConfig>(deploymentConfig);
+                    Config.DeploymentConfig = JsonConvert.DeserializeObject<JsonDeploymentConfig>(editorArgs.deploymentConfig);
                     if (Config.DeploymentConfig.IsUnityNull())
                     {
                         Debug.LogWarning($"Json Could not parse deploymentConfig!");
@@ -212,38 +219,43 @@ namespace Opencraft
                     }
                 }
             }
-            
+
 #endif
-            
+
             // Sanity checks
             if (Config.GetRemoteConfig && Config.DeploymentURL.IsNullOrEmpty())
             {
                 Debug.LogWarning($"Remote config flag set with no deployment service url provided, using loopback!");
                 Config.DeploymentURL = "127.0.0.1";
             }
+
             if (Config.GetRemoteConfig && Config.DeploymentID == -1)
             {
                 Debug.LogWarning($"Remote config flag set with no deployment ID provided, using 0!");
                 Config.DeploymentID = 0;
             }
-            if (Config.playTypes == GameBootstrap.BootstrapPlayTypes.Server && Config.multiplayStreamingRoles != MultiplayStreamingRoles.Disabled)
+
+            if (Config.playTypes == GameBootstrap.BootstrapPlayTypes.Server &&
+                Config.multiplayStreamingRoles != MultiplayStreamingRoles.Disabled)
             {
                 Debug.LogWarning("Cannot run Multiplay streaming on Server, disabling Multiplay!");
                 Config.multiplayStreamingRoles = MultiplayStreamingRoles.Disabled;
             }
-            if (Config.playTypes != GameBootstrap.BootstrapPlayTypes.Server && Config.ServerUrl.IsNullOrEmpty() )
+
+            if (Config.playTypes != GameBootstrap.BootstrapPlayTypes.Server && Config.ServerUrl.IsNullOrEmpty())
             {
-                Debug.LogWarning($"No server ip given to client! Attempting to connect to loopback on {Config.ServerPort}");
-                Config.ServerUrl = $"127.0.0.1:{Config.ServerPort}";
+                Debug.LogWarning($"No server ip given to client! Falling back to 127.0.0.1 ");
+                Config.ServerUrl = $"127.0.0.1";
             }
 
-            if (Config.multiplayStreamingRoles != MultiplayStreamingRoles.Disabled && Config.SignalingUrl.IsNullOrEmpty())
+            if (Config.multiplayStreamingRoles != MultiplayStreamingRoles.Disabled &&
+                Config.SignalingUrl.IsNullOrEmpty())
             {
                 Debug.LogWarning("Run as Multiplay streaming host or client with no signaling server!");
             }
-            
+
             return true;
         }
-        
+
     }
 }

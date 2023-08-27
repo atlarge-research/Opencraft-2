@@ -9,7 +9,7 @@ namespace Opencraft.Networking
     public class NetCodeDriverConstructor : INetworkStreamDriverConstructor
     {
         // Custom timeout time
-        private static readonly int s_DisconnectTimeout = 2000;
+        private static readonly int s_DisconnectTimeout = 4000;
 
         private NetworkSettings CreateNetworkSettings(int maxFrameTime = 0)
         {
@@ -29,7 +29,7 @@ namespace Opencraft.Networking
         {
             var driverInstance = new NetworkDriverStore.NetworkDriverInstance();
     #if UNITY_EDITOR || NETCODE_DEBUG
-            var settings = CreateNetworkSettings(100);
+            var settings = CreateNetworkSettings(0);
             driverInstance.simulatorEnabled = NetworkSimulatorSettings.Enabled;
             if (NetworkSimulatorSettings.Enabled)
             {

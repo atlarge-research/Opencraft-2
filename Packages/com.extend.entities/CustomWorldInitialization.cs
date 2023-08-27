@@ -116,6 +116,8 @@ namespace Unity.Entities
         /// <returns>The initialized <see cref="World"/> object.</returns>
         public static World Initialize(string defaultWorldName, bool editorWorld = false)
         {
+            // Hacky workaround, force TypeManager to initialize now
+            TypeManager.Initialize();
             using var marker = new ProfilerMarker("Create World & Systems").Auto();
 
             RegisterUnloadOrPlayModeChangeShutdown();

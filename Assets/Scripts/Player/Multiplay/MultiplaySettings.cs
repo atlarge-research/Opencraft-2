@@ -16,66 +16,39 @@ namespace Opencraft.Player.Multiplay
         public const int DefaultStreamWidth = 1920;
         public const int DefaultStreamHeight = 1080;
 
-        private bool useDefaultSettings = true;
-        private SignalingType signalingType = SignalingType.WebSocket;
-        private string signalingAddress = "localhost";
-        private int signalingInterval = 5000;
-        private bool signalingSecured = false;
-        private Vector2Int streamSize = new Vector2Int(DefaultStreamWidth, DefaultStreamHeight);
-        private VideoCodecInfo receiverVideoCodec = null;
-        private VideoCodecInfo senderVideoCodec = null;
+        public bool MultiplayEnabled { get; set; } = true;
 
-        public bool UseDefaultSettings
-        {
-            get { return useDefaultSettings; }
-            set { useDefaultSettings = value; }
-        }
+        public SignalingType SignalingType { get; set; } = SignalingType.WebSocket;
 
-        public SignalingType SignalingType
-        {
-            get { return signalingType; }
-            set { signalingType = value; }
-        }
+        public string SignalingAddress { get; set; } = "127.0.0.1";
 
-        public string SignalingAddress
-        {
-            get { return signalingAddress; }
-            set { signalingAddress = value; }
-        }
+        public ushort SignalingPort { get; set; } = 7981;
 
-        public bool SignalingSecured
-        {
-            get { return signalingSecured; }
-            set { signalingSecured = value; }
-        }
+        public bool SignalingSecured { get; set; } = false;
 
-        public int SignalingInterval
-        {
-            get { return signalingInterval; }
-            set { signalingInterval = value; }
-        }
+        public int SignalingInterval { get; set; } = 5000;
 
         public SignalingSettings SignalingSettings
         {
             get
             {
-                switch (signalingType)
+                switch (SignalingType)
                 {
                     case SignalingType.WebSocket:
                     {
-                        var schema = signalingSecured ? "wss" : "ws";
+                        var schema = SignalingSecured ? "wss" : "ws";
                         return new WebSocketSignalingSettings
                         (
-                            url: $"{schema}://{signalingAddress}"
+                            url: $"{schema}://{SignalingAddress}:{SignalingPort}"
                         );
                     }
                     case SignalingType.Http:
                     {
-                        var schema = signalingSecured ? "https" : "http";
+                        var schema = SignalingSecured ? "https" : "http";
                         return new HttpSignalingSettings
                         (
-                            url: $"{schema}://{signalingAddress}",
-                            interval: signalingInterval
+                            url: $"{schema}://{SignalingAddress}:{SignalingPort}",
+                            interval: SignalingInterval
                         );
                     }
                 }
@@ -84,23 +57,11 @@ namespace Opencraft.Player.Multiplay
             }
         }
 
-        public Vector2Int StreamSize
-        {
-            get { return streamSize; }
-            set { streamSize = value; }
-        }
+        public Vector2Int StreamSize { get; set; } = new Vector2Int(DefaultStreamWidth, DefaultStreamHeight);
 
-        public VideoCodecInfo ReceiverVideoCodec
-        {
-            get { return receiverVideoCodec; }
-            set { receiverVideoCodec = value; }
-        }
+        public VideoCodecInfo ReceiverVideoCodec { get; set; } = null;
 
-        public VideoCodecInfo SenderVideoCodec
-        {
-            get { return senderVideoCodec; }
-            set { senderVideoCodec = value; }
-        }
+        public VideoCodecInfo SenderVideoCodec { get; set; } = null;
     }
 
     internal class MultiplaySettingsManager
@@ -109,45 +70,56 @@ namespace Opencraft.Player.Multiplay
 
         public static MultiplaySettingsManager Instance
         {
-            get
-            {
-                if (s_instance == null)
-                    s_instance = new MultiplaySettingsManager();
-                return s_instance;
-            }
+            get { return s_instance ??= new MultiplaySettingsManager(); }
         }
 
-        public MultiplaySettings Settings
-        {
-            get { return m_settings; }
-        }
-
-        MultiplaySettings m_settings;
+        public MultiplaySettings Settings { get; private set; }
 
         public void Initialize()
         {
-            if (m_settings == null)
+            if (Settings != null) return;
+            Settings = new MultiplaySettings();
+            var codecs = VideoStreamReceiver.GetAvailableCodecs();
+            bool h264NotFound = true;
+            VideoCodecInfo chosenCodec = null;
+            foreach(var codec in codecs)
             {
-                m_settings = new MultiplaySettings();
-                var codecs = VideoStreamReceiver.GetAvailableCodecs();
-                bool h264NotFound = true;
-                foreach(var codec in codecs)
+                if (codec.name == "AV1")
                 {
-                    if (codec.name == "H264")
+                    AV1CodecInfo av1 = (AV1CodecInfo) codec;
+                    Debug.Log($"Found codec: AV1 {av1.profile}");
+                }else if (codec.name == "VP9")
+                {
+                    VP9CodecInfo vp9 = (VP9CodecInfo)codec;
+                    Debug.Log($"Found codec: VP9 {vp9.profile}");
+                } else if (codec.name == "H264")
+                {
+                    H264CodecInfo h264 = (H264CodecInfo) codec;
+                    Debug.Log($"Found codec: H264 {h264.profile} {h264.level}");
+                    if (h264.profile == H264Profile.High)
                     {
-                        H264CodecInfo  h264 = (H264CodecInfo) codec;
-                        if (h264.profile == H264Profile.High)
-                        {
-                            m_settings.ReceiverVideoCodec = codec;
-                            m_settings.SenderVideoCodec = codec;
-                            h264NotFound = false;
-                            break;
-                        }
+                        h264NotFound = false;
+                        chosenCodec = codec;
                     }
                 }
-                if(h264NotFound)
-                    Debug.LogWarning($"Could not find H264.High as streaming codec!");
+                else
+                {
+                    Debug.Log($"Found non-specified codec: {codec.name} {codec.codecImplementation} {codec.mimeType} {codec.sdpFmtpLine}");
+                }
+                // Backup codec if we don't find h264.high
+                if (h264NotFound)
+                    chosenCodec = codec;
             }
+            if(chosenCodec == null){
+                Debug.LogError($"No supported codec types found! Disabling Multiplay");
+                Settings.MultiplayEnabled = false;
+            }
+            if(h264NotFound)
+                Debug.LogWarning($"Could not find H264.High as streaming codec!");
+            Settings.ReceiverVideoCodec = chosenCodec;
+            Settings.SenderVideoCodec = chosenCodec;
+            Settings.SignalingAddress = Config.SignalingUrl;
+            Settings.SignalingPort    = Config.SignalingPort;
         }
     }
 }

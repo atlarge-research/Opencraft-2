@@ -9,17 +9,20 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bc8ba17751ad4107a50fa1415017b6b1, type: 3}
-  m_Name: RenderStreamingSettings
+  m_Script: {fileID: 11500000, guid: 22c294fb286b37446a86664f4fb41023, type: 3}
+  m_Name: SignalingSettings
   m_EditorClassIdentifier: 
-  automaticStreaming: 0
-  signalingSettings:
-    rid: 4584853665536016384
+  settings:
+    id: 0
   references:
-    version: 2
-    RefIds:
-    - rid: 4584853665536016384
+    version: 1
+    00000000:
       type: {class: WebSocketSignalingSettings, ns: Unity.RenderStreaming, asm: Unity.RenderStreaming}
       data:
-        m_url: ws://127.0.0.1:7981
-        m_iceServers: []
+        m_url: ws://127.0.0.1
+        m_iceServers:
+        - m_urls:
+          - stun:stun.l.google.com:19302
+          m_username: 
+          m_credentialType: 0
+          m_credential: 

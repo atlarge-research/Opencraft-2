@@ -11,5 +11,5 @@ EditorBuildSettings:
   m_configObjects:
     com.unity.input.settings: {fileID: 11400000, guid: ef9e150584b38684e83b28a6dfeebe9d,
       type: 2}
-    com.unity.renderstreaming.settings: {fileID: 11400000, guid: 6f3da38745715d74898a82087d4aa657,
+    com.unity.renderstreaming.settings: {fileID: 11400000, guid: 623c7a717e8785e4c841d760d93ce8c2,
       type: 2}
