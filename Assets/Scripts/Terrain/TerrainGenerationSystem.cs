@@ -6,19 +6,14 @@ using Opencraft.Terrain.Layers;
 using Opencraft.Terrain.Structures;
 using Opencraft.Terrain.Utilities;
 using Opencraft.ThirdParty;
-using Packages.procgen.Runtime.Terrain.Approach2;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
-using Unity.NetCode;
 using Unity.Transforms;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
-using Unity.Physics;
 using Unity.Profiling;
-using Unity.Rendering;
-using UnityEngine;
 
 // Annoyingly this assembly directive must be outside the namespace.
 [assembly: RegisterGenericJobType(typeof(SortJob<int2, Int2DistanceComparer>))]

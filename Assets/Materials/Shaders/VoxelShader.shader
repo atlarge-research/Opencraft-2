@@ -40,7 +40,7 @@ Shader "Custom/VoxelShader"
     SubShader
     {
         
-         Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline" "IgnoreProjector" = "True"}
+        Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline" "IgnoreProjector" = "True"}
         Pass
         {
             Name "Forward"
@@ -240,5 +240,5 @@ Shader "Custom/VoxelShader"
             ENDHLSL
         }
     }
-    FallBack "Diffuse"
+    
 }
