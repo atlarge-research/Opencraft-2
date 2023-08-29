@@ -227,8 +227,8 @@ Shader "Custom/VoxelShader"
                 
                 // Get the chunk-relative position from the first 24 bits
                 float3 position = float3(float(IN.aData&(255)), float((IN.aData >> 8)&(255)), float((IN.aData >> 16)&(255)));
-                float4 positionWS = mul(UNITY_MATRIX_MVP, float4(position, 1.0)); // Use MVP matrix to get global position
-                OUT.positionHCS = positionWS;
+                // float4 positionWS = mul(UNITY_MATRIX_MVP, float4(position, 1.0)); // Use MVP matrix to get global position
+                OUT.positionHCS = TransformObjectToHClip(position);
                 return OUT;
             }
             

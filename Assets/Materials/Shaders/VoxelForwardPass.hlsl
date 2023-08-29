@@ -124,29 +124,29 @@ Varyings VoxelForwardVertex(Attributes input)
     float3 positionOS = float3(float(input.packedData&(255)), float((input.packedData >> 8)&(255)), float((input.packedData >> 16)&(255)));
     int normal = int((input.packedData >> 29)&(7));
     float3 normalOS;
-    [call] switch (normal)
+    if(normal == 0)
     {
-    case 0:
-        normalOS = float3(0,1,0);
-        break;
-    case 1:
-        normalOS= float3(0,-1,0);
-        break;
-    case 2:
-        normalOS = float3(1,0,0);
-        break;
-    case 3:
-        normalOS = float3(-1,0,0);
-        break;
-    case 4:
-        normalOS = float3(0,0,1);
-        break;
-    case 5:
-        normalOS = float3(0,0,-1);
-        break;
-    default:
-        normalOS= float3(0,0,-1);
-        break;
+        normalOS = float4(0,1,0,0);
+    }
+    else if(normal == 1)
+    {
+        normalOS= float4(0,-1,0,0);
+    }
+    else if(normal == 2)
+    {
+        normalOS = float4(1,0,0,0);
+    }
+    else if(normal == 3)
+    {
+        normalOS = float4(-1,0,0,0);
+    }
+    else if(normal == 4)
+    {
+        normalOS = float4(0,0,1,0);
+    }
+    else
+    {
+        normalOS = float4(0,0,-1,0);
     }
     float4 tangentOS = float4(0,0,0,1);
     VertexPositionInputs vertexInput = GetVertexPositionInputs(positionOS);
