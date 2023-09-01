@@ -475,7 +475,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7670ed7fdc2d435abe14606c6942102a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  editorArgs: -deploymentID 1
+  editorArgs: -deploymentID 1 -takeScreenshots
   useDeploymentConfig: 1
   deploymentConfig: "{\r\n\"nodes\":[\r\n\t{\r\n\t\t\"nodeID\":0,\r\n\t\t\"nodeIP\":\"127.0.0.1\",\r\n\t\t\"worldConfigs\":[\r\n\t\t\t{\r\n\t\t\t\"worldType\":\"Client\",\r\n\t\t\t\"initializationMode\":\"CreateAndConnect\",\r\n\t\t\t\"multiplayStreamingRoles\":\"Guest\",\r\n\t\t\t\"serverNodeID\":-1,\r\n\t\t\t\"streamingNodeID\":1,\r\n\t\t\t\"numThinClients\":0,\r\n\t\t\t\"services\":[\"1\",\"2\"],\r\n\t\t\t\"serviceFilterType\":\"Includes\",\r\n\t\t\t\"emulationBehaviours\":\"None\"\r\n\t\t\t}\r\n\t\t]\r\n\t},\r\n\t{\r\n\t\t\"nodeID\":1,\r\n\t\t\"nodeIP\":\"127.0.0.1\",\r\n\t\t\"worldConfigs\":[\r\n\t\t\t{\r\n\t\t\t\"worldType\":\"Server\",\r\n\t\t\t\"initializationMode\":\"CreateAndConnect\",\r\n\t\t\t\"multiplayStreamingRoles\":\"Disabled\",\r\n\t\t\t\"serverNodeID\":-1,\r\n\t\t\t\"streamingNodeID\":-1,\r\n\t\t\t\"numThinClients\":0,\r\n\t\t\t\"services\":[],\r\n\t\t\t\"serviceFilterType\":\"Includes\",\r\n\t\t\t\"emulationBehaviours\":\"None\"\r\n\t\t\t},\r\n\t\t\t{\r\n\t\t\t\"worldType\":\"Client\",\r\n\t\t\t\"initializationMode\":\"CreateAndConnect\",\r\n\t\t\t\"multiplayStreamingRoles\":\"Host\",\r\n\t\t\t\"serverNodeID\":1,\r\n\t\t\t\"streamingNodeID\":-1,\r\n\t\t\t\"numThinClients\":0,\r\n\t\t\t\"services\":[],\r\n\t\t\t\"serviceFilterType\":\"Includes\",\r\n\t\t\t\"emulationBehaviours\":\"None\"\r\n\t\t\t}\r\n\t\t]\r\n\t}\r\n]\r\n}"
 --- !u!1 &827113861

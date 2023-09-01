@@ -69,7 +69,7 @@ namespace Opencraft.Bootstrap
         internal static readonly JsonFileArgument<JsonCmdArgs> ImportConfigJson = new JsonFileArgument<JsonCmdArgs>("-localConfigJson");
         internal static readonly IntArgument NetworkTickRate = new IntArgument("-networkTickRate");
         internal static readonly IntArgument SimulationTickRate = new IntArgument("-simulationTickRate");
-
+        internal static readonly FlagArgument TakeScreenshots = new FlagArgument("-takeScreenshots");
         
         // ================== SIGNALING ==================
         internal static readonly StringArgument SignalingUrl = new StringArgument("-signalingUrl");
@@ -97,7 +97,7 @@ namespace Opencraft.Bootstrap
         static readonly List<IArgument> options = new List<IArgument>()
         {
             ImportDeploymentConfig, DeploymentID, GetRemoteConfig, DeploymentURL, DeploymentPort,
-            DebugEnabled, Seed, PlayType, ServerUrl, ServerPort, ImportConfigJson, NetworkTickRate, SimulationTickRate,
+            DebugEnabled, Seed, PlayType, ServerUrl, ServerPort, ImportConfigJson, NetworkTickRate, SimulationTickRate, TakeScreenshots,
             SignalingUrl, SignalingPort,
             MultiplayStreamingRole,
             EmulationType, EmulationFile, NumThinClientPlayers,

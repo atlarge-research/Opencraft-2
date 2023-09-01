@@ -30,6 +30,7 @@ namespace Opencraft
         public static ushort ServerPort;
         public static int NetworkTickRate;
         public static int SimulationTickRate;
+        public static bool TakeScreenshots;
 
         // ================== MULTIPLAY ==================
         public static MultiplayStreamingRoles multiplayStreamingRoles;

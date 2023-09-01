@@ -5,11 +5,16 @@
 /[Ll]ibrary/
 /[Tt]emp/
 /[Oo]bj/
-/[Bb]uild/
-/[Bb]uilds/
+/[Bb]uild/*/
+/[Bb]uilds/*/
 /[Ll]ogs/
 /[Uu]ser[Ss]ettings/
 /[Pp]rofile[Aa]nalyzer/
+
+# Include docker related files in build directories
+!/[Bb]uild/Dockerfile
+!/[Bb]uilds/docker_run.sh
+!/[Bb]uilds/Multiplay_WebApp/
 
 # output dir
 /Bin/

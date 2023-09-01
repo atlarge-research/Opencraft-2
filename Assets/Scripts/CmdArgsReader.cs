@@ -143,6 +143,13 @@ namespace Opencraft
                 Config.SimulationTickRate = (int)CommandLineParser.SimulationTickRate.Value;
             else
                 Config.SimulationTickRate = 60;
+            
+            // Get take screenshots flag
+            if (CommandLineParser.TakeScreenshots.Value != null)
+                Config.TakeScreenshots = (bool)CommandLineParser.TakeScreenshots.Value;
+            else
+                Config.TakeScreenshots = false;
+            
 
 
 

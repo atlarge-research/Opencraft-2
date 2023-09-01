@@ -4,6 +4,7 @@ using Opencraft.Deployment;
 using Opencraft.Networking;
 using Opencraft.Player.Emulated;
 using Opencraft.Player.Multiplay;
+using Opencraft.Rendering;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.NetCode;
@@ -280,7 +281,7 @@ namespace Opencraft.Bootstrap
 
         public static World CreateStreamedClientWorld()
         {
-            var systems = new List<Type> { typeof(MultiplayInitSystem), typeof(EmulationInitSystem) };
+            var systems = new List<Type> { typeof(MultiplayInitSystem), typeof(EmulationInitSystem), typeof(TakeScreenshotSystem) };
             return CreateClientWorld("StreamingGuestWorld", (WorldFlags)WorldFlagsExtension.StreamedClient, systems);
         }
         
