@@ -145,6 +145,7 @@ namespace Opencraft.Player.Multiplay
             if (value.performed)
             {
                 Debug.Log("Exiting game!");
+                //World.DisposeAllWorlds();
 #if UNITY_EDITOR
                 EditorApplication.ExitPlaymode();
 #else

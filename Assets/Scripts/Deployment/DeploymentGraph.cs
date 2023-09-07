@@ -126,7 +126,7 @@ namespace Opencraft.Deployment
                     }
                     else
                     {
-                        Debug.LogWarning($"Node {nodeID} World {worldConfig.worldType} has nonexistent server node id: {worldConfig.serverNodeID}!");
+                       Debug.Log($"Node {nodeID} World {worldConfig.worldType} has nonexistent server node id: {worldConfig.serverNodeID}!");
                     }
                     // Give the same server port to all nodes
                     cRPC.serverPort = Config.ServerPort;
@@ -145,7 +145,7 @@ namespace Opencraft.Deployment
                     }
                     else
                     {
-                        Debug.LogWarning($"Node {nodeID} World {worldConfig.worldType} has nonexistent streaming node id: {worldConfig.streamingNodeID}!");
+                       Debug.Log($"Node {nodeID} World {worldConfig.worldType} has nonexistent streaming node id: {worldConfig.streamingNodeID}!");
                     }
                     
                     cRPC.signallingPort = Config.SignalingPort;
@@ -158,7 +158,7 @@ namespace Opencraft.Deployment
             }
             else
             {
-                Debug.LogWarning("NodeToConfig called with nonexistent nodeID!");
+               Debug.Log("NodeToConfig called with nonexistent nodeID!");
             }
             
             
@@ -195,7 +195,7 @@ namespace Opencraft.Deployment
                     }
                     else
                     {
-                        Debug.LogWarning($"Node deployment IP: {jsonNode.nodeIP} cannot be parsed!");
+                       Debug.Log($"Node deployment IP: {jsonNode.nodeIP} cannot be parsed!");
                         newNode.endpoint = NetworkEndpoint.LoopbackIpv4; 
                     }
                 }
@@ -211,12 +211,12 @@ namespace Opencraft.Deployment
                     Type serviceType = GetTypeByName(serviceName);
                     if (serviceType.IsUnityNull())
                     {
-                        Debug.LogWarning($"Could not find service with name {serviceName}!");
+                       Debug.Log($"Could not find service with name {serviceName}!");
                         continue;
                     }
                     if (!serviceType.IsAssignableFrom(typeof(ISystem) ) && !serviceType.IsAssignableFrom(typeof(ComponentSystemBase) ) )
                     {
-                        Debug.LogWarning($"{serviceName} is not a service!");
+                       Debug.Log($"{serviceName} is not a service!");
                         continue;
                     }
                     newNode.services.Add(serviceType);

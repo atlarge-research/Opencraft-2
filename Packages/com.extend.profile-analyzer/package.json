@@ -1,0 +1,16 @@
+{
+  "name": "com.extend.profile-analyzer",
+  "displayName": "Profiler Analyzer Extensions",
+  "version": "0.0.1",
+  "unity": "2022.2",
+  "unityRelease": "15f1",
+  "dependencies": {
+    "com.unity.performance.profile-analyzer": "1.2.2"
+  },
+  "description": "Extensions to com.unity.performance.profile-analyzer",
+  "keywords": [
+    "editor",
+    "analysis",
+    "extensions"
+  ]
+}

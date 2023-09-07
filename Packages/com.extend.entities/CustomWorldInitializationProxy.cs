@@ -26,7 +26,10 @@ namespace Unity.Entities
         public void OnDisable()
         {
             if (IsActive)
+            {
+                UnityEngine.Debug.Log("Calling DomainUnloadOrPlayModeChangeShutdown!");
                 CustomWorldInitialization.DomainUnloadOrPlayModeChangeShutdown();
+            }
         }
     }
 }

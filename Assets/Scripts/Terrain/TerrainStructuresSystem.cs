@@ -274,7 +274,7 @@ namespace Opencraft.Terrain
             int startLeafHeight =  trunkStartHeight + (trunkHeight / 2);
             int stopLeafHeight = trunkStopHeight;
             
-            //Debug.Log($"Creating tree structure at {structure.basePos} with offset
+            //OpencraftLogger.Log($"Creating tree structure at {structure.basePos} with offset
             //{structure.offset}, extends {startX} - {endX}, {startY} - {endY}, {startZ} - {endZ}");
             
             // x,y,z are in space of local terrain area (containing this sub-structure)

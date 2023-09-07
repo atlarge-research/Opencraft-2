@@ -5,6 +5,7 @@ using Unity.NetCode;
 using Unity.Transforms;
 using Unity.Burst;
 using Unity.Collections;
+using UnityEngine;
 
 
 namespace Opencraft.Player
@@ -42,7 +43,7 @@ namespace Opencraft.Player
                 in ReceiveRpcCommandRequest requestSource, in SpawnPlayerRequest reqSpawn) =>
             {
                 NetworkId networkId = networkIdFromEntity[requestSource.SourceConnection];
-                UnityEngine.Debug.Log(
+               Debug.Log(
                     $"'Spawning a Ghost '{prefabName}' for user '{reqSpawn.Username}' on connection '{networkId.Value}'!");
                 commandBuffer.AddComponent<ConnectionState>(entity);
                 var player = commandBuffer.Instantiate(prefab);
@@ -74,7 +75,7 @@ namespace Opencraft.Player
             Entities.WithName("HandleDestroyPlayerRPCs").ForEach((Entity entity,
                 in ReceiveRpcCommandRequest _, in DestroyPlayerRequest reqDestroy) =>
             {
-                UnityEngine.Debug.Log($"Destroying player entity '{reqDestroy.Player}'!");
+                Debug.Log($"Destroying player entity '{reqDestroy.Player}'!");
                 commandBuffer.DestroyEntity(reqDestroy.Player);
                 commandBuffer.DestroyEntity(entity);
             }).Run();

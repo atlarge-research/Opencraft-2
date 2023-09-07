@@ -6,13 +6,53 @@ Unity should automatically install required packages. This includes the [ParrelS
 which is useful for testing multiplayer functionality in-editor.
 The [Rider](https://www.jetbrains.com/rider/) IDE is recommended, it has direct integration with Unity.
 
-The game can be started from `Scenes/MainScene`. To run, select PlayMode type from Server, Client, or Server & Client in `Multiplayer > Window: PlayMode Tools`, and set an address,
+The game can be started from `Scenes/MainScene`. To run, select PlayMode type from Server, Client, or Server & Client in `Multiplayer -> Window: PlayMode Tools`, and set an address,
 by default `127.0.0.1:7979`. Then press the play button. Additional configuration can be specified in command line arguments, 
-which can be set in-editor on the `Editor Args` field of the `GameBootstrap->Editor Cmd Args` singleton component.
+which can be set in-editor on the `Editor Args` field of the `GameBootstrap -> Editor Cmd Args` singleton component.
+
+## Builds
+Opencraft 2 is built by the Unity editor, using `File -> Build Settings` with `Platform` set to `Windows, Mac, Linux` and
+`Target Platform` set to `Linux` or `Windows` (Mac is untested). For debugging and analysis, the `Development Build`
+flag must be set. The builds folder is location under `./Builds/`. This folder also contains the Docker files for containerizing Opencraft 2.
+
+### Docker
+Opencraft 2 can be run as a container. The main game container can be built from the `./Builds/` folder using 
+`docker build -t jerriteic/opencraft2:base .`. This base image depends on `jerriteic/gpu_ubuntu20.04` which allows
+container application to run graphics applications with NVIDIA GPU hardware acceleration. That container can 
+be built in the same folder using the `Dockerfile.ubuntugpu` dockerfile.
+
+#### Docker Requirements
+The game container runs a hardware-accelerated 3D graphics application through VirtualGL. 
+This requires extensive configuration to the host platform:
+1. Install correct NVIDIA drivers for your platform and GPU.
+   1. Container is tested on Ubuntu 20.04 on NVIDIA Tesla T4 with proprietary driver version 535. 
+2. Install [Docker + NVIDIA container toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#docker)
+3. On headless hosts, configure display settings according to [this guide](https://github.com/trn84/recipe-wizard/blob/master/nvidia-headless.md). 
+   1. Do not reinstall the NVIDIA drivers, skip the step marked `Install NVIDIA Driver from CUDA .run shell script`.
+
+#### Running the Container
+If the Docker requirements are met, run the container using the following command:
+```
+docker run -it \
+--runtime=nvidia \
+--name=super-container \
+--security-opt seccomp=unconfined \
+--init \
+--net=host \
+--privileged=true \
+--rm=false \
+-e DISPLAY=:0 \
+-v /tmp/.X11-unix/X0:/tmp/.X11-unix/X0:ro \
+-v /etc/localtime:/etc/localtime:ro \
+-v /share-docker:/share-docker \
+jerriteic/opencraft2:base
+```
+> [!WARNING]
+> Running Docker containers with these flags gives them **UNRESTRICTED HOST ROOT ACCESS**! Act accordingly.
 
 ## Parrelsync
 [ParrelSync](https://github.com/VeriorPies/ParrelSync) allows synchronizing multiple copies of a Unity project. These
-can be run in parallel to test networked functionality. To create a new ParrelSync clone, in `ParrelSync > Clones Manager` select `Add new clone`.
+can be run in parallel to test networked functionality. To create a new ParrelSync clone, in `ParrelSync -> Clones Manager` select `Add new clone`.
 > [!NOTE]
 > ParrelSync clones require manual setup to fix package dependencies
 
@@ -36,24 +76,24 @@ application command line argument `-signalingPort <int>`.
 
 ## Debugging and Analysis
 Inspecting existing entities, components, systems, and queries in each existing world can be done using
-Entities information pages under `Window > Entities`. Information not specific to ECS can be found under `Window > Analysis`,
+Entities information pages under `Window -> Entities`. Information not specific to ECS can be found under `Window -> Analysis`,
 with the `Profiler` being particularly important for determining performance impact of various changes.
-Burst compiled generated code can be viewed in `Jobs > Burst > Open Inspector`, though this is mainly useful for low level optimization work.
-Multiplayer functionality and behaviour can be visualized using the `Window > Multiplayer > Window: NetDbg (Browser)` tool,
+Burst compiled generated code can be viewed in `Jobs -> Burst -> Open Inspector`, though this is mainly useful for low level optimization work.
+Multiplayer functionality and behaviour can be visualized using the `Window -> Multiplayer -> Window: NetDbg (Browser)` tool,
 which automatically gathers state snapshot metrics from Netcode for Entities connections.
 
 If your Unity or your IDE starts giving strange errors, particularly about packages,
-it is worth trying `Edit > Preferences > External Tools > Regenerate project files`. As a last resort, `Reimport All`
+it is worth trying `Edit > Preferences -> External Tools -> Regenerate project files`. As a last resort, `Reimport All`
 through the right-click menu in the `Project` window.
 
 ## Configuration and Parameters
 The Opencraft 2 application can be configured in a variety of ways, with some methods being different in-editor and
-when run standalone. In editor, the hierarchy of configuration is `Multiplayer PlayMode Tools`
+when run standalone. In editor, the hierarchy of configuration is `Deployment Graph`>`Multiplayer PlayMode Tools` >`Editor Args` > `localConfigJson`.
 ### Command Line Arguments
 | Argument                | Options                                                                                                                        | Default                                                  | Description                                                          |
 |-------------------------|--------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------|----------------------------------------------------------------------|
 | -deploymentJson         | <FilePath>                                                                                                                     | null                                                     | Path to a deployment configuration Json file.                        |
-| -deploymentID           | <int>                                                                                                                          | 0                                                        | The ID of this node, used for deployment.                            |
+| -deploymentID           | <int>                                                                                                                          | -1                                                       | The ID of this node, used for deployment.                            |
 | -remoteConfig           | true/false                                                                                                                     | false                                                    | Should this node fetch configuration from a deployment service.      |
 | -deploymentURL          | <URL>                                                                                                                          | 127.0.0.1                                                | URL of the deployment service.                                       |
 | -deploymentPort         | <int>                                                                                                                          | 7980                                                     | Port of the deployment service.                                      |
@@ -66,6 +106,7 @@ when run standalone. In editor, the hierarchy of configuration is `Multiplayer P
 | -networkTickRate        | <int>                                                                                                                          | 60                                                       | Rate of network snapshots.                                           |
 | -simulationTickRate     | <int>                                                                                                                          | 60                                                       | Rate of simulation steps.                                            |
 | -takeScreenshots        | true/false                                                                                                                     | false                                                    | Take screenshots once per second. No effect on Server-only builds.   |
+| -duration               | <int>                                                                                                                          | -1                                                       | Exit after a set amount of seconds.                                  |
 | -signalingUrl           | <URL>                                                                                                                          | 127.0.0.1                                                | URL of the stream signaling service.                                 |
 | -signalingPort          | <int>                                                                                                                          | 7981                                                     | Port of the stream signaling service.                                |
 | -multiplayRole          | Disabled<br/>Host<br/>Guest                                                                                                    | Disabled                                                 | Stream gaming role.                                                  |

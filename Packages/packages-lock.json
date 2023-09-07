@@ -16,6 +16,14 @@
         "com.unity.netcode": "1.0.10"
       }
     },
+    "com.extend.profile-analyzer": {
+      "version": "file:com.extend.profile-analyzer",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.performance.profile-analyzer": "1.2.2"
+      }
+    },
     "com.unity.ai.navigation": {
       "version": "1.1.4",
       "depth": 0,
@@ -174,11 +182,10 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.performance.profile-analyzer": {
-      "version": "1.2.2",
+      "version": "file:com.unity.performance.profile-analyzer",
       "depth": 0,
-      "source": "registry",
-      "dependencies": {},
-      "url": "https://packages.unity.com"
+      "source": "embedded",
+      "dependencies": {}
     },
     "com.unity.physics": {
       "version": "1.0.14",

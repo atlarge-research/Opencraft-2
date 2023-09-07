@@ -27,7 +27,7 @@ namespace Opencraft.Rendering
             }
             lastUpdate = state.World.Time.ElapsedTime;
             
-            ScreenCapture.CaptureScreenshot($"../screenshot{number}");
+            ScreenCapture.CaptureScreenshot($"../logs/screenshot{number}");
             number++;
         }
         

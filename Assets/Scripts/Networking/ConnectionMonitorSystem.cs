@@ -1,4 +1,5 @@
-﻿using Unity.Burst;
+﻿using System;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.NetCode;
@@ -37,6 +38,7 @@ namespace Opencraft.Networking
         [BurstCompile]
         protected override void OnUpdate()
         {
+            var now = new FixedString512Bytes(DateTime.Now.TimeOfDay.ToString());
             var ecb = m_CommandBufferSystem.CreateCommandBuffer();
             Entities.WithName("AddConnectionStateToNewConnections").WithNone<ConnectionState>().ForEach((Entity entity,
                 in NetworkStreamConnection state) =>
@@ -52,17 +54,16 @@ namespace Opencraft.Networking
                 (Entity entity, in NetworkId id) =>
                 {
                     ecb.AddComponent(entity, new InitializedConnection());
-                    Debug.Log($"[{worldName}] New connection ID:{id.Value}");
+                    Debug.Log($"[{now}]:[{worldName}] New connection ID:{id.Value}");
                 }).Run();
 
             Entities.WithName("HandleDisconnect").WithNone<NetworkStreamConnection>().ForEach(
                 (Entity entity, in ConnectionState state) =>
                 {
                     Debug.Log(
-                        $"[{worldName}] Connection disconnected ID:{state.NetworkId} Reason:{DisconnectReasonEnumToString.Convert((int)state.DisconnectReason)}");
+                        $"[{now}]:[{worldName}] Connection disconnected ID:{state.NetworkId} Reason:{DisconnectReasonEnumToString.Convert((int)state.DisconnectReason)}");
                     ecb.RemoveComponent<ConnectionState>(entity);
                 }).Run();
-
             m_CommandBufferSystem.AddJobHandleForProducer(Dependency);
         }
     }

@@ -35,7 +35,7 @@ namespace Opencraft.Player.Multiplay
                 {
                     var requests = _requestQuery.ToComponentDataArray<NetworkStreamRequestConnect>(Allocator.Temp);
                     if(requests.Length > 1)
-                        Debug.LogWarning($"Render streaming guest has multiple connection requests! Ignoring all but the first...");
+                        Debug.Log($"Render streaming guest has multiple connection requests! Ignoring all but the first...");
                     NetworkEndpoint endpoint = requests[0].Endpoint;
                     Debug.Log($"Got multiplay guest endpoint of {endpoint}");
                     multiplay.SetUpGuest(endpoint);

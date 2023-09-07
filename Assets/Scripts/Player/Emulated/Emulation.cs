@@ -28,7 +28,7 @@ namespace Opencraft.Player.Emulated
             catch (Exception ex)
             {
                 Debug.Log("Failed to load input playback file with error:");
-                Debug.LogError(ex);
+                Debug.LogError(ex.ToString());
                 return;
             } 
             Debug.Log($"Starting input playback from {Config.EmulationFilePath}");

@@ -48,7 +48,7 @@ namespace Opencraft.Player.Emulated
             // Multiplay guest emulation only supports input playback
             if (Config.multiplayStreamingRoles == MultiplayStreamingRoles.Guest && (emulation.emulationType & EmulationBehaviours.Simulation) == EmulationBehaviours.Simulation)
             {
-                Debug.LogWarning("Multiplay guest emulation only supports input playback, switching to it.");
+                Debug.Log("Multiplay guest emulation only supports input playback, switching to it.");
                 emulation.emulationType ^= EmulationBehaviours.Simulation;
                 emulation.emulationType |= EmulationBehaviours.Playback;
             }

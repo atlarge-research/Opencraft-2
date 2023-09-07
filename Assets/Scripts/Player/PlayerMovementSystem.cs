@@ -199,7 +199,7 @@ namespace Opencraft.Player
             
             if (!TerrainUtilities.GetTerrainAreaByPosition(ref playerAreaLoc, in terrainAreas, out int containingAreaIndex))
             {
-                //Debug.LogWarning($"Player {player.Username} at {transform.pos} corresponding to {playerAreaLoc} not contained in an area!");
+                //OpencraftLogger.Log($"Player {player.Username} at {transform.pos} corresponding to {playerAreaLoc} not contained in an area!");
                 containingAreaLoc = new int3(-1);
                 return -1;
             }

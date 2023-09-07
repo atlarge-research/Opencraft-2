@@ -327,7 +327,7 @@ MonoBehaviour:
   m_ShadowRenderingLayers: 1
   m_LightCookieSize: {x: 1, y: 1}
   m_LightCookieOffset: {x: 0, y: 0}
-  m_SoftShadowQuality: 1
+  m_SoftShadowQuality: 0
 --- !u!1 &650406532
 GameObject:
   m_ObjectHideFlags: 0
@@ -475,8 +475,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7670ed7fdc2d435abe14606c6942102a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  editorArgs: -deploymentID 1 -takeScreenshots
-  useDeploymentConfig: 1
+  editorArgs: -seed 42
+  useDeploymentConfig: 0
   deploymentConfig: "{\r\n\"nodes\":[\r\n\t{\r\n\t\t\"nodeID\":0,\r\n\t\t\"nodeIP\":\"127.0.0.1\",\r\n\t\t\"worldConfigs\":[\r\n\t\t\t{\r\n\t\t\t\"worldType\":\"Client\",\r\n\t\t\t\"initializationMode\":\"CreateAndConnect\",\r\n\t\t\t\"multiplayStreamingRoles\":\"Guest\",\r\n\t\t\t\"serverNodeID\":-1,\r\n\t\t\t\"streamingNodeID\":1,\r\n\t\t\t\"numThinClients\":0,\r\n\t\t\t\"services\":[\"1\",\"2\"],\r\n\t\t\t\"serviceFilterType\":\"Includes\",\r\n\t\t\t\"emulationBehaviours\":\"None\"\r\n\t\t\t}\r\n\t\t]\r\n\t},\r\n\t{\r\n\t\t\"nodeID\":1,\r\n\t\t\"nodeIP\":\"127.0.0.1\",\r\n\t\t\"worldConfigs\":[\r\n\t\t\t{\r\n\t\t\t\"worldType\":\"Server\",\r\n\t\t\t\"initializationMode\":\"CreateAndConnect\",\r\n\t\t\t\"multiplayStreamingRoles\":\"Disabled\",\r\n\t\t\t\"serverNodeID\":-1,\r\n\t\t\t\"streamingNodeID\":-1,\r\n\t\t\t\"numThinClients\":0,\r\n\t\t\t\"services\":[],\r\n\t\t\t\"serviceFilterType\":\"Includes\",\r\n\t\t\t\"emulationBehaviours\":\"None\"\r\n\t\t\t},\r\n\t\t\t{\r\n\t\t\t\"worldType\":\"Client\",\r\n\t\t\t\"initializationMode\":\"CreateAndConnect\",\r\n\t\t\t\"multiplayStreamingRoles\":\"Host\",\r\n\t\t\t\"serverNodeID\":1,\r\n\t\t\t\"streamingNodeID\":-1,\r\n\t\t\t\"numThinClients\":0,\r\n\t\t\t\"services\":[],\r\n\t\t\t\"serviceFilterType\":\"Includes\",\r\n\t\t\t\"emulationBehaviours\":\"None\"\r\n\t\t\t}\r\n\t\t]\r\n\t}\r\n]\r\n}"
 --- !u!1 &827113861
 GameObject:
@@ -581,55 +581,6 @@ AudioListener:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 827113861}
   m_Enabled: 1
---- !u!1 &832575517
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 832575519}
-  - component: {fileID: 832575518}
-  m_Layer: 0
-  m_Name: Global Volume
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &832575518
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 832575517}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_IsGlobal: 1
-  priority: 0
-  blendDistance: 0
-  weight: 1
-  sharedProfile: {fileID: 11400000, guid: a6560a915ef98420e9faacc1c7438823, type: 2}
---- !u!4 &832575519
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 832575517}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -12.19, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &955198405
 GameObject:
   m_ObjectHideFlags: 0
@@ -1277,7 +1228,6 @@ SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 410087041}
-  - {fileID: 832575519}
   - {fileID: 2101193219}
   - {fileID: 650406536}
   - {fileID: 827113865}

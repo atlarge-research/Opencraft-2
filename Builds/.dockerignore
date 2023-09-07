@@ -6,7 +6,9 @@
 !*/GameAssembly.so
 !*/UnityPlayer.so
 !*/opencraft2.x86_64
+!*/localconfig.json
 !/Multiplay_WebApp
+!*/logs
 
 
 # Ignore unnecessary files inside allowed directories

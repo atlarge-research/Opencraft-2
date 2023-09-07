@@ -56,7 +56,7 @@ namespace Opencraft.Bootstrap
                             out NetworkEndpoint deploymentEndpoint,
                             NetworkFamily.Ipv4))
                     {
-                        Debug.LogWarning($"Couldn't parse deployment URL of {Config.DeploymentURL}:{Config.DeploymentPort}, falling back to 127.0.0.1!");
+                        Debug.Log($"Couldn't parse deployment URL of {Config.DeploymentURL}:{Config.DeploymentPort}, falling back to 127.0.0.1!");
                         deploymentEndpoint = NetworkEndpoint.LoopbackIpv4.WithPort(Config.DeploymentPort);
                     }
                     
@@ -67,8 +67,8 @@ namespace Opencraft.Bootstrap
                 else
                 {
                     // Deployment server
-                    Entity connReq = deploymentWorld.EntityManager.CreateEntity();
-                    deploymentWorld.EntityManager.AddComponentData(connReq,
+                    Entity listenReq = deploymentWorld.EntityManager.CreateEntity();
+                    deploymentWorld.EntityManager.AddComponentData(listenReq,
                         new NetworkStreamRequestListen { Endpoint = NetworkEndpoint.LoopbackIpv4.WithPort(Config.DeploymentPort) });
                 }
             }
@@ -221,8 +221,9 @@ namespace Opencraft.Bootstrap
                     && world.IsClient() && !world.IsThinClient() && !world.IsStreamedClient())
                 {
                     Entity connReq = world.EntityManager.CreateEntity();
-                    NetworkEndpoint.TryParse(serverUrl,serverPort,
+                    NetworkEndpoint.TryParse(serverUrl, serverPort,
                         out NetworkEndpoint gameEndpoint, NetworkFamily.Ipv4);
+                    Debug.Log($"Created connection request for {gameEndpoint}");
                     world.EntityManager.AddComponentData(connReq,
                         new NetworkStreamRequestConnect { Endpoint = gameEndpoint });
                 }
@@ -244,6 +245,7 @@ namespace Opencraft.Bootstrap
                     Entity connReq = world.EntityManager.CreateEntity();
                     NetworkEndpoint.TryParse(serverUrl,serverPort,
                         out NetworkEndpoint gameEndpoint, NetworkFamily.Ipv4);
+                    Debug.Log($"Created connection request for {gameEndpoint}");
                     world.EntityManager.AddComponentData(connReq,
                         new NetworkStreamRequestConnect { Endpoint = gameEndpoint });
                 }
@@ -252,8 +254,10 @@ namespace Opencraft.Bootstrap
                     && world.IsServer())
                 {
                     Entity connReq = world.EntityManager.CreateEntity();
+                    var listenNetworkEndpoint = NetworkEndpoint.AnyIpv4.WithPort(serverPort);
+                    Debug.Log($"Created listen request for {listenNetworkEndpoint}");
                     world.EntityManager.AddComponentData(connReq,
-                        new NetworkStreamRequestListen { Endpoint = NetworkEndpoint.LoopbackIpv4.WithPort(serverPort) });
+                        new NetworkStreamRequestListen { Endpoint = listenNetworkEndpoint });
                 }
                 
             }
@@ -324,8 +328,6 @@ namespace Opencraft.Bootstrap
                     continue;
                 filteredServerSystems.Add(system);
             }
-            //if(autoConnect)
-            //    filteredServerSystems.Add(typeof(CustomAutoconnectSystem));
 
             return CreateServerWorld("ServerWorld", WorldFlags.GameServer, filteredServerSystems );
         }

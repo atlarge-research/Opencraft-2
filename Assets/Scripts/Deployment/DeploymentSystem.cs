@@ -133,12 +133,12 @@ namespace Opencraft.Deployment
                 // Check request validity
                 if (node == null)
                 {
-                    Debug.LogWarning($"Received configuration request from node with unknown ID: {req.ValueRO.nodeID}");
+                    Debug.Log($"Received configuration request from node with unknown ID: {req.ValueRO.nodeID}");
                     commandBuffer.AddComponent(res, new ConfigErrorRPC{nodeID = nodeID, errorType = ConfigErrorType.UnknownID});
                     commandBuffer.AddComponent(res, new SendRpcCommandRequest { TargetConnection = sourceConn });
                 } else if (node.Value.connected)
                 {
-                    Debug.LogWarning($"Received configuration request from node with already connected ID: {req.ValueRO.nodeID}");
+                    Debug.Log($"Received configuration request from node with already connected ID: {req.ValueRO.nodeID}");
                     commandBuffer.AddComponent(res, new ConfigErrorRPC{nodeID = nodeID, errorType = ConfigErrorType.DuplicateID});
                     commandBuffer.AddComponent(res, new SendRpcCommandRequest { TargetConnection = sourceConn });
                 }
@@ -151,7 +151,7 @@ namespace Opencraft.Deployment
                     NetworkEndpoint remoteEndpoint = netDriver.GetRemoteEndPoint(connection);
                     if (!_deploymentGraph.CompareEndpoint(nodeID, remoteEndpoint))
                     {
-                        Debug.LogWarning($"Received config request for node {nodeID} from endpoint {remoteEndpoint}," +
+                        Debug.Log($"Received config request for node {nodeID} from endpoint {remoteEndpoint}," +
                                          $"even though this node is configured to be at endpoint {_deploymentGraph.GetEndpoint(nodeID)}");
                         // should we exit here?
                     }
@@ -176,7 +176,7 @@ namespace Opencraft.Deployment
                          .Query<RefRO<ReceiveRpcCommandRequest>, RefRO<ConfigErrorRPC >>()
                          .WithEntityAccess())
             {
-                Debug.LogWarning($"Received configuration error response of type: {errorRPC.ValueRO.errorType} from node with ID {errorRPC.ValueRO.nodeID}");
+                Debug.Log($"Received configuration error response of type: {errorRPC.ValueRO.errorType} from node with ID {errorRPC.ValueRO.nodeID}");
                 commandBuffer.DestroyEntity(reqEntity);
             }
             
@@ -224,7 +224,7 @@ namespace Opencraft.Deployment
                          .Query<RefRO<ReceiveRpcCommandRequest>, RefRO<ConfigErrorRPC >>()
                          .WithEntityAccess())
             {
-                Debug.LogWarning($"Received configuration error response of type: {errorRPC.ValueRO.errorType}");
+                Debug.Log($"Received configuration error response of type: {errorRPC.ValueRO.errorType}");
                 commandBuffer.DestroyEntity(reqEntity);
             }
             
@@ -273,7 +273,7 @@ namespace Opencraft.Deployment
             newWorlds = new NativeList<WorldUnmanaged>(16, Allocator.Temp);
             if (cRPC.worldType == WorldTypes.None)
             {
-                Debug.LogWarning($"Received deployment config RPC with no worldtype!");
+                Debug.Log($"Received deployment config RPC with no worldtype!");
                 return;
             }
             GameBootstrap.BootstrapPlayTypes playTypes = GameBootstrap.BootstrapPlayTypes.ServerAndClient;
@@ -307,7 +307,7 @@ namespace Opencraft.Deployment
             }
             else
             {
-                Debug.LogWarning($"Received unsupported configuration action {cRPC.action}");
+                Debug.Log($"Received unsupported configuration action {cRPC.action}");
             }
         }
     }

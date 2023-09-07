@@ -115,7 +115,7 @@ namespace Opencraft.Player.Multiplay
                 Settings.MultiplayEnabled = false;
             }
             if(h264NotFound)
-                Debug.LogWarning($"Could not find H264.High as streaming codec!");
+                Debug.Log($"Could not find H264.High as streaming codec!");
             Settings.ReceiverVideoCodec = chosenCodec;
             Settings.SenderVideoCodec = chosenCodec;
             Settings.SignalingAddress = Config.SignalingUrl;

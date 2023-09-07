@@ -55,6 +55,14 @@ namespace Opencraft
                 return false;
             }
 
+            bool isLocalConf = CommandLineParser.LocalConfigJson.Value != null;
+            JsonCmdArgs localArgs = new JsonCmdArgs();
+            if (isLocalConf)
+            {
+                Debug.Log("Using local config from file");
+                localArgs = (JsonCmdArgs)CommandLineParser.LocalConfigJson.Value;
+            }
+
             // ================== DEPLOYMENT ==================
             // Deployment configuration file, used to construct the Deployment Graph
             if (CommandLineParser.ImportDeploymentConfig.Value != null)
@@ -71,38 +79,48 @@ namespace Opencraft
             if (CommandLineParser.DeploymentID.Value != null)
                 Config.DeploymentID = (int)CommandLineParser.DeploymentID.Value;
             else
-                Config.DeploymentID = -1;
+            {
+                Config.DeploymentID = localArgs.DeploymentID;
+            }
 
             // Get remote config flag
+            #if UNITY_SERVER
+            Config.GetRemoteConfig = false;
+            #else
             if (CommandLineParser.GetRemoteConfig.Value != null)
                 Config.GetRemoteConfig = (bool)CommandLineParser.GetRemoteConfig.Value;
+            else
+                Config.GetRemoteConfig = localArgs.GetRemoteConfig;
+            #endif
 
             // Deployment service URL
             if (CommandLineParser.DeploymentURL.Value != null)
                 Config.DeploymentURL = CommandLineParser.DeploymentURL.Value;
+            else
+                Config.DeploymentURL = localArgs.DeploymentURL;
 
             // Deployment port
             if (CommandLineParser.DeploymentPort.Value != null)
                 Config.DeploymentPort = (ushort)CommandLineParser.DeploymentPort.Value;
             else
-                Config.DeploymentPort = 7980;
+                Config.DeploymentPort = (ushort)localArgs.DeploymentPort;
 
             // ================== SIGNALING ==================
             // Signaling URL
             if (CommandLineParser.SignalingUrl.Value != null)
                 Config.SignalingUrl = CommandLineParser.SignalingUrl.Value;
             else
-                Config.SignalingUrl = "127.0.0.1";
+                Config.SignalingUrl = localArgs.SignalingUrl;
             // Signaling port
             if (CommandLineParser.SignalingPort.Value != null)
                 Config.SignalingPort = (ushort)CommandLineParser.SignalingPort.Value;
             else
-                Config.SignalingPort = 7981;
+                Config.SignalingPort = (ushort)localArgs.SignalingPort;
 
 
             // ================== APPLICATION ==================
             // Debug
-            Config.DebugEnabled = CommandLineParser.DebugEnabled.Defined;
+            Config.DebugEnabled = CommandLineParser.DebugEnabled.Defined || localArgs.DebugEnabled;
             // Seed
             MD5 md5Hasher = MD5.Create();
             if (CommandLineParser.Seed.Value != null)
@@ -113,71 +131,83 @@ namespace Opencraft
             }
             else
             {
-                var hashed = md5Hasher.ComputeHash(Encoding.UTF8.GetBytes("42"));
+                var hashed = md5Hasher.ComputeHash(Encoding.UTF8.GetBytes(localArgs.Seed));
                 var ivalue = BitConverter.ToInt32(hashed, 0);
                 Config.Seed = ivalue;
             }
 
             // PlayType
+            #if UNITY_SERVER
+            Config.playTypes = GameBootstrap.BootstrapPlayTypes.Server;
+            #else
             if (CommandLineParser.PlayType.Value != null)
                 Config.playTypes = (GameBootstrap.BootstrapPlayTypes)CommandLineParser.PlayType.Value;
             else
-                Config.playTypes = GameBootstrap.BootstrapPlayTypes.Client;
+                Config.playTypes = localArgs.PlayType;
+            #endif
+            
             // Server url
             if (CommandLineParser.ServerUrl.Value != null)
-                Config.ServerUrl = CommandLineParser.ServerUrl.Value;
+                Config.ServerUrl = (string)CommandLineParser.ServerUrl.Value;
             else
-                Config.ServerUrl = "127.0.0.1";
+                Config.ServerUrl = (string)localArgs.ServerUrl;
             // Server port
             if (CommandLineParser.ServerPort.Value != null)
                 Config.ServerPort = (ushort)CommandLineParser.ServerPort.Value;
             else
-                Config.ServerPort = 7979;
+                Config.ServerPort = (ushort)localArgs.ServerPort;
 
             // Tick rates
             if (CommandLineParser.NetworkTickRate.Value != null)
                 Config.NetworkTickRate = (int)CommandLineParser.NetworkTickRate.Value;
             else
-                Config.NetworkTickRate = 60;
+                Config.NetworkTickRate = localArgs.NetworkTickRate;
             if (CommandLineParser.SimulationTickRate.Value != null)
                 Config.SimulationTickRate = (int)CommandLineParser.SimulationTickRate.Value;
             else
-                Config.SimulationTickRate = 60;
+                Config.SimulationTickRate = localArgs.SimulationTickRate;
             
             // Get take screenshots flag
             if (CommandLineParser.TakeScreenshots.Value != null)
                 Config.TakeScreenshots = (bool)CommandLineParser.TakeScreenshots.Value;
             else
-                Config.TakeScreenshots = false;
+                Config.TakeScreenshots = localArgs.TakeScreenshots;
             
-
-
+            // Duration
+            if (CommandLineParser.Duration.Value != null)
+                Config.Duration = (int)CommandLineParser.Duration.Value;
+            else
+                Config.Duration = localArgs.Duration;
 
             // ================== MULTIPLAY ==================
             // Multiplay role
+            #if UNITY_SERVER
+            Config.multiplayStreamingRoles = MultiplayStreamingRoles.Disabled;
+            #else
             if (CommandLineParser.MultiplayStreamingRole.Value != null)
                 Config.multiplayStreamingRoles =
                     (MultiplayStreamingRoles)CommandLineParser.MultiplayStreamingRole.Value;
             else
-                Config.multiplayStreamingRoles = MultiplayStreamingRoles.Disabled;
+                Config.multiplayStreamingRoles = localArgs.MultiplayStreamingRole;
+            #endif
 
             // ================== EMULATION ==================
             // Emulation type
             if (CommandLineParser.EmulationType.Value != null)
                 Config.EmulationType = (EmulationBehaviours)CommandLineParser.EmulationType.Value;
             else
-                Config.EmulationType = EmulationBehaviours.None;
+                Config.EmulationType = localArgs.EmulationType;
             // Emulation file path
             if (CommandLineParser.EmulationFile.Value != null)
                 Config.EmulationFilePath = CommandLineParser.EmulationFile.Value;
             else
-                Config.EmulationFilePath = Application.persistentDataPath + '\\' + "recordedInputs.inputtrace";
+                Config.EmulationFilePath = localArgs.EmulationFile;
 
             // Number of thin clients
             if (CommandLineParser.NumThinClientPlayers.Value != null)
                 Config.NumThinClientPlayers = (int)CommandLineParser.NumThinClientPlayers.Value;
             else
-                Config.NumThinClientPlayers = 0;
+                Config.NumThinClientPlayers = localArgs.NumThinClientPlayers;
 
 #if UNITY_EDITOR
 
@@ -210,7 +240,7 @@ namespace Opencraft
             {
                 if (editorArgs.deploymentConfig.IsNullOrEmpty())
                 {
-                    Debug.LogWarning($"UseDeploymentConfig flag set but deploymentConfig is empty");
+                    Debug.Log($"UseDeploymentConfig flag set but deploymentConfig is empty");
                 }
                 else
                 {
@@ -218,7 +248,7 @@ namespace Opencraft
                     Config.DeploymentConfig = JsonConvert.DeserializeObject<JsonDeploymentConfig>(editorArgs.deploymentConfig);
                     if (Config.DeploymentConfig.IsUnityNull())
                     {
-                        Debug.LogWarning($"Json Could not parse deploymentConfig!");
+                        Debug.Log($"Json Could not parse deploymentConfig!");
                     }
                     else
                     {
@@ -232,33 +262,33 @@ namespace Opencraft
             // Sanity checks
             if (Config.GetRemoteConfig && Config.DeploymentURL.IsNullOrEmpty())
             {
-                Debug.LogWarning($"Remote config flag set with no deployment service url provided, using loopback!");
+                Debug.Log($"Remote config flag set with no deployment service url provided, using loopback!");
                 Config.DeploymentURL = "127.0.0.1";
             }
 
             if (Config.GetRemoteConfig && Config.DeploymentID == -1)
             {
-                Debug.LogWarning($"Remote config flag set with no deployment ID provided, using 0!");
+                Debug.Log($"Remote config flag set with no deployment ID provided, using 0!");
                 Config.DeploymentID = 0;
             }
 
             if (Config.playTypes == GameBootstrap.BootstrapPlayTypes.Server &&
                 Config.multiplayStreamingRoles != MultiplayStreamingRoles.Disabled)
             {
-                Debug.LogWarning("Cannot run Multiplay streaming on Server, disabling Multiplay!");
+                Debug.Log("Cannot run Multiplay streaming on Server, disabling Multiplay!");
                 Config.multiplayStreamingRoles = MultiplayStreamingRoles.Disabled;
             }
 
             if (Config.playTypes != GameBootstrap.BootstrapPlayTypes.Server && Config.ServerUrl.IsNullOrEmpty())
             {
-                Debug.LogWarning($"No server ip given to client! Falling back to 127.0.0.1 ");
+                Debug.Log($"No server ip given to client! Falling back to 127.0.0.1 ");
                 Config.ServerUrl = $"127.0.0.1";
             }
 
             if (Config.multiplayStreamingRoles != MultiplayStreamingRoles.Disabled &&
                 Config.SignalingUrl.IsNullOrEmpty())
             {
-                Debug.LogWarning("Run as Multiplay streaming host or client with no signaling server!");
+                Debug.Log("Run as Multiplay streaming host or client with no signaling server!");
             }
 
             return true;

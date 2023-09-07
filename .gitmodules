@@ -1,3 +1,6 @@
 [submodule "UnityRenderStreaming"]
 	path = UnityRenderStreaming
 	url = git@github.com:JerritEic/UnityRenderStreaming.git
+[submodule "Packages/com.unity.performance.profile-analyzer"]
+	path = Packages/com.unity.performance.profile-analyzer
+	url = git@github.com:JerritEic/com.unity.performance.profile-analyzer.git
