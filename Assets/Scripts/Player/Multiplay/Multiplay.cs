@@ -40,8 +40,9 @@ namespace Opencraft.Player.Multiplay
 
         public void InitSettings()
         {
-            if(_initialized)
+            if (_initialized)
                 return;
+            
             // Fetch the settings on awake
             MultiplaySettingsManager.Instance.Initialize();
             settings = MultiplaySettingsManager.Instance.Settings;
@@ -107,6 +108,7 @@ namespace Opencraft.Player.Multiplay
             // Spawn object with camera and input component at a default location. This object will be synced
             // with player transform on clients by PlayerInputSystem. These objects do not exist on the server.
             var playerObj = Instantiate(playerPrefab, initialPosition, Quaternion.identity);
+            
             connectionPlayerObjects.Add(data.connectionId, playerObj);
 
             var videoChannel = playerObj.GetComponent<StreamSenderBase>();
@@ -122,8 +124,9 @@ namespace Opencraft.Player.Multiplay
 
             streams.Add(videoChannel);
             streams.Add(inputChannel);
-
+            Debug.Log($"Pre-addsender");
             AddSender(data.connectionId, videoChannel);
+            Debug.Log($"Post-addesenderr");
             AddChannel(data.connectionId, inputChannel);
 
             SendAnswer(data.connectionId);
@@ -161,24 +164,22 @@ namespace Opencraft.Player.Multiplay
             }
                 
             renderStreaming.useDefaultSettings = false;
-            Debug.Log($"Setting up multiplay host with signaling at {settings.SignalingAddress}:{settings.SignalingPort}");
+            Debug.Log($"Setting up multiplay host with signaling at {settings.SignalingAddress}");
             renderStreaming.SetSignalingSettings(settings.SignalingSettings);
             statsUI.AddSignalingHandler(this);
             renderStreaming.Run(handlers: new SignalingHandlerBase[] { this });
         }
 
-        public void SetUpGuest(NetworkEndpoint endpoint)
+        public void SetUpGuest(string url)
         {
             if (!settings.MultiplayEnabled)
             {
                 Debug.Log("SetUpGuest called but Multiplay disabled.");
                 return;
             }
-
-            Debug.Log($"Set up guest got endpoint {endpoint}");
-            settings.SignalingPort = endpoint.Port;
-            string address = endpoint.WithPort(0).ToString();
-            settings.SignalingAddress = address.Substring(0,address.Length - 2);
+            Debug.Log("Removing any previous connection objects");
+            ClearConnectionPlayerObjects();
+            settings.SignalingAddress = url;
             StartCoroutine(ConnectGuest());
         }
 
@@ -191,7 +192,7 @@ namespace Opencraft.Player.Multiplay
             
             renderStreaming.useDefaultSettings = false;
             renderStreaming.SetSignalingSettings(settings.SignalingSettings);
-            Debug.Log($"Setting up multiplay guest with signaling at {settings.SignalingAddress}:{settings.SignalingPort}");
+            Debug.Log($"[{DateTime.Now.TimeOfDay.ToString()}] Setting up multiplay guest with signaling at {settings.SignalingAddress}");
             renderStreaming.Run(handlers: new SignalingHandlerBase[] { handler });
             
             
@@ -212,6 +213,17 @@ namespace Opencraft.Player.Multiplay
             yield return new WaitUntil(() => handler.IsConnected(connectionId));
             guestConnected = true;
         }
+
+        void ClearConnectionPlayerObjects()
+        {
+            foreach (var (key, connectionPlayerObject) in connectionPlayerObjects)
+            {
+                Destroy(connectionPlayerObject);
+            }
+            connectionPlayerObjects.Clear();
+        }
     }
+    
+    
 
 }

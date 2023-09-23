@@ -10,7 +10,9 @@ namespace Opencraft.Player.Multiplay
         Http
     }
 
-    // Multiplay settings class, has the default values
+    /// <summary>
+    /// Configurable settings of Multiplay Render Streaming
+    /// </summary>
     public class MultiplaySettings
     {
         public const int DefaultStreamWidth = 1920;
@@ -21,42 +23,13 @@ namespace Opencraft.Player.Multiplay
         public SignalingType SignalingType { get; set; } = SignalingType.WebSocket;
 
         public string SignalingAddress { get; set; } = "127.0.0.1";
-
-        public ushort SignalingPort { get; set; } = 7981;
-
+        
         public bool SignalingSecured { get; set; } = false;
 
         public int SignalingInterval { get; set; } = 5000;
 
-        public SignalingSettings SignalingSettings
-        {
-            get
-            {
-                switch (SignalingType)
-                {
-                    case SignalingType.WebSocket:
-                    {
-                        var schema = SignalingSecured ? "wss" : "ws";
-                        return new WebSocketSignalingSettings
-                        (
-                            url: $"{schema}://{SignalingAddress}:{SignalingPort}"
-                        );
-                    }
-                    case SignalingType.Http:
-                    {
-                        var schema = SignalingSecured ? "https" : "http";
-                        return new HttpSignalingSettings
-                        (
-                            url: $"{schema}://{SignalingAddress}:{SignalingPort}",
-                            interval: SignalingInterval
-                        );
-                    }
-                }
-
-                throw new InvalidOperationException();
-            }
-        }
-
+        public SignalingSettings SignalingSettings;
+        
         public Vector2Int StreamSize { get; set; } = new Vector2Int(DefaultStreamWidth, DefaultStreamHeight);
 
         public VideoCodecInfo ReceiverVideoCodec { get; set; } = null;
@@ -79,6 +52,14 @@ namespace Opencraft.Player.Multiplay
         {
             if (Settings != null) return;
             Settings = new MultiplaySettings();
+            
+            Settings.SignalingAddress = Config.SignalingUrl;
+
+            Settings.SignalingSettings = new WebSocketSignalingSettings
+            (
+                url: Config.SignalingUrl
+            );
+            
             var codecs = VideoStreamReceiver.GetAvailableCodecs();
             bool h264NotFound = true;
             VideoCodecInfo chosenCodec = null;
@@ -118,8 +99,7 @@ namespace Opencraft.Player.Multiplay
                 Debug.Log($"Could not find H264.High as streaming codec!");
             Settings.ReceiverVideoCodec = chosenCodec;
             Settings.SenderVideoCodec = chosenCodec;
-            Settings.SignalingAddress = Config.SignalingUrl;
-            Settings.SignalingPort    = Config.SignalingPort;
+            
         }
     }
 }

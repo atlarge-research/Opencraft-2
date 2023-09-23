@@ -284,26 +284,21 @@ namespace Opencraft.Deployment
             if (cRPC.worldType == WorldTypes.ThinClient)
                 playTypes = GameBootstrap.BootstrapPlayTypes.ThinClient;
             
-            /*NetworkEndpoint.TryParse(cRPC.serverIP.ToString(), cRPC.serverPort,
-                out NetworkEndpoint gameEndpoint, NetworkFamily.Ipv4);
-            Debug.Log($"Game {cRPC.serverIP.ToString()}:{cRPC.serverPort} endpoint is {gameEndpoint}");
-            NetworkEndpoint.TryParse(cRPC.signallingIP.ToString(), cRPC.signallingPort,
-                out NetworkEndpoint streamEndpoint, NetworkFamily.Ipv4);*/
             
             if (cRPC.action == ConfigRPCActions.InitializeAndConnect)
             {
-                BootstrapInstance.instance.SetupWorlds(cRPC.multiplayStreamingRoles, playTypes, ref newWorlds, cRPC.numThinClients,
-                    autoConnect: true,cRPC.serverIP.ToString(), cRPC.serverPort,cRPC.signallingIP.ToString(), cRPC.signallingPort);
+                BootstrapInstance.instance.SetupWorlds(cRPC.multiplayStreamingRoles, playTypes, 0, ref newWorlds, cRPC.numThinClients,
+                    autoConnect: true,cRPC.serverIP.ToString(), cRPC.serverPort,cRPC.signallingIP.ToString());
             }
             else if (cRPC.action == ConfigRPCActions.Initialize)
             {
-                BootstrapInstance.instance.SetupWorlds(cRPC.multiplayStreamingRoles, playTypes, ref newWorlds, cRPC.numThinClients,
-                    autoConnect: false, cRPC.serverIP.ToString(), cRPC.serverPort,cRPC.signallingIP.ToString(), cRPC.signallingPort);
+                BootstrapInstance.instance.SetupWorlds(cRPC.multiplayStreamingRoles, playTypes, 0, ref newWorlds, cRPC.numThinClients,
+                    autoConnect: false, cRPC.serverIP.ToString(), cRPC.serverPort,cRPC.signallingIP.ToString());
             }
             else if (cRPC.action == ConfigRPCActions.Connect)
             {
-                BootstrapInstance.instance.ConnectWorlds(cRPC.multiplayStreamingRoles, playTypes,
-                    cRPC.serverIP.ToString(), cRPC.serverPort,cRPC.signallingIP.ToString(), cRPC.signallingPort);
+                BootstrapInstance.instance.ConnectWorlds(cRPC.multiplayStreamingRoles, playTypes, 0,
+                    cRPC.serverIP.ToString(), cRPC.serverPort,cRPC.signallingIP.ToString());
             }
             else
             {

@@ -26,7 +26,7 @@ namespace Opencraft.Bootstrap
     [UnityEngine.Scripting.Preserve]
     public class GameBootstrap : ICustomBootstrap
     {
-        private List<World> worlds;
+        public List<World> worlds;
         private World deploymentWorld;
         public bool Initialize(string defaultWorldName)
         {
@@ -77,7 +77,7 @@ namespace Opencraft.Bootstrap
                 // Use only local configuration
                 SetupWorldsFromLocalConfig();
             }
-
+            
             return true;
         }
     
@@ -145,16 +145,16 @@ namespace Opencraft.Bootstrap
         {
             //SetBootStrapConfig(Config.ServerUrl, Config.ServerPort);
             NativeList<WorldUnmanaged> newWorlds = new NativeList<WorldUnmanaged>(Allocator.Temp);
-            SetupWorlds(Config.multiplayStreamingRoles, Config.playTypes, ref newWorlds, Config.NumThinClientPlayers, autoConnect: true,
-                Config.ServerUrl, Config.ServerPort, Config.SignalingUrl, Config.SignalingPort);
+            SetupWorlds(Config.multiplayStreamingRoles, Config.playTypes, Config.SwitchToStreamDuration, ref newWorlds, Config.NumThinClientPlayers, autoConnect: true,
+                Config.ServerUrl, Config.ServerPort, Config.SignalingUrl);
         }
         
         
         /// <summary>
         /// Sets up bootstrapping details and creates local worlds
         /// </summary>
-        public void SetupWorlds(MultiplayStreamingRoles mRole, BootstrapPlayTypes playTypes, ref NativeList<WorldUnmanaged> newWorlds,
-            int numThinClients, bool autoConnect, string serverUrl, ushort serverPort, string signalingUrl, ushort signalingPort)
+        public void SetupWorlds(MultiplayStreamingRoles mRole, BootstrapPlayTypes playTypes, int switchToStreamed, ref NativeList<WorldUnmanaged> newWorlds,
+            int numThinClients, bool autoConnect, string serverUrl, ushort serverPort, string signalingUrl)
         {
 
             Debug.Log($"Setting up worlds with playType {playTypes} and streaming role {mRole}");
@@ -165,22 +165,29 @@ namespace Opencraft.Bootstrap
                 Config.multiplayStreamingRoles = MultiplayStreamingRoles.Host;
             }
             
+            if (playTypes == BootstrapPlayTypes.StreamedClient || switchToStreamed > 0)
+            {
+                mRole = MultiplayStreamingRoles.Guest;
+            }
+            
             //Client
             if (playTypes == BootstrapPlayTypes.Client || playTypes == BootstrapPlayTypes.ClientAndServer)
             {
-                if (mRole == MultiplayStreamingRoles.Guest)
+                // Streamed client
+                if (mRole == MultiplayStreamingRoles.Guest || switchToStreamed > 0)
                 {
                     var world = CreateStreamedClientWorld();
                     worlds.Add(world);
                     newWorlds.Add(world.Unmanaged);
-                } 
-                else
-                {
+                }
+
+                if (mRole != MultiplayStreamingRoles.Guest || switchToStreamed > 0){
                     var world = CreateDefaultClientWorld(mRole == MultiplayStreamingRoles.Host);
                     worlds.Add(world);
                     newWorlds.Add(world.Unmanaged);
                 }
             }
+            
 
             // Thin client
             if (playTypes == BootstrapPlayTypes.ThinClient && numThinClients > 0)
@@ -202,14 +209,14 @@ namespace Opencraft.Bootstrap
             }
             
             if(autoConnect)
-                ConnectWorlds(mRole, playTypes, serverUrl, serverPort, signalingUrl,  signalingPort);
+                ConnectWorlds(mRole, playTypes, switchToStreamed, serverUrl, serverPort, signalingUrl);
         }
         
         /// <summary>
         /// Connects worlds with types specified through playTypes and streaming roles
         /// </summary>
-        public void ConnectWorlds(MultiplayStreamingRoles mRole, BootstrapPlayTypes playTypes, string serverUrl,
-            ushort serverPort, string signalingUrl, ushort signalingPort)
+        public void ConnectWorlds(MultiplayStreamingRoles mRole,BootstrapPlayTypes playTypes, int switchToStreamed, string serverUrl,
+            ushort serverPort, string signalingUrl)
         {
             
             Debug.Log($"Connecting worlds with playType {playTypes} and streaming role {mRole}");
@@ -233,11 +240,10 @@ namespace Opencraft.Bootstrap
                     && world.IsStreamedClient())
                 {
                     Entity connReq = world.EntityManager.CreateEntity();
-                    NetworkEndpoint.TryParse(signalingUrl, signalingPort,
-                        out NetworkEndpoint streamEndpoint, NetworkFamily.Ipv4);
-                    Debug.Log($"Creating multiplay guest connect with endpoint {streamEndpoint}");
+                    
+                    Debug.Log($"Creating multiplay guest connect with endpoint {signalingUrl}");
                     world.EntityManager.AddComponentData(connReq,
-                        new NetworkStreamRequestConnect { Endpoint = streamEndpoint });
+                        new StreamedClientRequestConnect{ url = new FixedString512Bytes(signalingUrl) });
                 }
                 // Thin client worlds
                 if (playTypes == BootstrapPlayTypes.ThinClient && world.IsThinClient())
@@ -285,7 +291,7 @@ namespace Opencraft.Bootstrap
 
         public static World CreateStreamedClientWorld()
         {
-            var systems = new List<Type> { typeof(MultiplayInitSystem), typeof(EmulationInitSystem), typeof(TakeScreenshotSystem) };
+            var systems = new List<Type> { typeof(MultiplayInitSystem), typeof(EmulationInitSystem), typeof(TakeScreenshotSystem), typeof(UpdateWorldTimeSystem), typeof(ExitAfterDurationSystem) };
             return CreateClientWorld("StreamingGuestWorld", (WorldFlags)WorldFlagsExtension.StreamedClient, systems);
         }
         

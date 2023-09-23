@@ -19,11 +19,11 @@ ENV NVIDIA_DRIVER_CAPABILITIES all
 
 
 # Game port
-EXPOSE 7979
+EXPOSE 7979/udp
 # Deployment port
-EXPOSE 7980
-# Signaling port
-EXPOSE 7981
+EXPOSE 7980/udp
+# Signaling ports
+EXPOSE 7981-7984/udp
 
 # We run the game from the kubernetes job description
 CMD /bin/bash

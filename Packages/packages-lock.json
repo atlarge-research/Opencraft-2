@@ -393,6 +393,12 @@
       },
       "url": "https://packages.unity.com"
     },
+    "com.utj.profilerreader": {
+      "version": "file:com.utj.profilerreader",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
     "com.veriorpies.parrelsync": {
       "version": "https://github.com/VeriorPies/ParrelSync.git?path=/ParrelSync",
       "depth": 0,

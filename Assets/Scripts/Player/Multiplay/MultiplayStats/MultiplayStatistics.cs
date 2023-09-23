@@ -4,29 +4,30 @@
 using Unity.Profiling.Editor;
 #endif
 
-
-// Defines profiler counters for collection and display by profiler module
 namespace Opencraft.Player.Multiplay.MultiplayStats
 {
+    /// <summary>
+    /// Profiler module for Multiplay render streaming performance data
+    /// </summary>
     public class MultiplayStatistics
     {
         public static readonly ProfilerCategory MultiplayCategory = ProfilerCategory.Scripts;
         
-        public const string RoundTripTimeName = "Round Trip Time (ms)";
+        public const string RoundTripTimeName = "Multiplay RTT (ms)";
         public static readonly ProfilerCounterValue<double> MultiplayRoundTripTime =
             new ProfilerCounterValue<double>(MultiplayCategory, RoundTripTimeName, ProfilerMarkerDataUnit.Count);
         
-        public const string BitRateName = "BitRate";
+        public const string BitRateName = "Multiplay BitRate";
         public static readonly ProfilerCounterValue<double> MultiplayBitRate =
-            new ProfilerCounterValue<double>(MultiplayCategory ,BitRateName , ProfilerMarkerDataUnit.Count);
+            new ProfilerCounterValue<double>(MultiplayCategory ,BitRateName  , ProfilerMarkerDataUnit.Count);
         
-        public const string FPSName = "FPS";
+        public const string FPSName = "Multiplay FPS";
         public static readonly ProfilerCounterValue<double> MultiplayFPS =
-            new ProfilerCounterValue<double>(MultiplayCategory ,"FPS" , ProfilerMarkerDataUnit.Count);
+            new ProfilerCounterValue<double>(MultiplayCategory ,FPSName  , ProfilerMarkerDataUnit.Count);
         
-        public const string PacketLossName = "PacketLoss";
+        public const string PacketLossName = "Multiplay PacketLoss";
         public static readonly ProfilerCounterValue<double> MultiplayPacketLoss =
-            new ProfilerCounterValue<double>(MultiplayCategory ,"PacketLoss" , ProfilerMarkerDataUnit.Percent);
+            new ProfilerCounterValue<double>(MultiplayCategory ,PacketLossName , ProfilerMarkerDataUnit.Percent);
     }
     
 #if UNITY_EDITOR

@@ -30,13 +30,17 @@ namespace Opencraft.Bootstrap
         public int NetworkTickRate = 60;
         public int SimulationTickRate = 60;
         public bool TakeScreenshots = false;
+        public int TakeScreenshotsInterval = 5;
+        public string ScreenshotFolder = Application.persistentDataPath + "/screenshots";
         public int Duration = -1;
-        public string SignalingUrl = "127.0.0.1";
-        public int SignalingPort = 7981;
+        public string SignalingUrl = "ws://127.0.0.1:7981";
         public MultiplayStreamingRoles MultiplayStreamingRole = MultiplayStreamingRoles.Disabled;
+        public int SwitchToStreamDuration = 0;
         public EmulationBehaviours EmulationType = EmulationBehaviours.None;
         public string EmulationFile = Application.persistentDataPath + '\\' + "recordedInputs.inputtrace";
         public int NumThinClientPlayers = 0;
+        public bool LogStats = false;
+        public string StatsFile = Application.persistentDataPath + '\\' + "stats.csv";
     }
     
     
@@ -87,11 +91,12 @@ namespace Opencraft.Bootstrap
         internal static readonly IntArgument NetworkTickRate = new IntArgument("-networkTickRate");
         internal static readonly IntArgument SimulationTickRate = new IntArgument("-simulationTickRate");
         internal static readonly FlagArgument TakeScreenshots = new FlagArgument("-takeScreenshots");
+        internal static readonly IntArgument TakeScreenshotsInterval = new IntArgument("-screenshotInterval");
+        internal static readonly FilePathArgument ScreenshotFolder = new FilePathArgument("-screenshotFolder");
         internal static readonly IntArgument Duration = new IntArgument("-duration");
         
         // ================== SIGNALING ==================
         internal static readonly StringArgument SignalingUrl = new StringArgument("-signalingUrl");
-        internal static readonly IntArgument SignalingPort = new IntArgument("-signalingPort");
 
         // We only use WebSocket
         //internal static readonly StringArgument SignalingType = new StringArgument("-signalingType");
@@ -103,22 +108,27 @@ namespace Opencraft.Bootstrap
         
         // ================== MULTIPLAY ==================
         internal static readonly EnumArgument<MultiplayStreamingRoles> MultiplayStreamingRole = new EnumArgument<MultiplayStreamingRoles>("-multiplayRole");
+        internal static readonly IntArgument SwitchToStreamDuration = new IntArgument("-switchToStream");
         
         // ================== EMULATION ==================
         internal static readonly EnumArgument<EmulationBehaviours> EmulationType = new EnumArgument<EmulationBehaviours>("-emulationType");
         internal static readonly FilePathArgument EmulationFile = new FilePathArgument("-emulationFile");
         internal static readonly IntArgument NumThinClientPlayers = new IntArgument("-numThinClientPlayers");
-
+        
+        // ================== STATISTICS ==================
+        internal static readonly FlagArgument LogStats = new FlagArgument("-logStats");
+        internal static readonly FilePathArgument StatsFilePath = new FilePathArgument("-statsFile");
         
         
 
         static readonly List<IArgument> options = new List<IArgument>()
         {
             ImportDeploymentConfig, DeploymentID, GetRemoteConfig, DeploymentURL, DeploymentPort,
-            DebugEnabled, Seed, PlayType, ServerUrl, ServerPort, LocalConfigJson, NetworkTickRate, SimulationTickRate, TakeScreenshots, Duration,
-            SignalingUrl, SignalingPort,
-            MultiplayStreamingRole,
+            DebugEnabled, Seed, PlayType, ServerUrl, ServerPort, LocalConfigJson, NetworkTickRate, SimulationTickRate, TakeScreenshots, TakeScreenshotsInterval, ScreenshotFolder, Duration,
+            SignalingUrl,
+            MultiplayStreamingRole,SwitchToStreamDuration,
             EmulationType, EmulationFile, NumThinClientPlayers,
+            LogStats, StatsFilePath
         };
 
         internal delegate bool TryParseDelegate<T>(string[] arguments, string argumentName, out T result);
@@ -416,11 +426,11 @@ namespace Opencraft.Bootstrap
                 return true;
             }
 
-            if (!File.Exists(value))
+            /*if (!File.Exists(value))
             {
                 argumentValue = null;
                 return false;
-            }
+            }*/
             argumentValue = value;
             return true;
         }

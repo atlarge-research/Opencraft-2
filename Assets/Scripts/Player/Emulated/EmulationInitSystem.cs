@@ -9,7 +9,9 @@ using UnityEngine;
 
 namespace Opencraft.Player.Emulated
 {
-    // ECS System wrapper around Multiplay class that handles render streaming connections
+    /// <summary>
+    ///  Sets up and starts emulated player input 
+    /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(InitializationSystemGroup))]
     public partial class EmulationInitSystem : SystemBase
@@ -30,7 +32,7 @@ namespace Opencraft.Player.Emulated
             if (emulation.IsUnityNull() || multiplay.IsUnityNull())
                 return;
             // Wait for either clientworld to be connected to the server, or for this guest client to be connected
-            if (Config.multiplayStreamingRoles == MultiplayStreamingRoles.Guest)
+            if (Config.multiplayStreamingRoles == MultiplayStreamingRoles.Guest && Config.SwitchToStreamDuration == 0)
             {
                 if(!multiplay.IsGuestConnected())
                     return;

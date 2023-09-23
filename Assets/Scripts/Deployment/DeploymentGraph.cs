@@ -148,7 +148,6 @@ namespace Opencraft.Deployment
                        Debug.Log($"Node {nodeID} World {worldConfig.worldType} has nonexistent streaming node id: {worldConfig.streamingNodeID}!");
                     }
                     
-                    cRPC.signallingPort = Config.SignalingPort;
                     
                     cRPC.emulationBehaviours = worldConfig.emulationBehaviours;
                     

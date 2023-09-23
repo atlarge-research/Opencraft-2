@@ -5,6 +5,9 @@ using Unity.Profiling.Editor;
 
 namespace Opencraft.Statistics
 {
+    /// <summary>
+    ///  Profiler module for game-specific performance data
+    /// </summary>
     public class GameStatistics
     {
         public static readonly ProfilerCategory GameStatisticsCategory = ProfilerCategory.Scripts;
@@ -37,6 +40,54 @@ namespace Opencraft.Statistics
 
         // Pass the auto-enabled category names to the base constructor.
         public GameProfilerModule() : base(k_Counters, autoEnabledCategoryNames: k_AutoEnabledCategoryNames) { }
+    }
+#endif
+    
+    /// <summary>
+    ///  Profiler module for Netcode For Entities performance data
+    /// </summary>
+    public class NetCodeStatistics
+    {
+        public static readonly ProfilerCategory NetCodeStatisticsCategory = ProfilerCategory.Network;
+        
+        public const string SnapshotSizeInBitsName = "NFE Snapshot Size (bits)";
+        public static readonly ProfilerCounterValue<uint> SnapshotSizeInBits =
+            new ProfilerCounterValue<uint>(NetCodeStatisticsCategory, SnapshotSizeInBitsName, ProfilerMarkerDataUnit.Count);
+        
+        public const string SnapshotTickName = "NFE Snapshot Tick";
+        public static readonly ProfilerCounterValue<uint> SnapshotTick =
+            new ProfilerCounterValue<uint>(NetCodeStatisticsCategory, SnapshotTickName , ProfilerMarkerDataUnit.Count);
+        
+        public const string RTTName = "NFE RTT";
+        public static readonly ProfilerCounterValue<float> RTT =
+            new ProfilerCounterValue<float>(NetCodeStatisticsCategory, RTTName, ProfilerMarkerDataUnit.Count);
+        
+        public const string JitterName = "NFE Jitter";
+        public static readonly ProfilerCounterValue<float> Jitter =
+            new ProfilerCounterValue<float>(NetCodeStatisticsCategory, JitterName, ProfilerMarkerDataUnit.Count);
+    }
+#if UNITY_EDITOR
+    [System.Serializable]
+    [ProfilerModuleMetadata("NetCode Statistics")] 
+    public class NetCodeProfilerModule : ProfilerModule
+    {
+        static readonly ProfilerCounterDescriptor[] k_Counters = new ProfilerCounterDescriptor[]
+        {
+            new ProfilerCounterDescriptor(NetCodeStatistics.SnapshotSizeInBitsName, NetCodeStatistics.NetCodeStatisticsCategory),
+            new ProfilerCounterDescriptor(NetCodeStatistics.SnapshotTickName, NetCodeStatistics.NetCodeStatisticsCategory),
+            new ProfilerCounterDescriptor(NetCodeStatistics.RTTName, NetCodeStatistics.NetCodeStatisticsCategory),
+            new ProfilerCounterDescriptor(NetCodeStatistics.JitterName, NetCodeStatistics.NetCodeStatisticsCategory),
+        };
+
+        // Ensure that both ProfilerCategory.Scripts and ProfilerCategory.Memory categories are enabled when our module is active.
+        static readonly string[] k_AutoEnabledCategoryNames = new string[]
+        {
+            ProfilerCategory.Network.Name
+        };
+
+
+        // Pass the auto-enabled category names to the base constructor.
+        public NetCodeProfilerModule() : base(k_Counters, autoEnabledCategoryNames: k_AutoEnabledCategoryNames) { }
     }
 #endif
 }

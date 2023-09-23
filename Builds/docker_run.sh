@@ -1,13 +1,13 @@
 docker run -it \
-  --runtime=nvidia \
-  --name=super-container \
-  --security-opt seccomp=unconfined \
-  --init \
-  --net=host \
-  --privileged=true \
-  --rm=false \
-  -e DISPLAY=:0 \
-  -v /tmp/.X11-unix/X0:/tmp/.X11-unix/X0:ro \
-  -v /etc/localtime:/etc/localtime:ro \
-  -v ./logs:/opencraft2/logs \
-  jerriteic/opencraft2:base
+--name=opencraft2-client \
+--net=host \
+--rm=true \
+-v ./logs:/opencraft2/logs/ \
+jerriteic/opencraft2:base sh -c "./opencraft2.x86_64 -playType Client \
+ -nographics -batchmode \
+ -multiplayRole Guest \
+ -signalingUrl ws://127.0.0.1:7981 \
+ -localConfigJson ./localconfig.json \
+ -logFile ./logs/opencraft2_log.txt \
+ -duration 30 "
+

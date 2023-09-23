@@ -813,7 +813,7 @@ PlayerSettings:
   webGLPowerPreference: 2
   scriptingDefineSymbols:
     Server: UNITY_DISABLE_AUTOMATIC_SYSTEM_BOOTSTRAP
-    Standalone: UNITY_DISABLE_AUTOMATIC_SYSTEM_BOOTSTRAP
+    Standalone: UNITY_DISABLE_AUTOMATIC_SYSTEM_BOOTSTRAP;NETCODE_DEBUG
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:
@@ -822,7 +822,7 @@ PlayerSettings:
     Standalone: 1
   il2cppCompilerConfiguration:
     Server: 0
-    Standalone: 0
+    Standalone: 1
   il2cppCodeGeneration: {}
   managedStrippingLevel:
     EmbeddedLinux: 1

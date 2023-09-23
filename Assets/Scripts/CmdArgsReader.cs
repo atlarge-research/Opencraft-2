@@ -111,11 +111,11 @@ namespace Opencraft
                 Config.SignalingUrl = CommandLineParser.SignalingUrl.Value;
             else
                 Config.SignalingUrl = localArgs.SignalingUrl;
-            // Signaling port
+            /* Signaling port
             if (CommandLineParser.SignalingPort.Value != null)
                 Config.SignalingPort = (ushort)CommandLineParser.SignalingPort.Value;
             else
-                Config.SignalingPort = (ushort)localArgs.SignalingPort;
+                Config.SignalingPort = (ushort)localArgs.SignalingPort;*/
 
 
             // ================== APPLICATION ==================
@@ -173,6 +173,19 @@ namespace Opencraft
             else
                 Config.TakeScreenshots = localArgs.TakeScreenshots;
             
+            // Get take screenshots interval
+            if (CommandLineParser.TakeScreenshotsInterval.Value != null)
+                Config.TakeScreenshotsInterval = (int)CommandLineParser.TakeScreenshotsInterval.Value;
+            else
+                Config.TakeScreenshotsInterval = localArgs.TakeScreenshotsInterval;
+            
+            // Get take screenshots save location
+            if (CommandLineParser.ScreenshotFolder.Value != null)
+                Config.ScreenshotFolder = (string)CommandLineParser.ScreenshotFolder.Value;
+            else
+                Config.ScreenshotFolder = localArgs.ScreenshotFolder;
+
+            
             // Duration
             if (CommandLineParser.Duration.Value != null)
                 Config.Duration = (int)CommandLineParser.Duration.Value;
@@ -190,6 +203,12 @@ namespace Opencraft
             else
                 Config.multiplayStreamingRoles = localArgs.MultiplayStreamingRole;
             #endif
+            
+            if (CommandLineParser.SwitchToStreamDuration.Value != null)
+                Config.SwitchToStreamDuration =
+                    (int)CommandLineParser.SwitchToStreamDuration.Value;
+            else
+                Config.SwitchToStreamDuration = localArgs.SwitchToStreamDuration;
 
             // ================== EMULATION ==================
             // Emulation type
@@ -208,6 +227,18 @@ namespace Opencraft
                 Config.NumThinClientPlayers = (int)CommandLineParser.NumThinClientPlayers.Value;
             else
                 Config.NumThinClientPlayers = localArgs.NumThinClientPlayers;
+            
+            // Log statistics to csv file
+            if (CommandLineParser.LogStats.Value != null)
+                Config.LogStats = true;
+            else
+                Config.LogStats = localArgs.LogStats;
+            
+            // Statistics csv filepath
+            if (CommandLineParser.StatsFilePath.Value != null)
+                Config.StatsFilePath = CommandLineParser.StatsFilePath.Value;
+            else
+                Config.StatsFilePath = localArgs.StatsFile;
 
 #if UNITY_EDITOR
 

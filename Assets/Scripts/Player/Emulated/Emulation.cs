@@ -6,18 +6,14 @@ using UnityEngine;
 
 namespace Opencraft.Player.Emulated
 {
+    /// <summary>
+    /// Runs player emulation
+    /// </summary>
     public class Emulation : MonoBehaviour
     {
-        public string filename = "recordedInputs.inputtrace";
         public InputRecorder inputRecorder;
         [DontSerialize]public EmulationBehaviours emulationType = EmulationBehaviours.None;
         
-        
-        // Behaviour script
-        // InputPlayback file
-        // RecordInput file. Use run-length encoding
-        
-        //path = Application.persistentDataPath + inputFile;
 
         public void initializePlayback()
         {
@@ -46,9 +42,9 @@ namespace Opencraft.Player.Emulated
         {
             if ((emulationType & EmulationBehaviours.Record) == EmulationBehaviours.Record)
             {
-                Debug.Log($"Saving capture file to {Application.persistentDataPath + '/' +filename}");
+                Debug.Log($"Saving capture file to {Config.EmulationFilePath}");
                 inputRecorder.StopCapture();
-                inputRecorder.SaveCaptureToFile(Application.persistentDataPath + '/' + filename);
+                inputRecorder.SaveCaptureToFile(Config.EmulationFilePath);
             }
 
             if ((emulationType & EmulationBehaviours.Playback) == EmulationBehaviours.Playback)
@@ -57,12 +53,5 @@ namespace Opencraft.Player.Emulated
             }
         }
     }
-
-    /*public enum EmulationType
-    {
-        None,
-        InputPlayback,
-        RecordInput,
-        BehaviourProfile
-    }*/
+    
 }

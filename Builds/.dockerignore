@@ -1,7 +1,7 @@
 # Ignore everything
 *
 
-# Allow files and directories
+# Allow certain files and directories
 !*/opencraft2_Data
 !*/GameAssembly.so
 !*/UnityPlayer.so
@@ -9,6 +9,7 @@
 !*/localconfig.json
 !/Multiplay_WebApp
 !*/logs
+!*/input_recordings
 
 
 # Ignore unnecessary files inside allowed directories

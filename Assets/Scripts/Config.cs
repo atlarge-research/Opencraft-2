@@ -20,7 +20,7 @@ namespace Opencraft
 
         // ================== SIGNALING ==================
         public static string SignalingUrl;
-        public static ushort SignalingPort;
+        //public static ushort SignalingPort;
 
         // ================== APPLICATION ==================
         public static bool DebugEnabled;
@@ -31,16 +31,21 @@ namespace Opencraft
         public static int NetworkTickRate;
         public static int SimulationTickRate;
         public static bool TakeScreenshots;
+        public static string ScreenshotFolder;
+        public static int TakeScreenshotsInterval;
         public static int Duration;
 
         // ================== MULTIPLAY ==================
         public static MultiplayStreamingRoles multiplayStreamingRoles;
+        public static int SwitchToStreamDuration;
         
         // ================== EMULATION ==================
         public static EmulationBehaviours EmulationType;
         public static string EmulationFilePath;
         public static int NumThinClientPlayers;
         
-        
+        // ================== STATISTICS ==================
+        public static bool LogStats;
+        public static string StatsFilePath;
     }
 }
