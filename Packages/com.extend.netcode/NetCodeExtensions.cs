@@ -28,18 +28,22 @@ namespace Unity.NetCode
     public enum WorldFlagsExtension : int
     {
         /// <summary>
-        /// Streamed world, only contains video stream display and input sending
+        /// Regular client that can host additional streamed clients
         /// </summary>
         HostClient   = 1 << 11 | WorldFlags.GameClient,
         /// <summary>
+        /// Hosts streamed clients but has no local client
+        /// </summary>
+        CloudHostClient   = 1 << 12 | HostClient |  WorldFlags.GameClient,
+        /// <summary>
         /// Streamed world, only contains video stream display and input sending
         /// </summary>
-        StreamedClient   = 1 << 12 | WorldFlags.Game,
+        StreamedClient   = 1 << 13 | WorldFlags.Game,
         /// <summary>
         /// Deployment worlds <see cref="World"/> for remote configuration
         /// </summary>
-        DeploymentClient = 1 << 13 | WorldFlags.GameClient,
-        DeploymentServer = 1 << 14 | WorldFlags.GameServer,
+        DeploymentClient = 1 << 14 | WorldFlags.GameClient,
+        DeploymentServer = 1 << 15 | WorldFlags.GameServer,
     }
     
     /// <summary>
@@ -59,6 +63,26 @@ namespace Unity.NetCode
         
         /// <summary>
         /// Check if a world is a host client.
+        /// </summary>
+        /// <param name="world">A <see cref="World"/> instance</param>
+        /// <returns></returns>
+        public static bool IsCloudHostClient(this WorldUnmanaged world)
+        {
+            return ((WorldFlagsExtension)world.Flags & WorldFlagsExtension.CloudHostClient) == WorldFlagsExtension.CloudHostClient;
+        }
+        
+        /// <summary>
+        /// Check if a world is a cloud host client.
+        /// </summary>
+        /// <param name="world">A <see cref="World"/> instance</param>
+        /// <returns></returns>
+        public static bool IsCloudHostClient(this World world)
+        {
+            return ((WorldFlagsExtension)world.Flags & WorldFlagsExtension.CloudHostClient) == WorldFlagsExtension.CloudHostClient;
+        }
+        
+        /// <summary>
+        /// Check if a world is a cloud host client.
         /// </summary>
         /// <param name="world">A <see cref="World"/> instance</param>
         /// <returns></returns>
@@ -141,136 +165,6 @@ namespace Unity.NetCode
     public struct ConnectRequest : IComponentData
     {
     }
-    
-    /*
-    /// <summary>
-    /// Autoconnect system that waits for the WorldReady flag to be present within the world
-    /// </summary>
-    [WorldSystemFilter(WorldSystemFilterFlags.ThinClientSimulation | WorldSystemFilterFlags.ClientSimulation | WorldSystemFilterFlags.ServerSimulation)]
-    [CreateAfter(typeof(NetworkStreamReceiveSystem))]
-    public partial struct CustomAutoconnectSystem : ISystem
-    {
-        private EntityQuery _readyQuery;
-        public void OnCreate(ref SystemState state)
-        {
-            // WorldReady component added after all scene loading is complete
-            _readyQuery = state.GetEntityQuery(ComponentType.ReadOnly<WorldReady>());
-            state.RequireForUpdate(_readyQuery);
-        }
-
-        public void OnUpdate(ref SystemState state)
-        {
-            if (!SystemAPI.TryGetSingleton<NetworkStreamDriver>(out NetworkStreamDriver netDriver))
-            {
-                Debug.LogError($"AutoConnect system cannot find a NetworkStreamDriver!");
-                state.Enabled = false;
-                return;
-            }
-                
-            if(state.World.IsServer())
-            {
-                if (state.World.IsDeploymentServer())
-                {
-                    netDriver.Listen(BootstrappingConfig.DeploymentServerListenAddress);
-                    Debug.Log($"Calling Listen on deployment server at {BootstrappingConfig.DeploymentServerListenAddress}");   
-                }
-                else
-                {
-                    netDriver.Listen(BootstrappingConfig.ServerListenAddress);
-                    Debug.Log($"Calling Listen on server at {BootstrappingConfig.ServerListenAddress}"); 
-                }
-            }
-
-            if (state.World.IsClient() || state.World.IsThinClient())
-            {
-                if (state.World.IsDeploymentClient())
-                {
-                    netDriver.Connect(state.EntityManager, BootstrappingConfig.DeploymentClientConnectAddress);
-                    Debug.Log($"Calling connect on deployment client at {BootstrappingConfig.DeploymentClientConnectAddress}");
-                }
-                else
-                {
-                    netDriver.Connect(state.EntityManager, BootstrappingConfig.ClientConnectAddress);
-                    Debug.Log($"Calling connect on client at {BootstrappingConfig.ClientConnectAddress}");
-                }
-            }
-            state.Enabled = false;
-        }
-    }*/
-    
-    /*
-    /// <summary>
-    /// Connect system that handles ConnectRequest components
-    /// </summary>
-    [WorldSystemFilter(WorldSystemFilterFlags.ThinClientSimulation | WorldSystemFilterFlags.ClientSimulation | WorldSystemFilterFlags.ServerSimulation)]
-    [CreateAfter(typeof(NetworkStreamReceiveSystem))]
-    public partial struct NetcodeConnectRequestSystem : ISystem
-    {
-        private EntityQuery _requestQuery;
-        private EntityQuery _connectionQuery;
-        public void OnCreate(ref SystemState state)
-        {
-            // WorldReady component added after all scene loading is complete
-            _requestQuery = state.GetEntityQuery(ComponentType.ReadOnly<ConnectRequest>());
-            state.RequireForUpdate(_requestQuery);
-            _connectionQuery = state.GetEntityQuery(ComponentType.ReadOnly<NetworkStreamConnection>());
-            
-            state.RequireForUpdate<NetworkStreamDriver>();
-        }
-
-        public void OnUpdate(ref SystemState state)
-        {
-            if (!SystemAPI.TryGetSingleton<NetworkStreamDriver>(out NetworkStreamDriver netDriver))
-            {
-                // Should never occur given the RequireForUpdate call in OnCreate
-                Debug.LogError($"NetcodeConnectSystem cannot find a NetworkStreamDriver!");
-                return;
-            }
-            
-            if (!_connectionQuery.IsEmpty)
-            {
-                var connections = _connectionQuery.ToComponentDataArray<NetworkStreamConnection>(Allocator.Temp);
-                foreach (var connection in connections)
-                {
-                    if (netDriver.GetConnectionState(connection) != NetworkConnection.State.Disconnected)
-                    {
-                        Debug.LogError($"Connect system run called when non-disconnected connections exist!");
-                        return;
-                    }
-                }
-            }
-            
-            if(state.World.IsServer())
-            {
-                if (state.World.IsDeploymentServer())
-                {
-                    netDriver.Listen(BootstrappingConfig.DeploymentServerListenAddress);
-                    Debug.Log($"Calling Listen on deployment server at {BootstrappingConfig.DeploymentServerListenAddress}");   
-                }
-                else
-                {
-                    netDriver.Listen(BootstrappingConfig.ServerListenAddress);
-                    Debug.Log($"Calling Listen on server at {BootstrappingConfig.ServerListenAddress}"); 
-                }
-            }
-
-            if (state.World.IsClient() || state.World.IsThinClient())
-            {
-                if (state.World.IsDeploymentClient())
-                {
-                    netDriver.Connect(state.EntityManager, BootstrappingConfig.DeploymentClientConnectAddress);
-                    Debug.Log($"Calling connect on deployment client at {BootstrappingConfig.DeploymentClientConnectAddress}");
-                }
-                else
-                {
-                    netDriver.Connect(state.EntityManager, BootstrappingConfig.ClientConnectAddress);
-                    Debug.Log($"Calling connect on client at {BootstrappingConfig.ClientConnectAddress}");
-                }
-            }
-            state.EntityManager.DestroyEntity(_requestQuery);
-            
-        }
-    }*/
     
     /// <summary>
     /// Configure system

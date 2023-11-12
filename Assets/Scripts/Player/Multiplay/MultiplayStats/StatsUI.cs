@@ -73,6 +73,17 @@ namespace Opencraft.Player.Multiplay.MultiplayStats
 
             signalingHandlerList.Add(handlerBase);
         }
+        
+        public void RemoveSignalingHandler(SignalingHandlerBase handlerBase)
+        {
+            if (!signalingHandlerList.Contains(handlerBase))
+            {
+                return;
+            }
+
+            signalingHandlerList.Remove(handlerBase);
+        }
+        
 
         class StatsDisplay
         {
@@ -325,7 +336,7 @@ namespace Opencraft.Player.Multiplay.MultiplayStats
                         var duration = (double)(inboundStats.Timestamp - lastInboundStats.Timestamp) / 1000000;
                         var bitrate = (8 * (inboundStats.bytesReceived - lastInboundStats.bytesReceived) / duration) / 1000;
                         builder.AppendLine($"Bitrate: {bitrate:F2} kbit/sec");
-                        MultiplayStatistics.MultiplayBitRate.Value = bitrate;
+                        MultiplayStatistics.MultiplayBitRateIn.Value = bitrate;
                     }
                 }
                 else if (stats is RTCOutboundRTPStreamStats outboundStats)
@@ -371,6 +382,7 @@ namespace Opencraft.Player.Multiplay.MultiplayStats
                         var duration = (double)(outboundStats.Timestamp - lastOutboundStats.Timestamp) / 1000000;
                         var bitrate = (8 * (outboundStats.bytesSent - lastOutboundStats.bytesSent) / duration) / 1000;
                         builder.AppendLine($"Bitrate: {bitrate:F2} kbit/sec");
+                        MultiplayStatistics.MultiplayBitRateOut.Value = bitrate;
                     }
                 }
                 else if (stats is RTCRemoteOutboundRtpStreamStats remoteOutboundStats)

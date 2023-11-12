@@ -26,6 +26,7 @@ namespace Opencraft.Player.Multiplay
             playerQuery= new EntityQueryBuilder(Allocator.Temp)
                 .WithAllRW<Authoring.Player>()
                 .WithAll<NewPlayer>()
+                .WithAll<GhostOwnerIsLocal>()
                 .Build(this);
             RequireForUpdate<PlayerSpawner>();
         }
@@ -34,58 +35,26 @@ namespace Opencraft.Player.Multiplay
             Multiplay multiplay = MultiplaySingleton.Instance;
             if (multiplay.IsUnityNull())
                 return;
+            
             var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
-            NativeArray<Authoring.Player> playerData = playerQuery.ToComponentDataArray<Authoring.Player>(Allocator.Temp);
-            NativeArray<Entity> newPlayerEntities = playerQuery.ToEntityArray(Allocator.Temp);
+            
             var playerSpawner = SystemAPI.GetSingleton<PlayerSpawner>();
+            
             foreach (var (connID, playerObj) in multiplay.connectionPlayerObjects)
             {
                 var playerController = playerObj.GetComponent<MultiplayPlayerController>();
                 
-                // Check if a newly spawned player is a response to this playerObject's request
-                if (playerController.playerEntityRequestSent)
+                // Check if a player has a spawned player with the same name, link to it if it exists
+                if (playerController.playerEntityRequestSent && !playerController.playerEntityExists)
                 {
-                    for (int i = 0; i < newPlayerEntities.Length; i++)
-                    {
-                        var player = playerData[i];
-                        // todo: surely there is a better way of linking player entity and object...
-                        if (player.Username == playerController.username)
-                        {
-                            
-                            var playerEntity = newPlayerEntities[i];
-                            playerController.playerEntityRequestSent = false;
-                            playerController.playerEntityExists = true;
-                            Debug.Log($"Linking player entity {playerEntity } to {connID}");
-                            playerController.playerEntity = playerEntity;
-
-                            // Store connectionID in components as a blob reference.
-                            var builder = new BlobBuilder(Allocator.Temp);
-                            ref BlobString blobString = ref builder.ConstructRoot<BlobString>();
-                            builder.AllocateString(ref blobString, connID);
-                            // Copy new player component
-                            commandBuffer.SetComponent(playerEntity, new Authoring.Player
-                            {
-                                PlayerConfig = player.PlayerConfig,
-                                Velocity = player.Velocity,
-                                OnGround = player.OnGround,
-                                JumpStart = player.JumpStart,
-                                Username = player.Username,
-                                multiplayConnectionID = builder.CreateBlobAssetReference<BlobString>(Allocator.Persistent)
-                            });
-                            builder.Dispose();
-                            // Create a new block outline entity. Used by the HighlightSelectedBlockSystem on clients
-                            commandBuffer.Instantiate(playerSpawner.BlockOutline);
-                            commandBuffer.SetComponentEnabled<NewPlayer>(playerEntity, false);
-                            // Color the player red since it is locally controlled
-                            commandBuffer.SetComponent(playerEntity,
-                                new URPMaterialPropertyBaseColor() { Value = new float4(1, 0, 0, 1) });
-                        }
+                    if(linkPlayerIfExists(ref playerController, ref commandBuffer, in playerSpawner, in connID)){
+                        playerController.playerEntityRequestSent = false;
+                        playerController.playerEntityExists = true;
                     }
                 }
 
                 // Send any necessary player spawn requests
-                if (playerController.inputStart && 
-                    !playerController.playerEntityExists &&
+                if (!playerController.playerEntityExists &&
                     !playerController.playerEntityRequestSent)
                 {
                     // Create a spawn player rpc
@@ -111,7 +80,8 @@ namespace Opencraft.Player.Multiplay
 
                 if (playerController.playerEntityExists)
                 {
-                    Debug.Log($"Creating DestroyPlayer RPC for entity {playerController.playerEntity} on {connectionId}");
+                    commandBuffer.SetComponentEnabled<GhostOwnerIsLocal>(playerController.playerEntity, false);
+                    /*Debug.Log($"Creating DestroyPlayer RPC for entity {playerController.playerEntity} on {connectionId}");
                     foreach (var (_, entity) in SystemAPI.Query<RefRO<NetworkId>>().WithAll<NetworkStreamInGame>().WithEntityAccess())
                     {
                         var req = commandBuffer.CreateEntity();
@@ -119,7 +89,7 @@ namespace Opencraft.Player.Multiplay
                             { Player = playerController.playerEntity };
                         commandBuffer.AddComponent(req, destroyPlayerRequest);
                         commandBuffer.AddComponent(req, new SendRpcCommandRequest { TargetConnection = entity });
-                    }
+                    }*/
                 }
                 multiplay.DestroyMultiplayConnection(connectionId);
             }
@@ -129,5 +99,49 @@ namespace Opencraft.Player.Multiplay
             commandBuffer.Playback(EntityManager);
 
         }
+
+        bool linkPlayerIfExists(ref MultiplayPlayerController playerController, ref EntityCommandBuffer commandBuffer, in PlayerSpawner playerSpawner, in string connID)
+        {
+            NativeArray<Authoring.Player> playerData = playerQuery.ToComponentDataArray<Authoring.Player>(Allocator.Temp);
+            NativeArray<Entity> playerEntities = playerQuery.ToEntityArray(Allocator.Temp);
+            for (int i = 0; i < playerEntities.Length; i++)
+            {
+                var player = playerData[i];
+                var playerEntity = playerEntities[i];
+                // todo: surely there is a better way of linking player entity and object...
+                if (player.Username == playerController.username)
+                {
+                    Debug.Log($"Linking player entity {playerEntity} to {playerController.username}@{connID}");
+                    playerController.playerEntity = playerEntity;
+
+                    // Store connectionID in components as a blob reference.
+                    var builder = new BlobBuilder(Allocator.Temp);
+                    ref BlobString blobString = ref builder.ConstructRoot<BlobString>();
+                    builder.AllocateString(ref blobString, connID);
+                    // Copy new player component
+                    commandBuffer.SetComponent(playerEntity, new Authoring.Player
+                    {
+                        //PlayerConfig = player.PlayerConfig,
+                        //Velocity = player.Velocity,
+                        //OnGround = player.OnGround,
+                        //JumpStart = player.JumpStart,
+                        JumpVelocity = player.JumpVelocity,
+                        Username = player.Username,
+                        multiplayConnectionID = builder.CreateBlobAssetReference<BlobString>(Allocator.Persistent)
+                    });
+                    builder.Dispose();
+                    // Create a new block outline entity. Used by the HighlightSelectedBlockSystem on clients
+                    commandBuffer.Instantiate(playerSpawner.BlockOutline);
+                    commandBuffer.SetComponentEnabled<NewPlayer>(playerEntity, false);
+                    // Color the player red since it is locally controlled
+                    commandBuffer.SetComponent(playerEntity,
+                        new URPMaterialPropertyBaseColor() { Value = new float4(1, 0, 0, 1) });
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        
     }
 }

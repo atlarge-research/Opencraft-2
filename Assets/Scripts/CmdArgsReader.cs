@@ -9,6 +9,7 @@ using Unity.NetCode;
 using Unity.VisualScripting;
 using UnityEngine;
 using WebSocketSharp;
+using Random = UnityEngine.Random;
 #if UNITY_EDITOR
 using ParrelSync;
 using UnityEditor;
@@ -191,6 +192,16 @@ namespace Opencraft
                 Config.Duration = (int)CommandLineParser.Duration.Value;
             else
                 Config.Duration = localArgs.Duration;
+            
+            // UserID
+            if (CommandLineParser.UserID.Value != null)
+                Config.UserID = (int)CommandLineParser.UserID.Value;
+            else
+                Config.UserID = localArgs.UserID;
+            if (Config.UserID == -1)
+            {
+                Config.UserID = Random.Range(0, 99999);
+            }
 
             // ================== MULTIPLAY ==================
             // Multiplay role
@@ -230,7 +241,7 @@ namespace Opencraft
             
             // Log statistics to csv file
             if (CommandLineParser.LogStats.Value != null)
-                Config.LogStats = true;
+                Config.LogStats = (bool)CommandLineParser.LogStats.Value;
             else
                 Config.LogStats = localArgs.LogStats;
             

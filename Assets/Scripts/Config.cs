@@ -34,6 +34,7 @@ namespace Opencraft
         public static string ScreenshotFolder;
         public static int TakeScreenshotsInterval;
         public static int Duration;
+        public static int UserID;
 
         // ================== MULTIPLAY ==================
         public static MultiplayStreamingRoles multiplayStreamingRoles;

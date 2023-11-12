@@ -14,17 +14,22 @@ namespace Opencraft.Player.Authoring
     public struct Player : IComponentData
     {
         // Link to an associated configuration entity
-        public Entity PlayerConfig;
+        //public Entity PlayerConfig;
         // Link to containing area
         public Entity ContainingArea;
         // Link to containing area
         public int3 ContainingAreaLocation;
         // Movement variables
-        [GhostField(Quantization = 1000)] public float3 Velocity;
-        [GhostField] public byte OnGround;
-        [GhostField] public NetworkTick JumpStart;
+        //[GhostField(Quantization = 1000)] public float3 Velocity;
+        //[GhostField] public byte OnGround;
+        //[GhostField] public NetworkTick JumpStart;
+        
+        [GhostField] public int JumpVelocity;
+        [GhostField] public float Pitch;
+        [GhostField] public float Yaw;
+        
         // Connection related variables
-        [GhostField] public int Username;
+        [GhostField] public FixedString32Bytes Username;
         public BlobAssetReference<BlobString> multiplayConnectionID;
     }
     
@@ -48,12 +53,12 @@ namespace Opencraft.Player.Authoring
     [GhostComponent(PrefabType = GhostPrefabType.AllPredicted, OwnerSendType = SendToOwnerType.SendToNonOwner)]
     public struct PlayerInput : IInputComponentData
     {
-        [GhostField] public float2 Movement;
-        [GhostField] public InputEvent Jump;
-        [GhostField] public InputEvent PrimaryAction;
-        [GhostField] public InputEvent SecondaryAction;
-        [GhostField] public float Pitch;
-        [GhostField] public float Yaw;
+        [GhostField]public float2 Movement;
+        [GhostField]public InputEvent Jump;
+        [GhostField]public InputEvent PrimaryAction;
+        [GhostField]public InputEvent SecondaryAction;
+        [GhostField]public float Pitch;
+        [GhostField]public float Yaw;
     }
 
     // Group player related component accessors for ease of use
@@ -64,7 +69,7 @@ namespace Opencraft.Player.Authoring
 
         readonly RefRO<AutoCommandTarget> m_AutoCommandTarget;
         readonly RefRW<Player> m_Character;
-        readonly RefRW<PhysicsVelocity> m_Velocity;
+        //readonly RefRW<PhysicsVelocity> m_Velocity;
         readonly RefRO<PlayerInput> m_Input;
         readonly RefRO<GhostOwner> m_Owner;
         readonly RefRW<SelectedBlock> m_SelectedBlock;
@@ -73,14 +78,14 @@ namespace Opencraft.Player.Authoring
         public PlayerInput Input => m_Input.ValueRO;
         public int OwnerNetworkId => m_Owner.ValueRO.NetworkId;
         public ref Player Player => ref m_Character.ValueRW;
-        public ref PhysicsVelocity Velocity => ref m_Velocity.ValueRW;
+        //public ref PhysicsVelocity Velocity => ref m_Velocity.ValueRW;
         public ref SelectedBlock SelectedBlock => ref m_SelectedBlock.ValueRW;
     }
 
     [DisallowMultipleComponent]
     public class PlayerAuthoring : MonoBehaviour
     {
-        public PlayerConfigAuthoring playerConfig;
+        //public PlayerConfigAuthoring playerConfig;
         class Baker : Baker<PlayerAuthoring>
         {
             public override void Bake(PlayerAuthoring authoring)
@@ -89,7 +94,8 @@ namespace Opencraft.Player.Authoring
                 AddComponent(entity, new PlayerInput());
                 AddComponent(entity, new Player
                 {
-                    PlayerConfig = GetEntity(authoring.playerConfig.gameObject, TransformUsageFlags.Dynamic)});
+                    //PlayerConfig = GetEntity(authoring.playerConfig.gameObject, TransformUsageFlags.Dynamic)
+                });
                 AddComponent(entity, new NewPlayer());
                 AddComponent(entity, new SelectedBlock());
             }

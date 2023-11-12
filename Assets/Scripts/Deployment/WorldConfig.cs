@@ -19,6 +19,7 @@ namespace Opencraft.Deployment
     {
         Disabled,
         Host,
+        CloudHost,
         Guest
     }
     
@@ -33,8 +34,9 @@ namespace Opencraft.Deployment
     [Serializable]
     public enum InitializationMode
     {
-        CreateAndConnect,
         Create,
+        Start,
+        Connect
     }
     
     /// <summary>
@@ -43,6 +45,8 @@ namespace Opencraft.Deployment
     [Serializable]
     public class WorldConfig
     {
+        // Name of the world, used to uniquely identify it
+        public string worldName;
         // The type of world, determines how connection is performed and what systems are loaded
         public WorldTypes worldType;
         // How this world should be initialized

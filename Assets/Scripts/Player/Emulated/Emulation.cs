@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using Opencraft.Player.Emulated.InputPlayback;
+using Unity.Mathematics;
 using Unity.Serialization;
 using UnityEngine;
 
@@ -13,10 +14,32 @@ namespace Opencraft.Player.Emulated
     {
         public InputRecorder inputRecorder;
         [DontSerialize]public EmulationBehaviours emulationType = EmulationBehaviours.None;
+
+        public void Pause()
+        {
+            if ((emulationType & EmulationBehaviours.Playback) == EmulationBehaviours.Playback)
+            {
+                inputRecorder.PauseReplay();
+            }
+        }
+
+        public void Play()
+        {
+            if ((emulationType & EmulationBehaviours.Playback) == EmulationBehaviours.Playback)
+            {
+                inputRecorder.StartReplay();
+            }
+        }
         
 
         public void initializePlayback()
         {
+            if (inputRecorder.replayIsRunning)
+            {
+                Debug.Log($"Resuming input playback from {Config.EmulationFilePath}");
+                Play();
+                return;
+            }
             try
             {
                 inputRecorder.LoadCaptureFromFile(Config.EmulationFilePath);

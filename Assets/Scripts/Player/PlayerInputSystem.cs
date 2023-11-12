@@ -1,4 +1,5 @@
 ﻿using Opencraft.Player.Authoring;
+using Opencraft.Player.Emulated;
 using Opencraft.Player.Multiplay;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -28,14 +29,20 @@ namespace Opencraft.Player
             {
                 // Check if the connection has been created
                 if (!player.ValueRO.multiplayConnectionID.IsCreated)
+                {
+                    Debug.LogWarning($"Player {player.ValueRO.Username} has no connection ID!");
                     continue;
-                
+                }
+
                 ref var connID = ref player.ValueRO.multiplayConnectionID.Value;
                 
                 // Check if the connection has been terminated
                 if (!multiplay.connectionPlayerObjects.ContainsKey(connID.ToString()))
+                {
+                    Debug.LogWarning($"PlayerObject with connection ID {connID.ToString()} not found");
                     continue;
-                
+                }
+
                 var playerObj = multiplay.connectionPlayerObjects[connID.ToString()];
                 var playerController = playerObj.GetComponent<MultiplayPlayerController>();
 

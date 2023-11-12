@@ -26,10 +26,14 @@ namespace Opencraft.Player.Multiplay
     public partial class MultiplayInitSystem : SystemBase
     {
         private EntityQuery _requestQuery;
+        private EntityQuery _connQuery;
         private bool initialized = false;
         protected override void OnCreate()
         {
             _requestQuery = GetEntityQuery(ComponentType.ReadOnly<StreamedClientRequestConnect>());
+            var builder = new EntityQueryBuilder(Allocator.Temp)
+                .WithAll<NetworkId, NetworkStreamInGame>();
+            _connQuery = GetEntityQuery(builder);
             initialized = false;
         }
         
@@ -38,40 +42,6 @@ namespace Opencraft.Player.Multiplay
             Multiplay multiplay = MultiplaySingleton.Instance;
             if (multiplay.IsUnityNull())
                 return;
-            
-            // Only run initialization code once
-            if (!initialized)
-            {
-                Debug.Log("Initializing multiplay!");
-                multiplay.InitSettings();
-                if (World.Unmanaged.IsStreamedClient() && Config.SwitchToStreamDuration > 0)
-                {
-                    // Let the client world handle the switch.
-                    initialized = true;
-                }
-                else if (Config.multiplayStreamingRoles == MultiplayStreamingRoles.Disabled ||
-                    ((Config.multiplayStreamingRoles == MultiplayStreamingRoles.Guest ) && Config.SwitchToStreamDuration > 0 ))
-                {
-                    multiplay.SetUpLocalPlayer();
-                }
-                else if (World.Unmanaged.IsHostClient())
-                {
-                    multiplay.SetUpHost();
-                }
-                
-                // If we won't be switching streaming mode later, disable this system
-                if(Config.SwitchToStreamDuration <= 0 )
-                    Enabled = false;
-                
-                initialized = true;
-            }
-            
-            
-            // Don't start multiplay system until switch to stream duration elapsed
-            if ((Config.SwitchToStreamDuration > 0)  && (World.Time.ElapsedTime < Config.SwitchToStreamDuration))
-            {
-                return;
-            }
 
 
             if (World.Unmanaged.IsStreamedClient())
@@ -84,6 +54,28 @@ namespace Opencraft.Player.Multiplay
                         Debug.Log($"Render streaming guest has multiple connection requests! Ignoring all but the first...");
                     multiplay.SetUpGuest(requests[0].url.ToString());
                     EntityManager.DestroyEntity(_requestQuery);
+                }
+            }
+            else
+            {
+                if (!_connQuery.IsEmpty)
+                {
+                    // Run initialization after connection to server made
+                    if (!initialized)
+                    {
+                        if (World.Unmanaged.IsClient() && !World.Unmanaged.IsHostClient())
+                        {
+                            multiplay.SetUpLocalPlayer();
+                            Enabled = false;
+                        }
+                        else if (World.Unmanaged.IsHostClient())
+                        {
+                            multiplay.SetUpHost(World.Unmanaged.IsCloudHostClient());
+                            Enabled = false;
+                        }
+
+                        initialized = true;
+                    }
                 }
             }
             

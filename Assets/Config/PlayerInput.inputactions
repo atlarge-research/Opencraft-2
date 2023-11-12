@@ -42,15 +42,6 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "Start",
-                    "type": "Button",
-                    "id": "f5459e2b-435f-4c28-808d-ce074d5df92d",
-                    "expectedControlType": "Button",
-                    "processors": "",
-                    "interactions": "Press",
-                    "initialStateCheck": false
-                },
-                {
                     "name": "PrimaryAction",
                     "type": "Button",
                     "id": "3956cd52-8185-41fb-9912-de7c4f0f4020",
@@ -241,39 +232,6 @@
                     "processors": "ScaleVector2(x=0.3,y=0.3)",
                     "groups": "Touchscreen",
                     "action": "Look",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "10dd7861-078b-4a8a-b7a3-8b643a06ffe7",
-                    "path": "<Keyboard>/tab",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "Keyboard And Mouse",
-                    "action": "Start",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "656924d3-ea9d-447e-aba1-2863a29ae0dd",
-                    "path": "<Gamepad>/start",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "Gamepad",
-                    "action": "Start",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "d7fc3bff-4054-4c07-802b-e989420aef14",
-                    "path": "<Touchscreen>/touch0/tap",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "Touchscreen",
-                    "action": "Start",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

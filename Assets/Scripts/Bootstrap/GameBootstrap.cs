@@ -5,12 +5,16 @@ using Opencraft.Networking;
 using Opencraft.Player.Emulated;
 using Opencraft.Player.Multiplay;
 using Opencraft.Rendering;
+using Opencraft.Statistics;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.NetCode;
 using Unity.Networking.Transport;
 using Unity.Scenes;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 
 namespace Opencraft.Bootstrap
@@ -26,6 +30,7 @@ namespace Opencraft.Bootstrap
     [UnityEngine.Scripting.Preserve]
     public class GameBootstrap : ICustomBootstrap
     {
+        // TODO use dict<str worldName, World world>
         public List<World> worlds;
         private World deploymentWorld;
         public bool Initialize(string defaultWorldName)
@@ -69,7 +74,7 @@ namespace Opencraft.Bootstrap
                     // Deployment server
                     Entity listenReq = deploymentWorld.EntityManager.CreateEntity();
                     deploymentWorld.EntityManager.AddComponentData(listenReq,
-                        new NetworkStreamRequestListen { Endpoint = NetworkEndpoint.LoopbackIpv4.WithPort(Config.DeploymentPort) });
+                        new NetworkStreamRequestListen { Endpoint = NetworkEndpoint.AnyIpv4.WithPort(Config.DeploymentPort) });
                 }
             }
             else
@@ -145,27 +150,28 @@ namespace Opencraft.Bootstrap
         {
             //SetBootStrapConfig(Config.ServerUrl, Config.ServerPort);
             NativeList<WorldUnmanaged> newWorlds = new NativeList<WorldUnmanaged>(Allocator.Temp);
-            SetupWorlds(Config.multiplayStreamingRoles, Config.playTypes, Config.SwitchToStreamDuration, ref newWorlds, Config.NumThinClientPlayers, autoConnect: true,
-                Config.ServerUrl, Config.ServerPort, Config.SignalingUrl);
+            SetupWorlds(Config.multiplayStreamingRoles, Config.playTypes, ref newWorlds,
+                Config.NumThinClientPlayers, autoStart: true, autoConnect: true, Config.ServerUrl, Config.ServerPort, Config.SignalingUrl);
         }
         
         
         /// <summary>
         /// Sets up bootstrapping details and creates local worlds
         /// </summary>
-        public void SetupWorlds(MultiplayStreamingRoles mRole, BootstrapPlayTypes playTypes, int switchToStreamed, ref NativeList<WorldUnmanaged> newWorlds,
-            int numThinClients, bool autoConnect, string serverUrl, ushort serverPort, string signalingUrl)
+        public void SetupWorlds(MultiplayStreamingRoles mRole, BootstrapPlayTypes playTypes, ref NativeList<WorldUnmanaged> worldReferences,
+            int numThinClients, bool autoStart, bool autoConnect, string serverUrl, ushort serverPort, string signalingUrl, string worldName = "")
         {
 
             Debug.Log($"Setting up worlds with playType {playTypes} and streaming role {mRole}");
+
+            List<World> newWorlds = new List<World>();
             
             // ================== SETUP WORLDS ==================
-            if (mRole == MultiplayStreamingRoles.Host)
-            {
-                Config.multiplayStreamingRoles = MultiplayStreamingRoles.Host;
-            }
             
-            if (playTypes == BootstrapPlayTypes.StreamedClient || switchToStreamed > 0)
+            Config.multiplayStreamingRoles = mRole;
+            
+            
+            if (playTypes == BootstrapPlayTypes.StreamedClient)
             {
                 mRole = MultiplayStreamingRoles.Guest;
             }
@@ -174,17 +180,15 @@ namespace Opencraft.Bootstrap
             if (playTypes == BootstrapPlayTypes.Client || playTypes == BootstrapPlayTypes.ClientAndServer)
             {
                 // Streamed client
-                if (mRole == MultiplayStreamingRoles.Guest || switchToStreamed > 0)
+                if (mRole == MultiplayStreamingRoles.Guest)
                 {
-                    var world = CreateStreamedClientWorld();
-                    worlds.Add(world);
-                    newWorlds.Add(world.Unmanaged);
+                    var world = CreateStreamedClientWorld(worldName);
+                    newWorlds.Add(world);
                 }
 
-                if (mRole != MultiplayStreamingRoles.Guest || switchToStreamed > 0){
-                    var world = CreateDefaultClientWorld(mRole == MultiplayStreamingRoles.Host);
-                    worlds.Add(world);
-                    newWorlds.Add(world.Unmanaged);
+                if (mRole != MultiplayStreamingRoles.Guest){
+                    var world = CreateDefaultClientWorld(worldName, mRole == MultiplayStreamingRoles.Host, mRole == MultiplayStreamingRoles.CloudHost);
+                    newWorlds.Add(world);
                 }
             }
             
@@ -192,30 +196,92 @@ namespace Opencraft.Bootstrap
             // Thin client
             if (playTypes == BootstrapPlayTypes.ThinClient && numThinClients > 0)
             {
-                var world = CreateThinClientWorlds(numThinClients);
-                worlds.AddRange(world);
-                foreach (var w in world)
-                {
-                    newWorlds.Add(w.Unmanaged);
-                }
+                var world = CreateThinClientWorlds(numThinClients, worldName);
+                newWorlds.AddRange(world);
+                
             }
 
             // Server
             if (playTypes == BootstrapPlayTypes.Server || playTypes == BootstrapPlayTypes.ClientAndServer)
             {
-                var world = CreateDefaultServerWorld();
+                var world = CreateDefaultServerWorld(worldName);
+                newWorlds.Add(world);
+            }
+
+            foreach (var world in newWorlds)
+            {
+                worldReferences.Add(world.Unmanaged);
                 worlds.Add(world);
-                newWorlds.Add(world.Unmanaged);
+                
+                if (autoStart)
+                    SetWorldToUpdating(world);
+            }
+            
+            
+            if(autoConnect)
+                ConnectWorlds(mRole, playTypes,  serverUrl, serverPort, signalingUrl);
+        }
+
+
+        public void SetWorldToUpdating(World world)
+        {
+#if UNITY_DOTSRUNTIME
+            CustomDOTSWorlds.AppendWorldToClientTickWorld(world);
+#else
+            if (!ScriptBehaviourUpdateOrder.IsWorldInCurrentPlayerLoop(world))
+            {
+                Debug.Log($"Adding world {world.Name} to update list");
+                ScriptBehaviourUpdateOrder.AppendWorldToCurrentPlayerLoop(world);
+            }
+#endif
+        }
+        
+        /// <summary>
+        /// Adds worlds to update list
+        /// </summary>
+        public void StartWorlds(bool autoConnect, MultiplayStreamingRoles mRole,BootstrapPlayTypes playTypes,  string serverUrl,
+            ushort serverPort, string signalingUrl)
+        {
+            
+            Debug.Log($"Starting worlds with playType {playTypes} and streaming role {mRole}");
+            // ================== SETUP WORLDS ==================
+            foreach (var world in worlds)
+            {
+                // Client worlds
+                if (playTypes is BootstrapPlayTypes.Client or BootstrapPlayTypes.ClientAndServer 
+                    && world.IsClient() && !world.IsThinClient() && !world.IsStreamedClient())
+                {
+                    SetWorldToUpdating(world);
+                }
+                // Streamed guest client worlds
+                if (playTypes is BootstrapPlayTypes.Client or BootstrapPlayTypes.ClientAndServer 
+                    && mRole == MultiplayStreamingRoles.Guest
+                    && world.IsStreamedClient())
+                {
+                    SetWorldToUpdating(world);
+                }
+                // Thin client worlds
+                if (playTypes == BootstrapPlayTypes.ThinClient && world.IsThinClient())
+                {
+                    SetWorldToUpdating(world);
+                }
+                // Server worlds
+                if (playTypes is BootstrapPlayTypes.Server or BootstrapPlayTypes.ClientAndServer
+                    && world.IsServer())
+                {
+                    SetWorldToUpdating(world);
+                }
             }
             
             if(autoConnect)
-                ConnectWorlds(mRole, playTypes, switchToStreamed, serverUrl, serverPort, signalingUrl);
+                ConnectWorlds(mRole, playTypes,  serverUrl, serverPort, signalingUrl);
         }
+        
         
         /// <summary>
         /// Connects worlds with types specified through playTypes and streaming roles
         /// </summary>
-        public void ConnectWorlds(MultiplayStreamingRoles mRole,BootstrapPlayTypes playTypes, int switchToStreamed, string serverUrl,
+        public void ConnectWorlds(MultiplayStreamingRoles mRole,BootstrapPlayTypes playTypes,  string serverUrl,
             ushort serverPort, string signalingUrl)
         {
             
@@ -224,8 +290,9 @@ namespace Opencraft.Bootstrap
             foreach (var world in worlds)
             {
                 // Client worlds
-                if ((playTypes == BootstrapPlayTypes.Client || playTypes == BootstrapPlayTypes.ClientAndServer) 
-                    && world.IsClient() && !world.IsThinClient() && !world.IsStreamedClient())
+                if (playTypes is BootstrapPlayTypes.Client or BootstrapPlayTypes.ClientAndServer 
+                    && world.IsClient() && !world.IsThinClient() && !world.IsStreamedClient()
+                    && mRole != MultiplayStreamingRoles.Guest)
                 {
                     Entity connReq = world.EntityManager.CreateEntity();
                     NetworkEndpoint.TryParse(serverUrl, serverPort,
@@ -269,7 +336,7 @@ namespace Opencraft.Bootstrap
             }
         }
         
-        public static World CreateDefaultClientWorld(bool isHost = false)
+        public static World CreateDefaultClientWorld(string worldName, bool isHost = false, bool isCloudHost = false)
         {
             var clientSystems = DefaultWorldInitialization.GetAllSystems(WorldSystemFilterFlags.ClientSimulation |
                                                                          WorldSystemFilterFlags.Presentation);
@@ -281,22 +348,40 @@ namespace Opencraft.Bootstrap
                     continue;
                 filteredClientSystems.Add(system);
             }
-            //if(autoConnect)
-            //    filteredClientSystems.Add(typeof(CustomAutoconnectSystem));
-            if(isHost)
-                return CreateClientWorld("HostClientWorld", (WorldFlags)WorldFlagsExtension.HostClient, filteredClientSystems);
+            
+            if (isHost)
+            {
+                if (worldName == "")
+                    worldName = "HostClientWorld";
+                return CreateClientWorld(worldName, (WorldFlags)WorldFlagsExtension.HostClient,
+                    filteredClientSystems);
+            }
+            else if(isCloudHost)
+            {
+                if (worldName == "")
+                    worldName = "CloudHostClientWorld";
+                return CreateClientWorld(worldName, (WorldFlags)WorldFlagsExtension.CloudHostClient,
+                    filteredClientSystems); 
+            }
             else
-                return CreateClientWorld("ClientWorld", WorldFlags.GameClient, filteredClientSystems);
+            {
+                if (worldName == "")
+                    worldName = "ClientWorld";
+                return CreateClientWorld(worldName, WorldFlags.GameClient, filteredClientSystems);
+            }
+                
         }
 
-        public static World CreateStreamedClientWorld()
+        public static World CreateStreamedClientWorld(string worldName)
         {
-            var systems = new List<Type> { typeof(MultiplayInitSystem), typeof(EmulationInitSystem), typeof(TakeScreenshotSystem), typeof(UpdateWorldTimeSystem), typeof(ExitAfterDurationSystem) };
-            return CreateClientWorld("StreamingGuestWorld", (WorldFlags)WorldFlagsExtension.StreamedClient, systems);
+            var systems = new List<Type> { typeof(MultiplayInitSystem), typeof(EmulationInitSystem), typeof(TakeScreenshotSystem), typeof(UpdateWorldTimeSystem), typeof(StopWorldSystem) };
+            if (worldName == "")
+                worldName = "StreamingGuestWorld";
+            return CreateClientWorld(worldName, (WorldFlags)WorldFlagsExtension.StreamedClient, systems);
         }
         
         
-        public static List<World> CreateThinClientWorlds(int numThinClients)
+        public static List<World> CreateThinClientWorlds(int numThinClients, string worldName)
         {
             List<World> newWorlds = new List<World>();
             
@@ -313,16 +398,18 @@ namespace Opencraft.Bootstrap
             
             //if(autoConnect)
             //    filteredThinClientSystems.Add(typeof(CustomAutoconnectSystem));
-            
+
+            if (worldName == "")
+                worldName = "ThinClientWorld_";
             for (var i = 0; i < numThinClients; i++)
             {
-                newWorlds.Add(CreateClientWorld("ThinClientWorld", WorldFlags.GameThinClient, filteredThinClientSystems));
+                newWorlds.Add(CreateClientWorld(worldName+$"{i}", WorldFlags.GameThinClient, filteredThinClientSystems));
             }
 
             return newWorlds;
         }
 
-        public static World CreateDefaultServerWorld()
+        public static World CreateDefaultServerWorld(string worldName)
         {
             // todo: specify what systems in the server world
             var serverSystems = DefaultWorldInitialization.GetAllSystems(WorldSystemFilterFlags.ServerSimulation);
@@ -335,7 +422,9 @@ namespace Opencraft.Bootstrap
                 filteredServerSystems.Add(system);
             }
 
-            return CreateServerWorld("ServerWorld", WorldFlags.GameServer, filteredServerSystems );
+            if (worldName == "")
+                worldName = "ServerWorld";
+            return CreateServerWorld(worldName, WorldFlags.GameServer, filteredServerSystems );
         }
 
         /// <summary>
@@ -351,11 +440,6 @@ namespace Opencraft.Bootstrap
 
             DefaultWorldInitialization.AddSystemsToRootLevelSystemGroups(world, systems);
             
-#if UNITY_DOTSRUNTIME
-            CustomDOTSWorlds.AppendWorldToClientTickWorld(world);
-#else
-            ScriptBehaviourUpdateOrder.AppendWorldToCurrentPlayerLoop(world);
-#endif
 
             if (World.DefaultGameObjectInjectionWorld == null)
                 World.DefaultGameObjectInjectionWorld = world;
@@ -389,6 +473,19 @@ namespace Opencraft.Bootstrap
             return world;
         }
 
+
+        public void ExitGame()
+        {
+            if (Config.LogStats)
+                StatisticsWriterInstance.WriteStatisticsBuffer();
+                
+            #if UNITY_EDITOR
+                EditorApplication.ExitPlaymode();
+            #else
+                Application.Quit();
+            #endif
+        }
+        
         [Serializable]
         public enum BootstrapPlayTypes
         {

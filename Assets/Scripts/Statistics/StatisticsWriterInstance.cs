@@ -15,42 +15,55 @@ namespace Opencraft.Statistics
     /// Writes key statistics to a csv file
     /// </summary>
     // todo this is a (suboptimal) workaround for inability to properly convert profiler .raw files to csv.
-    public class StatisticsToFile : MonoBehaviour
+    public class StatisticsWriterInstance : MonoBehaviour
     {
         public static StatisticsWriter instance;
+        public static bool ready;
         private void Awake()
         {
-            if (!Config.LogStats)
-            {
-                enabled = false;
+            if (!Config.LogStats) {
                 return;
             }
 
             if (File.Exists(Config.StatsFilePath)){
                 // Don't overwrite existing data
                 Debug.Log($"Stats file {Config.StatsFilePath} already exists. Ignoring -logStats.");
-                enabled = false;
                 return;
             }
-            
-            if (instance.IsUnityNull())
-                instance = new StatisticsWriter();
 
+           
+            Debug.Log("Creating statistics writer!");
+            instance = new StatisticsWriter();
+            ready = true;
+            
         }
 
         private void OnDisable()
         {
-            if (Config.LogStats && !instance.written)
+            if (Config.LogStats && ready)
             {
                 // Write statistics before exit
-                instance.WriteStatisticsBuffer();
+                if(!instance.written)
+                    instance.WriteStatisticsBuffer();
+            }
+
+            ready = false;
+        }
+
+        public void Update()
+        {
+            if (Config.LogStats && ready)
+            {
+                instance.Update();
             }
         }
-        
-        
-        private void Update()
+
+        public static void WriteStatisticsBuffer()
         {
-            instance.Update();
+            if (!instance.IsUnityNull())
+            {
+                instance.WriteStatisticsBuffer();
+            }
         }
         
     }
@@ -70,24 +83,27 @@ namespace Opencraft.Statistics
             
             recorders.Add("Main Thread", ProfilerRecorder.StartNew(ProfilerCategory.Internal, "Main Thread"));
             recorders.Add("System Used Memory", ProfilerRecorder.StartNew(ProfilerCategory.Memory, "System Used Memory"));
+            recorders.Add("GC Reserved Memory", ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Reserved Memory"));
+            recorders.Add("Total Reserved Memory", ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Total Reserved Memory"));
             recorders.Add("Number of Terrain Areas (Client)", ProfilerRecorder.StartNew(ProfilerCategory.Scripts, "Number of Terrain Areas (Client)"));
             recorders.Add("Number of Terrain Areas (Server)", ProfilerRecorder.StartNew(ProfilerCategory.Scripts, "Number of Terrain Areas (Server)"));
             recorders.Add("NFE Snapshot Tick", ProfilerRecorder.StartNew(ProfilerCategory.Network, "NFE Snapshot Tick")); // Can be used to sync logs
             recorders.Add("NFE Snapshot Size (bits)", ProfilerRecorder.StartNew(ProfilerCategory.Network, "NFE Snapshot Size (bits)"));
-            recorders.Add("NFE  RTT", ProfilerRecorder.StartNew(ProfilerCategory.Network, "NFE  RTT"));
+            recorders.Add("NFE RTT", ProfilerRecorder.StartNew(ProfilerCategory.Network, "NFE RTT"));
             recorders.Add("NFE Jitter", ProfilerRecorder.StartNew(ProfilerCategory.Network, "NFE Jitter"));
             recorders.Add("Multiplay FPS", ProfilerRecorder.StartNew(ProfilerCategory.Scripts, "Multiplay FPS"));
-            recorders.Add("Multiplay BitRate", ProfilerRecorder.StartNew(ProfilerCategory.Scripts, "Multiplay BitRate"));
+            recorders.Add("Multiplay BitRate In", ProfilerRecorder.StartNew(ProfilerCategory.Scripts, "Multiplay BitRate In"));
+            recorders.Add("Multiplay BitRate Out", ProfilerRecorder.StartNew(ProfilerCategory.Scripts, "Multiplay BitRate Out"));
             recorders.Add("Multiplay RTT (ms)", ProfilerRecorder.StartNew(ProfilerCategory.Scripts, "Multiplay RTT (ms)"));
             recorders.Add("Multiplay PacketLoss", ProfilerRecorder.StartNew(ProfilerCategory.Scripts, "Multiplay PacketLoss"));
 
-            foreach (var (name, recorder) in recorders)
+            /*foreach (var (name, recorder) in recorders)
             {
                 if (!recorder.Valid)
                 {
-                    Debug.LogWarning($"Recordiner [{name}] is invalid!");
+                    Debug.LogWarning($"Recorder [{name}] is invalid!");
                 }
-            }
+            }*/
         }
 
         private byte[] HeaderToBytes()
@@ -101,7 +117,6 @@ namespace Opencraft.Statistics
         
         public void Update()
         {
-
             var sb = new StringBuilder($"{Time.frameCount};");
             foreach (var (_, rec) in recorders)
                 sb.Append($"{rec.LastValue.ToString()};");

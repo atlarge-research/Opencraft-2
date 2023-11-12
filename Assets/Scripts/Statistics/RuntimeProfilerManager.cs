@@ -23,7 +23,7 @@ namespace Opencraft.Statistics
             }
             // Filename without .raw extension
             baseFile = Profiler.logFile.Substring(0,  Profiler.logFile.Length-4);
-            
+
         }
 
         private void Update()
@@ -38,7 +38,8 @@ namespace Opencraft.Statistics
 
         private void NewProfilerLogFile()
         {
-            Profiler.logFile = $"{baseFile}_{fileOffset}.raw";
+            // Time.time is elapsed seconds since Awake calls finished
+            Profiler.logFile = $"{baseFile}_{fileOffset}_{Time.time}.raw";
             fileOffset++;
         }
     }

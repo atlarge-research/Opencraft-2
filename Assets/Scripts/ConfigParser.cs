@@ -33,6 +33,7 @@ namespace Opencraft.Bootstrap
         public int TakeScreenshotsInterval = 5;
         public string ScreenshotFolder = Application.persistentDataPath + "/screenshots";
         public int Duration = -1;
+        public int UserID = -1;
         public string SignalingUrl = "ws://127.0.0.1:7981";
         public MultiplayStreamingRoles MultiplayStreamingRole = MultiplayStreamingRoles.Disabled;
         public int SwitchToStreamDuration = 0;
@@ -51,6 +52,7 @@ namespace Opencraft.Bootstrap
     public struct JsonDeploymentConfig
     {
         public JsonDeploymentNode[] nodes;
+        public ExperimentAction[] experimentActions;
         
     }
     
@@ -67,6 +69,16 @@ namespace Opencraft.Bootstrap
         /*public override string ToString() =>
             $"[nodeID: {nodeID}; ip: {ip}; playType: {playTypes}; streamingRole: {streamingRoles};" +
             $"serverNodeID: {serverNodeID}; services: {services}; emulationBehaviours: {emulationBehaviours}; ]";*/
+    }
+    
+    /// <summary>
+    /// Perform set of experiment actions at a certain time specified by delay
+    /// </summary>
+    [Serializable]
+    public class ExperimentAction
+    {
+        public int delay;
+        public NodeAction[] actions;
     }
 
     /// <summary>
@@ -94,6 +106,7 @@ namespace Opencraft.Bootstrap
         internal static readonly IntArgument TakeScreenshotsInterval = new IntArgument("-screenshotInterval");
         internal static readonly FilePathArgument ScreenshotFolder = new FilePathArgument("-screenshotFolder");
         internal static readonly IntArgument Duration = new IntArgument("-duration");
+        internal static readonly IntArgument UserID = new IntArgument("-userID");
         
         // ================== SIGNALING ==================
         internal static readonly StringArgument SignalingUrl = new StringArgument("-signalingUrl");
@@ -124,7 +137,7 @@ namespace Opencraft.Bootstrap
         static readonly List<IArgument> options = new List<IArgument>()
         {
             ImportDeploymentConfig, DeploymentID, GetRemoteConfig, DeploymentURL, DeploymentPort,
-            DebugEnabled, Seed, PlayType, ServerUrl, ServerPort, LocalConfigJson, NetworkTickRate, SimulationTickRate, TakeScreenshots, TakeScreenshotsInterval, ScreenshotFolder, Duration,
+            DebugEnabled, Seed, PlayType, ServerUrl, ServerPort, LocalConfigJson, NetworkTickRate, SimulationTickRate, TakeScreenshots, TakeScreenshotsInterval, ScreenshotFolder, Duration, UserID,
             SignalingUrl,
             MultiplayStreamingRole,SwitchToStreamDuration,
             EmulationType, EmulationFile, NumThinClientPlayers,

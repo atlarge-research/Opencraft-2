@@ -1,8 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using Opencraft.Bootstrap;
+using Opencraft.Statistics;
 using Unity.Entities;
 using UnityEngine;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Opencraft
 {
@@ -11,7 +16,6 @@ namespace Opencraft
     /// Necessary to allow Jobs to complete after a world stops updating.
     /// </summary>
     public class WorldHeartbeatMonitor: MonoBehaviour{
-
         private void Start()
         {
             StartCoroutine(WorldHeartbeat());
@@ -19,14 +23,34 @@ namespace Opencraft
         IEnumerator WorldHeartbeat()
         {
             List<World> toRemove = new List<World>();
+            int timeOut = 5;
             while (true)
             {
                 if (BootstrapInstance.instance.worlds.Count == 0)
                 {
-                    break;
+                    timeOut -= 1;
+                    if (timeOut <= 0)
+                    {
+                        Debug.LogWarning("Heartbeat timed out with no worlds found, exiting!");  
+                        if (Config.LogStats)
+                            StatisticsWriterInstance.WriteStatisticsBuffer();
+                
+                        #if UNITY_EDITOR
+                        EditorApplication.ExitPlaymode();
+                        #else
+                        Application.Quit();
+                        #endif
+                    }
                 }
-                foreach (var world in BootstrapInstance.instance.worlds)
+                else
                 {
+                    timeOut = 5;
+                }
+                
+                
+                for(int worldID = 0; worldID < BootstrapInstance.instance.worlds.Count; worldID++)
+                {
+                    var world = BootstrapInstance.instance.worlds[worldID];
                     // If the world has been stopped, kill it
                     if (world.QuitUpdate)
                     {

@@ -5,6 +5,7 @@ using System.Linq;
 using Opencraft.Player.Multiplay.MultiplayStats;
 using Unity.Networking.Transport;
 using Unity.RenderStreaming;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -16,17 +17,25 @@ namespace Opencraft.Player.Multiplay
     /// Adapted from RenderStreaming package Multiplay sample.
     /// </summary>
     public class Multiplay : SignalingHandlerBase,
-        IOfferHandler, IAddChannelHandler, IDisconnectHandler, IDeletedConnectionHandler
+        IOfferHandler, IAddChannelHandler, IDisconnectHandler, IDeletedConnectionHandler, IConnectHandler
     {
+        private void Awake()
+        {
+            defaultCamera.SetActive(false);
+            _initialized = false;
+        }
+
         public SignalingManager renderStreaming;
         public GameObject guestPrefab;
         public GameObject playerPrefab;
         public RawImage videoImage;
         public StatsUI statsUI;
         public GameObject defaultCamera;
-        private bool _initialized = false;
+        private bool _initialized;
 
         private bool guestConnected = false;
+        private SignalingHandlerBase currentHandler;
+        private GameObject currentPlayerObj;
 
         private List<string> connectionIds = new List<string>();
         private List<Component> streams = new List<Component>();
@@ -71,9 +80,9 @@ namespace Opencraft.Player.Multiplay
 
         public void DestroyMultiplayConnection(string connectionId)
         {
-            if (!connectionIds.Contains(connectionId))
-                return;
-            connectionIds.Remove(connectionId);
+            //if (!connectionIds.Contains(connectionId))
+            //    return;
+            //connectionIds.Remove(connectionId);
 
             var playerObject = connectionPlayerObjects[connectionId];
             var sender = playerObject.GetComponent<StreamSenderBase>();
@@ -108,6 +117,8 @@ namespace Opencraft.Player.Multiplay
             // Spawn object with camera and input component at a default location. This object will be synced
             // with player transform on clients by PlayerInputSystem. These objects do not exist on the server.
             var playerObj = Instantiate(playerPrefab, initialPosition, Quaternion.identity);
+            var controller= playerObj.GetComponent<MultiplayPlayerController>();
+            controller.username = data.connectionId;
             
             connectionPlayerObjects.Add(data.connectionId, playerObj);
 
@@ -124,9 +135,9 @@ namespace Opencraft.Player.Multiplay
 
             streams.Add(videoChannel);
             streams.Add(inputChannel);
-            Debug.Log($"Pre-addsender");
+            //Debug.Log($"Pre-addsender");
             AddSender(data.connectionId, videoChannel);
-            Debug.Log($"Post-addesenderr");
+            //Debug.Log($"Post-addesenderr");
             AddChannel(data.connectionId, inputChannel);
 
             SendAnswer(data.connectionId);
@@ -142,7 +153,7 @@ namespace Opencraft.Player.Multiplay
 
         public void SetUpLocalPlayer()
         {
-            defaultCamera.SetActive(false);
+            Debug.Log("Creating local player object");
             Cursor.lockState = CursorLockMode.Locked;
             
             // We need to setup local input devices on local players
@@ -151,12 +162,18 @@ namespace Opencraft.Player.Multiplay
             var playerInput = hostPlayerObj.GetComponent<InputReceiver>();
             playerInput.PerformPairingWithAllLocalDevices();
             playerController.CheckPairedDevices();
+            playerController.playerEntityRequestSent = true; // Local player requests handled by StartGameStreamRPC
             connectionPlayerObjects.Add("LOCALPLAYER", hostPlayerObj);
+
+            currentPlayerObj = hostPlayerObj;
         }
 
-        public void SetUpHost()
+        public void SetUpHost(bool cloudOnly = false)
         {
-            SetUpLocalPlayer();
+            // Cloud only hosts do not run a local player
+            if(!cloudOnly)
+                SetUpLocalPlayer();
+            
             if (!settings.MultiplayEnabled)
             {
                 Debug.Log("SetUpHost called but Multiplay disabled.");
@@ -166,6 +183,7 @@ namespace Opencraft.Player.Multiplay
             renderStreaming.useDefaultSettings = false;
             Debug.Log($"Setting up multiplay host with signaling at {settings.SignalingAddress}");
             renderStreaming.SetSignalingSettings(settings.SignalingSettings);
+            currentHandler = this;
             statsUI.AddSignalingHandler(this);
             renderStreaming.Run(handlers: new SignalingHandlerBase[] { this });
         }
@@ -182,10 +200,17 @@ namespace Opencraft.Player.Multiplay
             settings.SignalingAddress = url;
             StartCoroutine(ConnectGuest());
         }
+        
+        public void OnConnect(SignalingEventData data)
+        {
+            //Debug.Log($"Disconnecting {eventData.connectionId}");
+            //disconnectedIds.Add(eventData.connectionId);
+            //data.connectionId
+        }
 
         IEnumerator ConnectGuest()
         {
-            var connectionId = Guid.NewGuid().ToString("N");
+            var connectionId = $"{Config.UserID}";//Guid.NewGuid().ToString("N");
             var guestPlayer = Instantiate(guestPrefab);
             var handler = guestPlayer.GetComponent<SingleConnection>();
             statsUI.AddSignalingHandler(handler);
@@ -194,6 +219,7 @@ namespace Opencraft.Player.Multiplay
             renderStreaming.SetSignalingSettings(settings.SignalingSettings);
             Debug.Log($"[{DateTime.Now.TimeOfDay.ToString()}] Setting up multiplay guest with signaling at {settings.SignalingAddress}");
             renderStreaming.Run(handlers: new SignalingHandlerBase[] { handler });
+            
             
             
             // Enable the video output
@@ -206,12 +232,14 @@ namespace Opencraft.Player.Multiplay
             
             Cursor.lockState = CursorLockMode.Locked;
             
-            //todo hacky wait for the signalling server to connect 
-            yield return new WaitForSeconds(1f);
-
+            yield return new WaitUntil(() => handler.WSConnected());
+            
             handler.CreateConnection(connectionId);
+            
             yield return new WaitUntil(() => handler.IsConnected(connectionId));
             guestConnected = true;
+            currentHandler = handler;
+            currentPlayerObj = guestPlayer;
         }
 
         void ClearConnectionPlayerObjects()
@@ -221,6 +249,35 @@ namespace Opencraft.Player.Multiplay
                 Destroy(connectionPlayerObject);
             }
             connectionPlayerObjects.Clear();
+        }
+
+        public void StopMultiplay()
+        {
+            if (guestConnected)
+            {
+                currentHandler.DeleteConnection($"{Config.UserID}");
+            }
+            else
+            {
+                // Stop any ongoing streams
+                foreach (var connID in connectionIds)
+                {
+                    DestroyMultiplayConnection(connID);
+                }
+                connectionIds.Clear();
+                connectionPlayerObjects.Clear();
+            }
+            // Destroy instantiated gameobjects
+            if (!currentPlayerObj.IsUnityNull())
+            {
+                Destroy(currentPlayerObj);
+            }
+            statsUI.RemoveSignalingHandler(currentHandler);
+            renderStreaming.RemoveSignalingHandler(currentHandler);
+            
+            // restore default camera setup
+            videoImage.gameObject.SetActive(false);
+            //defaultCamera.SetActive(true);
         }
     }
     

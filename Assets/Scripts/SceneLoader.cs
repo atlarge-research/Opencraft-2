@@ -80,7 +80,7 @@ namespace Opencraft
     /// <summary>
     /// Run in all worlds to spawn the authoring scene within this world, without needing the deployment service.
     /// </summary>
-    [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation | WorldSystemFilterFlags.ClientSimulation | WorldSystemFilterFlags.ThinClientSimulation)] // Don't automatically add to any worlds
+    [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation | WorldSystemFilterFlags.ClientSimulation | WorldSystemFilterFlags.ThinClientSimulation)] 
     [UpdateInGroup(typeof(InitializationSystemGroup))]
     [RequireMatchingQueriesForUpdate]
     public partial class AutoAuthoringSceneLoaderSystem : SystemBase

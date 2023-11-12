@@ -1,3 +1,4 @@
+using Unity.Collections;
 using Unity.Entities;
 using Unity.NetCode;
 using Unity.VisualScripting;
@@ -13,7 +14,7 @@ namespace Opencraft.Player.Authoring
     
     public struct SpawnPlayerRequest : IRpcCommand
     {
-        public int Username;
+        public FixedString32Bytes Username;
     }
 
     public struct DestroyPlayerRequest : IRpcCommand

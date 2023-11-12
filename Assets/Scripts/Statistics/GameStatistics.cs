@@ -65,6 +65,10 @@ namespace Opencraft.Statistics
         public const string JitterName = "NFE Jitter";
         public static readonly ProfilerCounterValue<float> Jitter =
             new ProfilerCounterValue<float>(NetCodeStatisticsCategory, JitterName, ProfilerMarkerDataUnit.Count);
+        
+        public const string PredictionErrorsName = "NFE Prediction Errors";
+        public static readonly ProfilerCounterValue<float> PredictionErrors =
+            new ProfilerCounterValue<float>(NetCodeStatisticsCategory, PredictionErrorsName, ProfilerMarkerDataUnit.Count);
     }
 #if UNITY_EDITOR
     [System.Serializable]

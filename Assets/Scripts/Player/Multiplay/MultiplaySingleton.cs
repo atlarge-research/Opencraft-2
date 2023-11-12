@@ -9,7 +9,9 @@ namespace Opencraft.Player.Multiplay
 
         void Awake()
         {
+            Debug.Log("Initializing multiplay!");
             Instance = GetComponent<Multiplay>();
+            Instance.InitSettings();
         }
 
         public static void Destroy()

@@ -31,16 +31,10 @@ namespace Opencraft.Player.Emulated
             Multiplay.Multiplay multiplay = MultiplaySingleton.Instance;
             if (emulation.IsUnityNull() || multiplay.IsUnityNull())
                 return;
-            // Wait for either clientworld to be connected to the server, or for this guest client to be connected
-            if (Config.multiplayStreamingRoles == MultiplayStreamingRoles.Guest && Config.SwitchToStreamDuration == 0)
+            // Wait for either clientworld to be connected to the server, or for a guest client to be connected
+            if (!(multiplay.IsGuestConnected() || !connections.IsEmpty))
             {
-                if(!multiplay.IsGuestConnected())
-                    return;
-            }
-            else
-            {
-                if(connections.IsEmpty)
-                    return;
+                return;
             }
             Enabled = false;
 

@@ -13,6 +13,7 @@ namespace Opencraft.Networking
     // RPC request from client to server for game to go "in game" and send game snapshots / inputs
     public struct StartGameStreamRequest : IRpcCommand
     {
+        public FixedString32Bytes Username;
     }
 
     // When client has a connection with network id, tell server to start stream
@@ -20,7 +21,8 @@ namespace Opencraft.Networking
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation | WorldSystemFilterFlags.ThinClientSimulation)]
     public partial struct StartGameStreamClientSystem : ISystem
     {
-        [BurstCompile]
+        private FixedString32Bytes name;
+       
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<PlayerSpawner>();
@@ -28,6 +30,9 @@ namespace Opencraft.Networking
                 .WithAll<NetworkId>()
                 .WithNone<NetworkStreamInGame>();
             state.RequireForUpdate(state.GetEntityQuery(builder));
+            
+            name = state.WorldUnmanaged.IsCloudHostClient() ? $"-1" : $"{Config.UserID}";
+            
         }
 
         [BurstCompile]
@@ -39,8 +44,8 @@ namespace Opencraft.Networking
             {
                 commandBuffer.AddComponent<NetworkStreamInGame>(entity);
                 var req = commandBuffer.CreateEntity();
-                commandBuffer.AddComponent<StartGameStreamRequest>(req);
-                Debug.Log("Sending start game stream RPC");
+                commandBuffer.AddComponent(req, new StartGameStreamRequest{Username = name});
+                Debug.Log($"Sending start game stream RPC with username {name}");
                 commandBuffer.AddComponent(req, new SendRpcCommandRequest { TargetConnection = entity });
             }
 
@@ -83,8 +88,8 @@ namespace Opencraft.Networking
             var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
             networkIdFromEntity.Update(ref state);
 
-            foreach (var (reqSrc, reqEntity) in SystemAPI.Query<RefRO<ReceiveRpcCommandRequest>>()
-                         .WithAll<StartGameStreamRequest>().WithEntityAccess())
+            foreach (var (reqSrc, req, reqEntity) in SystemAPI.Query<RefRO<ReceiveRpcCommandRequest>, RefRO<StartGameStreamRequest>>()
+                         .WithEntityAccess())
             {
                 commandBuffer.AddComponent<NetworkStreamInGame>(reqSrc.ValueRO.SourceConnection);
                 // Following line adds a per-connection component that enforces a non-standard packet size for snapshots.
@@ -94,6 +99,19 @@ namespace Opencraft.Networking
                 var networkId = networkIdFromEntity[reqSrc.ValueRO.SourceConnection];
 
                 Debug.Log($"Starting game stream on connection {networkId.Value}!");
+
+                FixedString32Bytes name = req.ValueRO.Username;
+                if (name != "-1")
+                {
+                    //Request to spawn a player for this connection
+                    Entity spawnPlayerReq = commandBuffer.CreateEntity();
+                    SpawnPlayerRequest spawnPlayerRequest = new SpawnPlayerRequest { Username = name };
+                    Debug.Log($"Making spawn player request for player {name}@{networkId.Value}");
+                    ReceiveRpcCommandRequest receiveRPC = new ReceiveRpcCommandRequest {SourceConnection = reqSrc.ValueRO.SourceConnection };
+                    commandBuffer.AddComponent(spawnPlayerReq, spawnPlayerRequest);
+                    commandBuffer.AddComponent(spawnPlayerReq, receiveRPC);
+                    
+                }
 
                 commandBuffer.DestroyEntity(reqEntity);
             }

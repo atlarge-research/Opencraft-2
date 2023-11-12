@@ -17,9 +17,13 @@ namespace Opencraft.Player.Multiplay.MultiplayStats
         public static readonly ProfilerCounterValue<double> MultiplayRoundTripTime =
             new ProfilerCounterValue<double>(MultiplayCategory, RoundTripTimeName, ProfilerMarkerDataUnit.Count);
         
-        public const string BitRateName = "Multiplay BitRate";
-        public static readonly ProfilerCounterValue<double> MultiplayBitRate =
-            new ProfilerCounterValue<double>(MultiplayCategory ,BitRateName  , ProfilerMarkerDataUnit.Count);
+        public const string BitRateInName = "Multiplay BitRate In";
+        public static readonly ProfilerCounterValue<double> MultiplayBitRateIn =
+            new ProfilerCounterValue<double>(MultiplayCategory ,BitRateInName  , ProfilerMarkerDataUnit.Count);
+        
+        public const string BitRateOutName = "Multiplay BitRate Out";
+        public static readonly ProfilerCounterValue<double> MultiplayBitRateOut =
+            new ProfilerCounterValue<double>(MultiplayCategory ,BitRateOutName  , ProfilerMarkerDataUnit.Count);
         
         public const string FPSName = "Multiplay FPS";
         public static readonly ProfilerCounterValue<double> MultiplayFPS =
@@ -38,7 +42,8 @@ namespace Opencraft.Player.Multiplay.MultiplayStats
         static readonly ProfilerCounterDescriptor[] k_Counters = new ProfilerCounterDescriptor[]
         {
             new ProfilerCounterDescriptor(MultiplayStatistics.RoundTripTimeName, MultiplayStatistics.MultiplayCategory),
-            new ProfilerCounterDescriptor(MultiplayStatistics.BitRateName, MultiplayStatistics.MultiplayCategory),
+            new ProfilerCounterDescriptor(MultiplayStatistics.BitRateInName, MultiplayStatistics.MultiplayCategory),
+            new ProfilerCounterDescriptor(MultiplayStatistics.BitRateOutName, MultiplayStatistics.MultiplayCategory),
             new ProfilerCounterDescriptor(MultiplayStatistics.FPSName, MultiplayStatistics.MultiplayCategory),
             new ProfilerCounterDescriptor(MultiplayStatistics.PacketLossName, MultiplayStatistics.MultiplayCategory),
         };

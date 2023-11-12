@@ -30,7 +30,7 @@ namespace Opencraft.Statistics
             //typeList[4] = ComponentType.ReadWrite<GhostMetrics>();
             //typeList[5] = ComponentType.ReadWrite<GhostSerializationMetrics>();
             //typeList[6] = ComponentType.ReadWrite<PredictionErrorNames>();
-            //typeList[7] = ComponentType.ReadWrite<PredictionErrorMetrics>();
+            //typeList[4] = ComponentType.ReadWrite<PredictionErrorMetrics>();
 
             var metricSingleton = state.EntityManager.CreateEntity(state.EntityManager.CreateArchetype(typeList));
             FixedString64Bytes singletonName = "NetCodeMetricsMonitor";
