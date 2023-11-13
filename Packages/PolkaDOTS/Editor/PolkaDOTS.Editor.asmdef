@@ -1,0 +1,10 @@
+{
+    "name": "PolkaDOTS.Editor",
+    "references": [ 
+        "PolkaDOTS",
+        "Unity.Performance.Profile-Analyzer.Editor",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [ "Editor" ],
+    "allowUnsafeCode": true
+}

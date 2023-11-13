@@ -1,5 +1,4 @@
-﻿using Opencraft.Networking;
-using Opencraft.Player.Authoring;
+﻿using Opencraft.Player.Authoring;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
@@ -16,7 +15,7 @@ namespace Opencraft.Player
     // If a player is marked for destruction, destroy it!
     [BurstCompile]
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
-    [UpdateAfter(typeof(StartGameStreamServerSystem))]
+    [UpdateAfter(typeof(PolkaDOTS.Networking.StartGameStreamServerSystem))]
     public partial class  PlayerManagerSystem : SystemBase
     {
         private BeginSimulationEntityCommandBufferSystem m_CommandBufferSystem;
@@ -31,7 +30,7 @@ namespace Opencraft.Player
             RequireForUpdate(GetEntityQuery(builder));
             
             playerQuery = new EntityQueryBuilder(Allocator.Temp)
-                .WithAll<Authoring.Player>()
+                .WithAll<PolkaDOTS.Player>()
                 .WithAll<LocalTransform>()
                 .WithAll<PlayerInput>()
                 .Build(this);
@@ -48,9 +47,9 @@ namespace Opencraft.Player
             ComponentLookup<NetworkId> networkIdFromEntity = GetComponentLookup<NetworkId>(true);
             
             // Existing player data
-            NativeArray<Authoring.Player> playerData = playerQuery.ToComponentDataArray<Authoring.Player>(Allocator.Temp);
-            NativeArray<LocalTransform> playerLocs = playerQuery.ToComponentDataArray<LocalTransform>(Allocator.Temp);
-            NativeArray<PlayerInput> playerInputs = playerQuery.ToComponentDataArray<PlayerInput>(Allocator.Temp);
+            NativeArray<PolkaDOTS.Player> playerData = playerQuery.ToComponentDataArray<PolkaDOTS.Player>(Allocator.Temp);
+            //NativeArray<LocalTransform> playerLocs = playerQuery.ToComponentDataArray<LocalTransform>(Allocator.Temp);
+            //NativeArray<PlayerInput> playerInputs = playerQuery.ToComponentDataArray<PlayerInput>(Allocator.Temp);
             NativeArray<Entity> playerEntities = playerQuery.ToEntityArray(Allocator.Temp);
             
             Entities.WithName("HandleSpawnPlayerRPCs").ForEach((Entity entity,
@@ -65,7 +64,7 @@ namespace Opencraft.Player
                 // Check if player for this username already exists
                 for (int i = 0; i < playerData.Length; i++)
                 {
-                    Authoring.Player player = playerData[i];
+                    PolkaDOTS.Player player = playerData[i];
                     if (player.Username == reqSpawn.Username)
                     {
                         var playerEntity = playerEntities[i];
@@ -89,7 +88,7 @@ namespace Opencraft.Player
                     commandBuffer.AddComponent<ConnectionState>(entity);
                     var player = commandBuffer.Instantiate(prefab);
                     commandBuffer.SetComponent(player, new GhostOwner { NetworkId = networkId.Value });
-                    commandBuffer.SetComponent(player, new Authoring.Player { Username = reqSpawn.Username });
+                    commandBuffer.SetComponent(player, new PolkaDOTS.Player{ Username = reqSpawn.Username });
 
                     /*if (found)
                     {

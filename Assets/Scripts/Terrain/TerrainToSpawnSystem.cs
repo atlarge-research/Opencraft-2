@@ -1,16 +1,9 @@
-﻿using System.Collections.Generic;
-using Opencraft.Terrain;
-using Opencraft.Terrain.Authoring;
-using Opencraft.Terrain.Utilities;
-using Opencraft.ThirdParty;
+﻿using Opencraft.Terrain.Authoring;
 using Unity.Entities;
-using Unity.Jobs;
 using Unity.Mathematics;
-using Unity.NetCode;
 using Unity.Transforms;
 using Unity.Burst;
 using Unity.Collections;
-using Unity.Physics;
 using Unity.Profiling;
 
 namespace Opencraft.Terrain
@@ -51,7 +44,7 @@ namespace Opencraft.Terrain
             // todo - make this parallel
             var areasPlayersCloseTo = new NativeHashSet<int2>(32, Allocator.TempJob);
             int viewRange = Env.TERRAIN_SPAWN_RANGE;
-            foreach (var transform in SystemAPI.Query<LocalTransform>().WithAll<Player.Authoring.Player, Simulate>())
+            foreach (var transform in SystemAPI.Query<LocalTransform>().WithAll<PolkaDOTS.Player, Simulate>())
             {
                 var pos = transform.Position;
                 int2 playerColumn =new int2(

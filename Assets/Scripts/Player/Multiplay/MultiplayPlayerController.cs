@@ -1,22 +1,24 @@
-﻿using System;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.InputSystem;
 using System.Linq;
-using System.Net.Mime;
 using Opencraft.Statistics;
 using Unity.Entities;
 using Unity.Profiling;
 using Unity.RenderStreaming;
 using Unity.Serialization;
+using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine.UI;
-using Random = UnityEngine.Random;
 
+/*
+ * Gathers input from Player GameObject
+ */
 namespace Opencraft.Player.Multiplay
 {
     // Collects input either from local devices or a remote input stream using InputActions
     public class MultiplayPlayerController : MonoBehaviour
     {
+        
         [SerializeField] InputReceiver playerInput;
         [DontSerialize] public string username;
         [DontSerialize]public Vector2 inputMovement;
@@ -28,7 +30,7 @@ namespace Opencraft.Player.Multiplay
         [DontSerialize]public bool playerEntityExists;
         [DontSerialize]public bool playerEntityRequestSent;
         [DontSerialize]public Entity playerEntity;
-
+        
         public Text debugText;
         //public Text tooltipText;
         
@@ -37,7 +39,7 @@ namespace Opencraft.Player.Multiplay
         protected void Awake()
         {
             playerInput.onDeviceChange += OnDeviceChange;
-            username = $"{Config.UserID}";
+            username = $"{PolkaDOTS.Config.UserID}";
         }
 
         private void OnEnable()

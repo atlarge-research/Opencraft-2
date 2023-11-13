@@ -1,10 +1,57 @@
-﻿using Unity.Profiling;
+﻿using Opencraft.Terrain.Authoring;
+using PolkaDOTS;
+using Unity.Entities;
+using Unity.NetCode;
+using Unity.Profiling;
+using UnityEngine;
 #if UNITY_EDITOR
 using Unity.Profiling.Editor;
 #endif
 
+
 namespace Opencraft.Statistics
 {
+    /// <summary>
+    /// Extend PolkaDOTS with additional performance metric 
+    /// </summary>
+    [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation | WorldSystemFilterFlags.ClientSimulation)]
+    [UpdateAfter(typeof(NetworkReceiveSystemGroup))]
+    public partial struct StatisticsSystem : ISystem
+    {
+        private EntityQuery _terrainAreaQuery;
+        private bool first;
+        
+        public void OnCreate(ref SystemState state)
+        {
+            _terrainAreaQuery = state.EntityManager.CreateEntityQuery(typeof(TerrainArea));
+            first = true;
+        }
+        
+        public void OnUpdate(ref SystemState state)
+        {
+            if (first)
+            {
+                if (Config.LogStats)
+                {
+                    Debug.Log("Adding terrain areas statistics recorders");
+                    PolkaDOTS.Statistics.StatisticsWriter writer = PolkaDOTS.Statistics.StatisticsWriterInstance.instance;
+                    writer.AddStatisticRecorder("Number of Terrain Areas (Client)", ProfilerCategory.Scripts);
+                    writer.AddStatisticRecorder("Number of Terrain Areas (Server)", ProfilerCategory.Scripts); 
+                }
+                first = false;
+            }
+            // Record terrain area data
+            var terrainCount = _terrainAreaQuery.CalculateEntityCount();
+            if (state.WorldUnmanaged.IsClient())
+                GameStatistics.NumTerrainAreasClient.Value = terrainCount;
+            if(state.WorldUnmanaged.IsServer())
+                GameStatistics.NumTerrainAreasServer.Value = terrainCount;
+            
+            
+            
+        }
+    }
+    
     /// <summary>
     ///  Profiler module for game-specific performance data
     /// </summary>
@@ -43,55 +90,4 @@ namespace Opencraft.Statistics
     }
 #endif
     
-    /// <summary>
-    ///  Profiler module for Netcode For Entities performance data
-    /// </summary>
-    public class NetCodeStatistics
-    {
-        public static readonly ProfilerCategory NetCodeStatisticsCategory = ProfilerCategory.Network;
-        
-        public const string SnapshotSizeInBitsName = "NFE Snapshot Size (bits)";
-        public static readonly ProfilerCounterValue<uint> SnapshotSizeInBits =
-            new ProfilerCounterValue<uint>(NetCodeStatisticsCategory, SnapshotSizeInBitsName, ProfilerMarkerDataUnit.Count);
-        
-        public const string SnapshotTickName = "NFE Snapshot Tick";
-        public static readonly ProfilerCounterValue<uint> SnapshotTick =
-            new ProfilerCounterValue<uint>(NetCodeStatisticsCategory, SnapshotTickName , ProfilerMarkerDataUnit.Count);
-        
-        public const string RTTName = "NFE RTT";
-        public static readonly ProfilerCounterValue<float> RTT =
-            new ProfilerCounterValue<float>(NetCodeStatisticsCategory, RTTName, ProfilerMarkerDataUnit.Count);
-        
-        public const string JitterName = "NFE Jitter";
-        public static readonly ProfilerCounterValue<float> Jitter =
-            new ProfilerCounterValue<float>(NetCodeStatisticsCategory, JitterName, ProfilerMarkerDataUnit.Count);
-        
-        public const string PredictionErrorsName = "NFE Prediction Errors";
-        public static readonly ProfilerCounterValue<float> PredictionErrors =
-            new ProfilerCounterValue<float>(NetCodeStatisticsCategory, PredictionErrorsName, ProfilerMarkerDataUnit.Count);
-    }
-#if UNITY_EDITOR
-    [System.Serializable]
-    [ProfilerModuleMetadata("NetCode Statistics")] 
-    public class NetCodeProfilerModule : ProfilerModule
-    {
-        static readonly ProfilerCounterDescriptor[] k_Counters = new ProfilerCounterDescriptor[]
-        {
-            new ProfilerCounterDescriptor(NetCodeStatistics.SnapshotSizeInBitsName, NetCodeStatistics.NetCodeStatisticsCategory),
-            new ProfilerCounterDescriptor(NetCodeStatistics.SnapshotTickName, NetCodeStatistics.NetCodeStatisticsCategory),
-            new ProfilerCounterDescriptor(NetCodeStatistics.RTTName, NetCodeStatistics.NetCodeStatisticsCategory),
-            new ProfilerCounterDescriptor(NetCodeStatistics.JitterName, NetCodeStatistics.NetCodeStatisticsCategory),
-        };
-
-        // Ensure that both ProfilerCategory.Scripts and ProfilerCategory.Memory categories are enabled when our module is active.
-        static readonly string[] k_AutoEnabledCategoryNames = new string[]
-        {
-            ProfilerCategory.Network.Name
-        };
-
-
-        // Pass the auto-enabled category names to the base constructor.
-        public NetCodeProfilerModule() : base(k_Counters, autoEnabledCategoryNames: k_AutoEnabledCategoryNames) { }
-    }
-#endif
 }

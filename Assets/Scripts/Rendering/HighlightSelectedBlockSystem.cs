@@ -1,17 +1,14 @@
 ﻿using Opencraft.Player;
 using Opencraft.Player.Authoring;
-using Opencraft.Player.Multiplay;
 using Opencraft.Rendering.Authoring;
 using Opencraft.Terrain.Authoring;
-using Opencraft.Terrain.Blocks;
-using Opencraft.Terrain.Utilities;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
 using Unity.Transforms;
-using Unity.VisualScripting;
+
 
 
 namespace Opencraft.Rendering
@@ -34,10 +31,10 @@ namespace Opencraft.Rendering
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
-            state.RequireForUpdate<Player.Authoring.Player>();
+            state.RequireForUpdate<PolkaDOTS.Player>();
             state.RequireForUpdate<BlockOutline>();
             playerQuery= new EntityQueryBuilder(Allocator.Temp)
-                .WithAll<Player.Authoring.Player, SelectedBlock, GhostOwnerIsLocal>()
+                .WithAll<PolkaDOTS.Player, SelectedBlock, GhostOwnerIsLocal>()
                 .Build(ref state);
             blockOutlineQuery = new EntityQueryBuilder(Allocator.Temp)
                 .WithAll<BlockOutline>()

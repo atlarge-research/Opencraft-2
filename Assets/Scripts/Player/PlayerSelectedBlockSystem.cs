@@ -6,9 +6,8 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
-using Unity.NetCode;
 using Unity.Transforms;
-using UnityEngine;
+
 
 namespace Opencraft.Player
 {
@@ -20,8 +19,6 @@ namespace Opencraft.Player
     {
         private BufferLookup<TerrainBlocks> _terrainBlockLookup;
         private ComponentLookup<TerrainNeighbors> _terrainNeighborLookup;
-        private NativeArray<Entity> terrainAreasEntities;
-        private NativeArray<LocalTransform> terrainAreaTransforms;
         private static readonly int raycastLength = 5;
         private static readonly float3 camOffset = new float3(0, Env.CAMERA_Y_OFFSET, 0);
         
@@ -33,7 +30,7 @@ namespace Opencraft.Player
         public void OnCreate(ref SystemState state)
         {
 
-            state.RequireForUpdate<Authoring.Player>();
+            state.RequireForUpdate<PolkaDOTS.Player>();
             state.RequireForUpdate<TerrainArea>();
             state.RequireForUpdate<TerrainSpawner>();
             _terrainBlockLookup = state.GetBufferLookup<TerrainBlocks>(true);
@@ -49,10 +46,6 @@ namespace Opencraft.Player
             state.CompleteDependency();
             _terrainBlockLookup.Update(ref state);
             _terrainNeighborLookup.Update(ref state);
-            var terrainAreasQuery = SystemAPI.QueryBuilder().WithAll<TerrainArea, LocalTransform>().Build();
-            terrainAreasEntities = terrainAreasQuery.ToEntityArray(state.WorldUpdateAllocator);
-            terrainAreaTransforms = terrainAreasQuery.ToComponentDataArray<LocalTransform>(state.WorldUpdateAllocator);
-            
             
             foreach (var player in SystemAPI.Query<PlayerAspect>().WithAll<Simulate>())
             {
@@ -61,7 +54,7 @@ namespace Opencraft.Player
                 player.SelectedBlock.neighborBlockLoc = new int3(-1);
                 player.SelectedBlock.neighborTerrainArea = Entity.Null;
 
-                if (player.Player.ContainingArea == Entity.Null)
+                if (player.ContainingArea.Area == Entity.Null)
                     continue;
                 
                 // Use player input Yaw/Pitch to calculate the camera direction on clients
@@ -76,8 +69,8 @@ namespace Opencraft.Player
                 // Setup search inputs
                 TerrainUtilities.BlockSearchInput.DefaultBlockSearchInput(ref BSI);
                 BSI.basePos = player.Transform.ValueRO.Position;
-                BSI.areaEntity = player.Player.ContainingArea;
-                BSI.terrainAreaPos = player.Player.ContainingAreaLocation;
+                BSI.areaEntity = player.ContainingArea.Area;
+                BSI.terrainAreaPos = player.ContainingArea.AreaLocation;
                 
                 // Step along a ray from the players position in the direction their camera is looking
                 for (int i = 0; i < raycastLength; i++)
@@ -104,37 +97,6 @@ namespace Opencraft.Player
                         neighborBlockLoc = BSO.localPos;
                     }
                     
-                    
-                    
-                    /*if (TerrainUtilities.GetBlockLocationAtPosition(ref location,
-                            ref terrainAreaTransforms,
-                            out int terrainAreaIndex,
-                            out int3 blockLoc))
-                    {
-                        Entity terrainAreaEntity = terrainAreasEntities[terrainAreaIndex];
-                        Entity neighborTerrainAreaEntity = neighborTerrainAreaIndex != -1 ?
-                            terrainAreasEntities[neighborTerrainAreaIndex] : Entity.Null;
-                        if (_terrainBlockLookup.TryGetBuffer(terrainAreaEntity,
-                                out DynamicBuffer<TerrainBlocks> terrainBlocks))
-                        {
-                            int blockIndex = TerrainUtilities.BlockLocationToIndex(ref blockLoc);
-                            if (terrainBlocks[blockIndex].type != BlockType.Air)
-                            {
-                                // found selected block
-                                player.SelectedBlock.blockLoc = blockLoc;
-                                player.SelectedBlock.terrainArea = terrainAreaEntity ;
-                                // Set neighbor
-                                player.SelectedBlock.neighborBlockLoc = neighborBlockLoc;
-                                player.SelectedBlock.neighborTerrainArea = neighborTerrainAreaEntity;
-                                
-                                break;
-                            }
-                            // If this block is air, still mark it as the neighbor
-                            neighborTerrainAreaIndex = terrainAreaIndex;
-                            neighborBlockLoc = blockLoc;
-                            
-                        }
-                    }*/
                 }
             }
             

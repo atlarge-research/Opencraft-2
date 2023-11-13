@@ -27,7 +27,7 @@ namespace Opencraft.Player
         public void OnCreate(ref SystemState state)
         {
 
-            state.RequireForUpdate<Authoring.Player>();
+            state.RequireForUpdate<PolkaDOTS.Player>();
             state.RequireForUpdate<TerrainArea>();
             state.RequireForUpdate<TerrainSpawner>();
             _terrainBlocksBufferLookup = state.GetBufferLookup<TerrainBlocks>(false);

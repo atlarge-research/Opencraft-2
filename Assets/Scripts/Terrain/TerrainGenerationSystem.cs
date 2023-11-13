@@ -115,7 +115,7 @@ namespace Opencraft.Terrain
                 terrainColMaxLookup = _terrainColMaxLookup,
                 _structuresToSpawnLookup = _structuresToSpawnLookup,
                 columnsToSpawn = columnsToSpawn,
-                noiseSeed = Config.Seed,
+                noiseSeed = PolkaDOTS.Config.Seed,
                 terrainGenLayers = _terrainGenLayers
             }.Schedule(numColumnsToSpawn, 1, sortHandle); // Each thread gets 1 column
             populateHandle.Complete();

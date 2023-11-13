@@ -1,27 +1,16 @@
 {
   "dependencies": {
-    "com.extend.entities": {
-      "version": "file:com.extend.entities",
+    "com.jerriteic.polkadots": {
+      "version": "file:PolkaDOTS",
       "depth": 0,
       "source": "embedded",
       "dependencies": {
-        "com.unity.entities": "1.0.11"
-      }
-    },
-    "com.extend.netcode": {
-      "version": "file:com.extend.netcode",
-      "depth": 0,
-      "source": "embedded",
-      "dependencies": {
-        "com.unity.netcode": "1.0.10"
-      }
-    },
-    "com.extend.profile-analyzer": {
-      "version": "file:com.extend.profile-analyzer",
-      "depth": 0,
-      "source": "embedded",
-      "dependencies": {
-        "com.unity.performance.profile-analyzer": "1.2.2"
+        "com.unity.entities": "1.0.16",
+        "com.unity.netcode": "1.0.17",
+        "com.veriorpies.parrelsync": "1.5.2",
+        "com.unity.renderstreaming": "3.1.0-exp.7",
+        "com.unity.inputsystem": "1.7.0",
+        "com.unity.nuget.newtonsoft-json": "3.2.1"
       }
     },
     "com.unity.ai.navigation": {

@@ -1,5 +1,4 @@
 ﻿using Opencraft.Player.Authoring;
-using Opencraft.Player.Emulated;
 using Opencraft.Player.Multiplay;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -11,7 +10,7 @@ using UnityEngine;
 
 namespace Opencraft.Player
 {
-    // Collects player input from any local or guest clients every frame.
+    // Applies collected input to player entities
     // Also moves the camera locally for these clients
     [UpdateInGroup(typeof(GhostInputSystemGroup))]
     public partial struct SamplePlayerInput : ISystem
@@ -19,12 +18,12 @@ namespace Opencraft.Player
         private static float3 _cameraOffset = new float3(0.0f,Env.CAMERA_Y_OFFSET,0.0f);
         public void OnUpdate(ref SystemState state)
         {
-            Multiplay.Multiplay multiplay = MultiplaySingleton.Instance;
+            PolkaDOTS.Multiplay.Multiplay multiplay = PolkaDOTS.Multiplay.MultiplaySingleton.Instance;
             if (multiplay.IsUnityNull())
                 return;
             // Apply movement input to owned player ghosts
             foreach (var (player, localToWorld, input)
-                     in SystemAPI.Query<RefRO<Authoring.Player>, RefRO<LocalToWorld>, RefRW<PlayerInput>>()
+                     in SystemAPI.Query<RefRO<PolkaDOTS.Player>, RefRO<LocalToWorld>, RefRW<PlayerInput>>()
                          .WithAll<GhostOwnerIsLocal>())
             {
                 // Check if the connection has been created
