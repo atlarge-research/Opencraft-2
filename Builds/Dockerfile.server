@@ -1,0 +1,19 @@
+FROM ubuntu:20.04
+
+# Select which build application folder to include
+ARG BUILD_TO_COPY=./ServerLinux
+  
+# Copy game files
+COPY $BUILD_TO_COPY /usr/src/opencraft2
+
+# Set working directory
+WORKDIR /usr/src/opencraft2
+
+# Deployment port
+EXPOSE 7980
+# Game port
+EXPOSE 7979
+
+# We run the command from the kubernetes job description
+#CMD ["./opencraft2.x86_64", "-logFile", "./opencraft2_log.txt"]
+CMD /bin/bash

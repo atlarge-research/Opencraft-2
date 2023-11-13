@@ -1,43 +1,45 @@
-﻿using System;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.InputSystem;
 using System.Linq;
-using System.Net.Mime;
 using Opencraft.Statistics;
 using Unity.Entities;
 using Unity.Profiling;
 using Unity.RenderStreaming;
 using Unity.Serialization;
+using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine.UI;
-using Random = UnityEngine.Random;
 
+/*
+ * Gathers input from Player GameObject
+ */
 namespace Opencraft.Player.Multiplay
 {
     // Collects input either from local devices or a remote input stream using InputActions
     public class MultiplayPlayerController : MonoBehaviour
     {
+        
         [SerializeField] InputReceiver playerInput;
-        [DontSerialize] public int username;
+        [DontSerialize] public string username;
         [DontSerialize]public Vector2 inputMovement;
         [DontSerialize]public Vector2 inputLook;
         [DontSerialize]public bool inputJump;
-        [DontSerialize]public bool inputStart = false;
+        //[DontSerialize]public bool inputStart = false;
         [DontSerialize]public bool inputPrimaryAction = false;
         [DontSerialize]public bool inputSecondaryAction = false;
         [DontSerialize]public bool playerEntityExists;
         [DontSerialize]public bool playerEntityRequestSent;
         [DontSerialize]public Entity playerEntity;
-
+        
         public Text debugText;
-        public Text tooltipText;
+        //public Text tooltipText;
         
         private ProfilerRecorder _numAreasRecorder;
 
         protected void Awake()
         {
             playerInput.onDeviceChange += OnDeviceChange;
-            username = Random.Range(0, 99999);
+            username = $"{PolkaDOTS.Config.UserID}";
         }
 
         private void OnEnable()
@@ -82,7 +84,6 @@ namespace Opencraft.Player.Multiplay
         private void Update()
         {
             debugText.text = $"NumAreas: {_numAreasRecorder.LastValue}\n";
-            tooltipText.enabled = !playerEntityRequestSent && !playerEntityExists;
         }
 
 
@@ -116,13 +117,13 @@ namespace Opencraft.Player.Multiplay
             }
         }
 
-        public void OnStart(InputAction.CallbackContext value)
+        /*public void OnStart(InputAction.CallbackContext value)
         {
             if (value.performed)
             {
                 inputStart = true;
             }
-        }
+        }*/
         
         public void OnPrimaryAction(InputAction.CallbackContext value)
         {
@@ -145,6 +146,7 @@ namespace Opencraft.Player.Multiplay
             if (value.performed)
             {
                 Debug.Log("Exiting game!");
+                //World.DisposeAllWorlds();
 #if UNITY_EDITOR
                 EditorApplication.ExitPlaymode();
 #else

@@ -2,7 +2,6 @@ using Opencraft.Terrain.Authoring;
 using Opencraft.Terrain.Utilities;
 using Unity.Burst;
 using Unity.Entities;
-using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
 
@@ -21,7 +20,7 @@ namespace Opencraft.Rendering
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<TerrainArea>();
-            if (!Config.DebugEnabled)
+            if (!PolkaDOTS.Config.DebugEnabled)
             {
                 state.Enabled = false;
             }

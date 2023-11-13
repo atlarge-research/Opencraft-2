@@ -1,10 +1,60 @@
-﻿using Unity.Profiling;
+﻿using Opencraft.Terrain.Authoring;
+using PolkaDOTS;
+using Unity.Entities;
+using Unity.NetCode;
+using Unity.Profiling;
+using UnityEngine;
 #if UNITY_EDITOR
 using Unity.Profiling.Editor;
 #endif
 
+
 namespace Opencraft.Statistics
 {
+    /// <summary>
+    /// Extend PolkaDOTS with additional performance metric 
+    /// </summary>
+    [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation | WorldSystemFilterFlags.ClientSimulation)]
+    [UpdateAfter(typeof(NetworkReceiveSystemGroup))]
+    public partial struct StatisticsSystem : ISystem
+    {
+        private EntityQuery _terrainAreaQuery;
+        private bool first;
+        
+        public void OnCreate(ref SystemState state)
+        {
+            _terrainAreaQuery = state.EntityManager.CreateEntityQuery(typeof(TerrainArea));
+            first = true;
+        }
+        
+        public void OnUpdate(ref SystemState state)
+        {
+            if (first)
+            {
+                if (Config.LogStats)
+                {
+                    Debug.Log("Adding terrain areas statistics recorders");
+                    PolkaDOTS.Statistics.StatisticsWriter writer = PolkaDOTS.Statistics.StatisticsWriterInstance.instance;
+                    writer.AddStatisticRecorder("Number of Terrain Areas (Client)", ProfilerCategory.Scripts);
+                    writer.AddStatisticRecorder("Number of Terrain Areas (Server)", ProfilerCategory.Scripts); 
+                }
+                first = false;
+            }
+            // Record terrain area data
+            var terrainCount = _terrainAreaQuery.CalculateEntityCount();
+            if (state.WorldUnmanaged.IsClient())
+                GameStatistics.NumTerrainAreasClient.Value = terrainCount;
+            if(state.WorldUnmanaged.IsServer())
+                GameStatistics.NumTerrainAreasServer.Value = terrainCount;
+            
+            
+            
+        }
+    }
+    
+    /// <summary>
+    ///  Profiler module for game-specific performance data
+    /// </summary>
     public class GameStatistics
     {
         public static readonly ProfilerCategory GameStatisticsCategory = ProfilerCategory.Scripts;
@@ -39,4 +89,5 @@ namespace Opencraft.Statistics
         public GameProfilerModule() : base(k_Counters, autoEnabledCategoryNames: k_AutoEnabledCategoryNames) { }
     }
 #endif
+    
 }
