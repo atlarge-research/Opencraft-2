@@ -7,3 +7,6 @@
 [submodule "Packages/com.utj.profilerreader"]
 	path = Packages/com.utj.profilerreader
 	url = git@github.com:JerritEic/ProfilerReader.git
+[submodule "Packages/PolkaDOTS"]
+	path = Packages/PolkaDOTS
+	url = git@github.com:JerritEic/PolkaDOTS.git
