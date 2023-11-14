@@ -1,1 +1,1 @@
-./server -p 7981
+./webserver -p 7981

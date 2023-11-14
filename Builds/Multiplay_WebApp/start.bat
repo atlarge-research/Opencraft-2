@@ -1,1 +1,1 @@
-.\webserver -p 7981
+.\webserver.exe -p 7981
