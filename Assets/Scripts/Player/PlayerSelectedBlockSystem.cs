@@ -68,7 +68,7 @@ namespace Opencraft.Player
 
                 // Setup search inputs
                 TerrainUtilities.BlockSearchInput.DefaultBlockSearchInput(ref BSI);
-                BSI.basePos = player.Transform.ValueRO.Position;
+                BSI.basePos = NoiseUtilities.FastFloor(player.Transform.ValueRO.Position);
                 BSI.areaEntity = player.ContainingArea.Area;
                 BSI.terrainAreaPos = player.ContainingArea.AreaLocation;
                 
@@ -77,7 +77,7 @@ namespace Opencraft.Player
                 {
                     //float3 location = cameraPos + (direction * i);
                     TerrainUtilities.BlockSearchOutput.DefaultBlockSearchOutput(ref BSO);
-                    BSI.offset = camOffset + (direction * i);
+                    BSI.offset = NoiseUtilities.FastFloor(camOffset + (direction * i));
                     if (TerrainUtilities.GetBlockAtPositionByOffset(in BSI, ref BSO,
                             ref _terrainNeighborLookup, ref _terrainBlockLookup))
                     {

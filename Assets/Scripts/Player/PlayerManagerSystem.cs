@@ -89,26 +89,10 @@ namespace Opencraft.Player
                     var player = commandBuffer.Instantiate(prefab);
                     commandBuffer.SetComponent(player, new GhostOwner { NetworkId = networkId.Value });
                     commandBuffer.SetComponent(player, new PolkaDOTS.Player{ Username = reqSpawn.Username });
-
-                    /*if (found)
-                    {
-                        commandBuffer.SetComponent(player, playerLoc);
-                        commandBuffer.SetComponent(player, playerInput);
-                    }*/
-                    // Give each NetworkId their own spawn pos:
-                    {
-                        var isEven = (networkId.Value & 1) == 0;
-                        const float halfCharacterWidthPlusHalfPadding = .55f;
-                        const float spawnStaggeredOffset = 0.25f;
-                        var staggeredXPos =
-                            networkId.Value * math.@select(halfCharacterWidthPlusHalfPadding,
-                                -halfCharacterWidthPlusHalfPadding, isEven) +
-                            math.@select(-spawnStaggeredOffset, spawnStaggeredOffset, isEven);
-                        var preventZFighting = 30f + -0.01f * networkId.Value;
-
-                        commandBuffer.SetComponent(player,
-                            LocalTransform.FromPosition(new float3(staggeredXPos, preventZFighting, -1)));
-                    }
+                    // Move spawned player object to set position
+                    commandBuffer.SetComponent(player,
+                        LocalTransform.FromPosition(new float3(0.5f, 30f , 0.5f)));
+                    
                 }
 
 

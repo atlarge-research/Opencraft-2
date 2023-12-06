@@ -148,6 +148,12 @@ namespace Opencraft.Terrain.Utilities
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int3 FastFloor(float3 vals)
+        {
+            return new int3(FastFloor(vals.x), FastFloor(vals.y), FastFloor(vals.z));
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int GetIndex1DFrom2D(int x, int z, int sizeX)
         {
             return x + z * sizeX;

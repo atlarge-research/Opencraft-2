@@ -185,14 +185,14 @@ namespace Opencraft.Player
         {
             // Setup search inputs
             TerrainUtilities.BlockSearchInput.DefaultBlockSearchInput(ref BSI);
-            BSI.basePos = pos;
+            BSI.offset = int3.zero;
             BSI.areaEntity = containingArea;
             BSI.terrainAreaPos = containingAreaLoc;
             // Check corners under player
             foreach (var offset in _playerSupportOffsets)
             {
                 TerrainUtilities.BlockSearchOutput.DefaultBlockSearchOutput(ref BSO);
-                BSI.offset = offset;
+                BSI.basePos = NoiseUtilities.FastFloor(pos + offset);
                 
                 if (TerrainUtilities.GetBlockAtPositionByOffset(in BSI, ref BSO,
                         ref _terrainNeighborLookup, ref _terrainBlockLookup))
@@ -215,7 +215,7 @@ namespace Opencraft.Player
             float3 newPosition = pos + wantedMove;
             // Setup search inputs
             TerrainUtilities.BlockSearchInput.DefaultBlockSearchInput(ref BSI);
-            BSI.basePos = newPosition;
+            BSI.offset = int3.zero;
             BSI.areaEntity = containingArea;
             BSI.terrainAreaPos = containingAreaLoc;
 
@@ -228,7 +228,7 @@ namespace Opencraft.Player
             foreach (var offset in _playerCollisionOffsets)
             {
                 TerrainUtilities.BlockSearchOutput.DefaultBlockSearchOutput(ref BSO);
-                BSI.offset = offset;
+                BSI.basePos = NoiseUtilities.FastFloor(newPosition + offset);
 
                 if (TerrainUtilities.GetBlockAtPositionByOffset(in BSI, ref BSO,
                         ref _terrainNeighborLookup, ref _terrainBlockLookup))

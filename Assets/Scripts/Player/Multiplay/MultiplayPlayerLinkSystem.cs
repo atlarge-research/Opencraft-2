@@ -133,6 +133,10 @@ namespace Opencraft.Player.Multiplay
                     // Create a new block outline entity. Used by the HighlightSelectedBlockSystem on clients
                     commandBuffer.Instantiate(playerSpawner.BlockOutline);
                     commandBuffer.SetComponentEnabled<PolkaDOTS.NewPlayer>(playerEntity, false);
+                    
+                    if (playerController.username != "LOCALPLAYER")
+                        commandBuffer.AddComponent<PolkaDOTS.GuestPlayer>(playerEntity);
+                    
                     // Color the player red since it is locally controlled
                     commandBuffer.SetComponent(playerEntity,
                         new URPMaterialPropertyBaseColor() { Value = new float4(1, 0, 0, 1) });
