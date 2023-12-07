@@ -20,7 +20,7 @@ namespace Opencraft.Rendering
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<TerrainArea>();
-            if (!PolkaDOTS.Config.DebugEnabled)
+            if (!PolkaDOTS.ApplicationConfig.DebugEnabled)
             {
                 state.Enabled = false;
             }

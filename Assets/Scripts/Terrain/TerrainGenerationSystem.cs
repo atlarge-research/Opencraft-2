@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Opencraft.Terrain;
 using Opencraft.Terrain.Authoring;
 using Opencraft.Terrain.Blocks;
@@ -6,6 +7,7 @@ using Opencraft.Terrain.Layers;
 using Opencraft.Terrain.Structures;
 using Opencraft.Terrain.Utilities;
 using Opencraft.ThirdParty;
+using PolkaDOTS;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -14,6 +16,8 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Profiling;
+using System.Security.Cryptography;
+using System.Text;
 
 // Annoyingly this assembly directive must be outside the namespace.
 [assembly: RegisterGenericJobType(typeof(SortJob<int2, Int2DistanceComparer>))]
@@ -34,6 +38,8 @@ namespace Opencraft.Terrain
         private BufferLookup<TerrainColMinY> _terrainColMinLookup;
         private BufferLookup<TerrainColMaxY> _terrainColMaxLookup;
         private BufferLookup<TerrainStructuresToSpawn> _structuresToSpawnLookup;
+
+        private int _hashedSeed;
         //private double lastUpdate;
 
         public void OnCreate(ref SystemState state)
@@ -51,13 +57,20 @@ namespace Opencraft.Terrain
             _terrainColMinLookup = state.GetBufferLookup<TerrainColMinY>(isReadOnly: false);
             _terrainColMaxLookup = state.GetBufferLookup<TerrainColMaxY>(isReadOnly: false);
             _structuresToSpawnLookup = state.GetBufferLookup<TerrainStructuresToSpawn>(isReadOnly: false);
+            
+            // Seed
+            MD5 md5Hasher = MD5.Create();
+            var hashed = md5Hasher.ComputeHash(Encoding.UTF8.GetBytes(ApplicationConfig.Seed.Value));
+            _hashedSeed = BitConverter.ToInt32(hashed, 0);
+            
         }
 
         public void OnDestroy(ref SystemState state)
         {
             _terrainGenLayers.Dispose();
         }
-
+        
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             if (!_terrainGenLayers.IsCreated)
@@ -89,7 +102,7 @@ namespace Opencraft.Terrain
             NativeArray<int2> columnsToSpawn = chunksColumnsSpawnBuffer.AsNativeArray();
             // Sort the columns to spawn so ones closer to 0,0 are first
             SortJob<int2, Int2DistanceComparer> sortJob = columnsToSpawn.SortJob<int2, Int2DistanceComparer>(new Int2DistanceComparer { });
-            JobHandle sortHandle = sortJob.Schedule();
+            JobHandle sortHandle = sortJob.Schedule(state.Dependency);
 
             // Spawn the terrain area entities
             int numColumnsToSpawn = columnsToSpawn.Length > Env.MAX_COL_PER_TICK
@@ -115,7 +128,7 @@ namespace Opencraft.Terrain
                 terrainColMaxLookup = _terrainColMaxLookup,
                 _structuresToSpawnLookup = _structuresToSpawnLookup,
                 columnsToSpawn = columnsToSpawn,
-                noiseSeed = PolkaDOTS.Config.Seed,
+                noiseSeed = _hashedSeed,
                 terrainGenLayers = _terrainGenLayers
             }.Schedule(numColumnsToSpawn, 1, sortHandle); // Each thread gets 1 column
             populateHandle.Complete();

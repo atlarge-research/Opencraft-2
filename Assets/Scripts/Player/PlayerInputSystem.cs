@@ -1,7 +1,7 @@
 ﻿using Opencraft.Player.Authoring;
 using Opencraft.Player.Multiplay;
 using PolkaDOTS;
-using PolkaDOTS.Emulation;
+using PolkaDOTS.Deployment;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
@@ -48,7 +48,7 @@ namespace Opencraft.Player
                 var playerController = playerObj.GetComponent<MultiplayPlayerController>();
                 
                 // If inputs are simulated then don't collect them from the controller
-                if (Config.EmulationType != EmulationType.Simulation)
+                if (ApplicationConfig.EmulationType != EmulationType.Simulation)
                 {
                     input.ValueRW.Movement = default;
                     input.ValueRW.Jump = default;

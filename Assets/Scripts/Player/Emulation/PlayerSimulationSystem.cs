@@ -5,7 +5,7 @@ using Opencraft.Terrain.Authoring;
 using Opencraft.Terrain.Blocks;
 using Opencraft.Terrain.Utilities;
 using PolkaDOTS;
-using PolkaDOTS.Emulation;
+using PolkaDOTS.Deployment;
 using Priority_Queue;
 using Unity.Burst;
 using Unity.Collections;
@@ -59,7 +59,7 @@ namespace Opencraft.Player.Emulation
         
         public void OnCreate(ref SystemState state)
         {
-            if (Config.EmulationType != EmulationType.Simulation)
+            if (ApplicationConfig.EmulationType != EmulationType.Simulation)
                 state.Enabled = false;
             
 

@@ -31,7 +31,7 @@ namespace Opencraft.Statistics
         {
             if (first)
             {
-                if (Config.LogStats)
+                if (ApplicationConfig.LogStats)
                 {
                     Debug.Log("Adding terrain areas statistics recorders");
                     PolkaDOTS.Statistics.StatisticsWriter writer = PolkaDOTS.Statistics.StatisticsWriterInstance.instance;

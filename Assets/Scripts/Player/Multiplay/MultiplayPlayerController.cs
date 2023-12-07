@@ -39,7 +39,7 @@ namespace Opencraft.Player.Multiplay
         protected void Awake()
         {
             playerInput.onDeviceChange += OnDeviceChange;
-            username = $"{PolkaDOTS.Config.UserID}";
+            username = $"{PolkaDOTS.ApplicationConfig.UserID.Value}";
         }
 
         private void OnEnable()
