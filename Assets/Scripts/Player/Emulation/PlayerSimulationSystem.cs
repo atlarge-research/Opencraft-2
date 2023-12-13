@@ -4,6 +4,7 @@ using Opencraft.Player.Authoring;
 using Opencraft.Terrain.Authoring;
 using Opencraft.Terrain.Blocks;
 using Opencraft.Terrain.Utilities;
+using Opencraft.ThirdParty;
 using PolkaDOTS;
 using PolkaDOTS.Deployment;
 using Priority_Queue;
@@ -37,6 +38,7 @@ namespace Opencraft.Player.Emulation
         // Reusable position offset sets
         private NativeHashSet<int3> _playerOffsets; 
         private NativeHashSet<int3> _belowOffsets;  
+        private NativeHashSet<int3> _aboveOffsets;  
         private NativeHashSet<int3> _levelOffsets;  
         private NativeHashSet<int3> _jumpXOffsets;   
         private NativeHashSet<int3> _jumpZOffsets;  
@@ -45,6 +47,7 @@ namespace Opencraft.Player.Emulation
         
         // Current planned block path
         private NativeList<float3> _path;
+        private CardinalDirection _previousDirection;
         
         // Angles that a simulated player can look
         private static float LEFT = -90 * Mathf.Deg2Rad;
@@ -55,6 +58,10 @@ namespace Opencraft.Player.Emulation
         // Area entity and location containing the player
         private Entity _containingArea;
         private int3 _containingAreaLoc;
+
+        private CardinalDirection _cardinalDirection;
+        private int2 _boundedArea;
+        private int _simulationSeed;
         
         
         public void OnCreate(ref SystemState state)
@@ -74,6 +81,10 @@ namespace Opencraft.Player.Emulation
             // The block directly underneath a player, who is of height 2
             _belowOffsets= new NativeHashSet<int3>(1, Allocator.Persistent);
             _belowOffsets.Add(new int3(0,-2,0));
+            
+            // The block directly above a player
+            _aboveOffsets= new NativeHashSet<int3>(1, Allocator.Persistent);
+            _aboveOffsets.Add(new int3(0,1,0));
             
             // Used to check if we are falling onto a block 
             _levelOffsets = new NativeHashSet<int3>(3, Allocator.Persistent);
@@ -118,6 +129,15 @@ namespace Opencraft.Player.Emulation
 
             _containingArea = Entity.Null;
             _containingAreaLoc = int3.zero;
+            
+            // Cardinal direction determined by user ID to evenly distribute
+            _cardinalDirection = (CardinalDirection)(ApplicationConfig.UserID % 4);
+            // Bounded area set to a fixed size, todo make this a parameter
+            _boundedArea = new int2(32, 32);
+            // Pseudorandom seed starts as userID
+            _simulationSeed = ApplicationConfig.UserID;
+
+            _markerPlayerSimulation = new ProfilerMarker("PlayerSimulationMarker");
 
         }
 
@@ -130,6 +150,7 @@ namespace Opencraft.Player.Emulation
             _jumpZOffsets.Dispose();
             _levelOffsets.Dispose();
             _belowOffsets.Dispose();
+            _aboveOffsets.Dispose();
             _playerOffsets.Dispose();
         }
 
@@ -166,42 +187,42 @@ namespace Opencraft.Player.Emulation
                 // If there is now no next position, determine new path based on behaviour
                 if (_path.IsEmpty)
                 {
-                    // TODO interchangeable behaviours to determine new path
-                    // Set new target location
-                    int3 target = new int3(0);
-                    int targetOffset = 10;
-                    int minTargetOffset = targetOffset - 3;
-                    for (; targetOffset > minTargetOffset; targetOffset--)
-                        if (FindTargetPos(blockPos + new int3(0, 0, targetOffset), out target))
-                            break;
-
-                    if (targetOffset <= minTargetOffset)
+                    bool foundPath = false;
+                    for (int attempt = 0; attempt < 9; attempt++)
                     {
-                        Debug.Log("Could not find a valid target location! Disabling player simulation");
+                        if (!FindTargetPos(blockPos, attempt, out int3 target))
+                        {
+                            continue;
+                        }
+                        Debug.Log($"Player simulation searching for path from {blockPos} to {target}");
+                        if (AStar(blockPos, target))
+                        {
+                            /*
+                            var sb = new StringBuilder($"Player simulation found path: ");
+                            foreach (float3 node in _path)
+                            {
+                                int3 n = NoiseUtilities.FastFloor(node);
+                                float3 fn = new float3(n);
+                                TerrainUtilities.DebugDrawTerrainBlock(in fn, Color.yellow, 6.0f);
+                                sb.Append($"[{n.x},{n.y},{n.z}]<-");
+                            }
+                            Debug.Log(sb.ToString());*/
+                            foundPath = true;
+                            break;
+                        }
+                        
+                        Debug.Log($"Player simulation could not find a path from {blockPos} to {target}, will choose new target");
+                        
+                    }
+
+                    if (!foundPath)
+                    {
+                        Debug.LogError("Player simulation could not find a path in 9 attempts! Disabling player simulation.");
                         state.Enabled = false;
+                        _markerPlayerSimulation.End();
                         return;
                     }
-
-                    Debug.Log($"Player simulation searching for path from {blockPos} to {target}");
-                    // Set new path using AStar
-                    if (AStar(blockPos, target))
-                    {
-                        var sb = new StringBuilder($"Player simulation found path: ");
-                        foreach (float3 node in _path)
-                        {
-                            int3 n = NoiseUtilities.FastFloor(node);
-                            float3 fn = new float3(n);
-                            TerrainUtilities.DebugDrawTerrainBlock(in fn, Color.yellow, 6.0f);
-                            sb.Append($"[{n.x},{n.y},{n.z}]<-");
-                        }
-                        Debug.Log(sb.ToString());
-                    }
-                    else
-                    {
-                        // Failed to find a path
-                        Debug.LogError($"Player simulation could not find a path from {blockPos} to {target}, will choose new target");
-                        continue;
-                    }
+                    
                 }
                 
                 float3 nextBlock = _path[^1];
@@ -228,33 +249,235 @@ namespace Opencraft.Player.Emulation
                 }
                     
                 // Determine inputs necessary to work towards next block
-                bool forward = pos.z < nextBlock.z && !PosCloseEnough(pos.z, nextBlock.z);
-                bool back = pos.z > nextBlock.z && !PosCloseEnough(pos.z, nextBlock.z);
-                bool left = pos.x > nextBlock.x && !PosCloseEnough(pos.x, nextBlock.x);
-                bool right = pos.x < nextBlock.x && !PosCloseEnough(pos.x, nextBlock.x);
-                bool up = blockPos.y < nextBlockInt.y;
-                //bool down = blockPos.y > nextBlockInt.y;
+                var zDiff = nextBlock.z - pos.z;
+                var xDiff = nextBlock.x - pos.x;
+                const float epsilon = 0.1f;
+
+                CardinalDirection primaryDirection = CardinalDirection.None;
+                CardinalDirection secondaryDirection = CardinalDirection.None;
                 
-                input.ValueRW.Movement.y = 1;
-                
-                if (back)
-                    input.ValueRW.Yaw = BACK;
-                else if (forward)
-                    input.ValueRW.Yaw = FORWARD;
-                else if(left)
-                    input.ValueRW.Yaw = LEFT;
-                else if(right)
-                    input.ValueRW.Yaw = RIGHT;
-                if (up)
-                    input.ValueRW.Jump.Set();
+                // Primary direction is largest difference amount, secondary is smaller difference amount
+                if (math.abs(zDiff) >= math.abs(xDiff))
+                {
+                    // Forward or back primary
+                    if (zDiff >= epsilon)
+                    {
+                        primaryDirection = CardinalDirection.North;
+                    }
+                    else if (zDiff <= -epsilon)
+                    {
+                        primaryDirection = CardinalDirection.South;
+                    }
+                    
+                    // Left or right secondary
+                    if (xDiff >= epsilon)
+                    {
+                        secondaryDirection = CardinalDirection.East;
+                    }
+                    else if (xDiff <= -epsilon)
+                    {
+                        secondaryDirection = CardinalDirection.West;
+                    }
+                    
+                }
                 else
+                {
+                    // Left or right primary
+                    if (xDiff >= epsilon)
+                    {
+                        primaryDirection = CardinalDirection.East;
+                    }
+                    else if (xDiff <= -epsilon)
+                    {
+                        primaryDirection = CardinalDirection.West;
+                    }
+                    
+                    // Forward or back secondary
+                    if (zDiff >= epsilon)
+                    {
+                        secondaryDirection = CardinalDirection.North;
+                    }
+                    else if (zDiff <= -epsilon)
+                    {
+                        secondaryDirection = CardinalDirection.South;
+                    }
+                }
+                
+                CardinalDirection currentDirection = primaryDirection;
+                input.ValueRW.Movement.y = 1;
+                input.ValueRW.Movement.x = 0;
+                // If we have no primary direction but do have a secondary direction, then use previous direction
+                // without moving forward and calculate secondary directions
+                if (primaryDirection == CardinalDirection.None)
+                {
+                    input.ValueRW.Movement.y = 0;
+                    currentDirection = _previousDirection;
+                }
+                else
+                {
+                    // Otherwise we do have a primary direction, keep track of it
+                    _previousDirection = currentDirection;
+                }
+                
+                switch (currentDirection)
+                {
+                    case CardinalDirection.North:
+                        input.ValueRW.Yaw = FORWARD;
+                        if(secondaryDirection == CardinalDirection.East)
+                            input.ValueRW.Movement.x = 1;
+                        if(secondaryDirection == CardinalDirection.West)
+                            input.ValueRW.Movement.x = -1;
+                        break;
+                    case CardinalDirection.East:
+                        input.ValueRW.Yaw = RIGHT;
+                        if(secondaryDirection == CardinalDirection.South)
+                            input.ValueRW.Movement.x = 1;
+                        if(secondaryDirection == CardinalDirection.North)
+                            input.ValueRW.Movement.x = -1;
+                        break;
+                    case CardinalDirection.South:
+                        input.ValueRW.Yaw = BACK;
+                        if(secondaryDirection == CardinalDirection.West)
+                            input.ValueRW.Movement.x = 1;
+                        if(secondaryDirection == CardinalDirection.East)
+                            input.ValueRW.Movement.x = -1;
+                        break;
+                    case CardinalDirection.West:
+                        input.ValueRW.Yaw = LEFT;
+                        if(secondaryDirection == CardinalDirection.North)
+                            input.ValueRW.Movement.x = 1;
+                        if(secondaryDirection == CardinalDirection.South)
+                            input.ValueRW.Movement.x = -1;
+                        break;
+                    case CardinalDirection.None:
+                    default:
+                        // Shouldn't occur
+                        break;
+                }
+                
+                
+                // Check for jump
+                if (blockPos.y < nextBlockInt.y)
+                {
+                    input.ValueRW.Jump.Set();
+                }
+                else
+                {
                     input.ValueRW.Jump.Count = 0;
+                }
             }
             
             _markerPlayerSimulation.End();
         }
 
-        private bool FindTargetPos( int3 start, out int3 target)
+        
+        /// <summary>
+        /// Determines the next target position for a simulated player
+        /// </summary>
+        /// <param name="playerPos">The block the player is currently standing on</param>
+        /// <param name="attempt">What retry number we are on</param>
+        /// <param name="target">A target position</param>
+        /// <returns>True if a target position was found</returns>
+        private bool FindTargetPos(int3 playerPos, int attempt, out int3 target)
+        {
+            switch (GameConfig.PlayerSimulationBehaviour.Value)
+            {
+                case SimulationBehaviour.FixedDirection:
+                    return FindTargetPosFixedDirection(playerPos, attempt, out target);
+                    break;
+                case SimulationBehaviour.BoundedRandom:
+                default:
+                    return FindTargetPosBoundedRandom(playerPos, attempt, out target);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Searches in a cardinal direction for an available target position
+        /// </summary>
+        /// <param name="playerPos">The block the player is currently standing on</param>
+        /// <param name="attempt">What retry number we are on</param>
+        /// <param name="target">A target position</param>
+        /// <returns>True if a target position was found</returns>
+        private bool FindTargetPosFixedDirection(int3 playerPos, int attempt, out int3 target)
+        {
+            // Secondary offset allows simulated players to go around obstacles 
+            var secondaryOffset = new[] { 0, -2, 2, 0, -2, 2, 0, -2, 2}[attempt];
+            var primaryOffset = new[] { 10, 10, 10, 6, 6, 6, 2, 2, 2 }[attempt];
+           
+            int3 offset;
+            switch (_cardinalDirection)
+            {
+                case CardinalDirection.North:
+                    offset = new int3(secondaryOffset, 0, primaryOffset);
+                    break;
+                case CardinalDirection.East:
+                    offset = new int3(primaryOffset, 0, secondaryOffset);
+                    break;
+                case CardinalDirection.South:
+                    offset = new int3(secondaryOffset, 0, -primaryOffset);
+                    break;
+                case CardinalDirection.West:
+                default:
+                    offset = new int3(-primaryOffset, 0, secondaryOffset);
+                    break;
+            }
+
+            if (FindAvailablePos(playerPos + offset, out target))
+                return true;
+
+
+            target = int3.zero;
+            return false;
+        }
+
+        /// <summary>
+        /// Searches within a bounded area for an available target position
+        /// </summary>
+        /// <param name="playerPos">The block the player is currently standing on</param>
+        /// <param name="attempt">What retry number we are on</param>
+        /// <param name="target">A target position</param>
+        /// <returns>True if a target position was found</returns>
+        private bool FindTargetPosBoundedRandom(int3 playerPos, int attempt, out int3 target)
+        {
+            int startSeed = _simulationSeed + attempt;
+            // Find local bounds within a wider bounding area
+            int maxOffset = 10;
+            int posXBound = math.min(playerPos.x + maxOffset, _boundedArea.x);
+            int negXBound = math.max(playerPos.x - maxOffset, -_boundedArea.x);
+            int posZBound = math.min(playerPos.z + maxOffset, _boundedArea.y);
+            int negZBound = math.max(playerPos.z - maxOffset, -_boundedArea.y);
+            
+            // Get random values based on seed and current position
+            int blockHash = TerrainUtilities.BlockLocationHash(playerPos.x, playerPos.y, playerPos.z);
+            float randVal1 = NoiseUtilities.RandomPrecise(blockHash, (byte)startSeed);
+            float randVal2 = NoiseUtilities.RandomPrecise(blockHash, (byte)(startSeed+128));
+            //float randVal1 = (FastNoise.GetNoise(playerPos.x, playerPos.y, playerPos.z, startSeed) + 1.0f) / 2.0f;
+            //float randVal2 = (FastNoise.GetNoise(playerPos.x, playerPos.y, playerPos.z, -(startSeed+1)) + 1.0f) / 2.0f;
+            
+            // Calculate starting target position
+            int rangeX = (posXBound - negXBound) + 1;
+            int rangeZ = (posZBound - negZBound) + 1;
+            int xVal = negXBound + NoiseUtilities.FastFloor(randVal1 * rangeX);
+            int zVal = negZBound + NoiseUtilities.FastFloor(randVal2 * rangeZ);
+            int3 startingTarget = new int3(xVal, playerPos.y, zVal);
+            
+            Debug.Log($"+x {posXBound} -x {negXBound} +z {posZBound} -z {negZBound} rv1 {randVal1} rv2 {randVal2}");
+            
+            if (FindAvailablePos(startingTarget, out target))
+                return true;
+            
+            target = int3.zero;
+            return false;
+        }
+
+        /// <summary>
+        /// In a given x and z column, find a y value that a player can stand in
+        /// </summary>
+        /// <param name="start">Position to search from (on x and z)</param>
+        /// <param name="target">Resulting position a player can stand in</param>
+        /// <returns>True if there is an available position.</returns>
+        private bool FindAvailablePos( int3 start, out int3 target)
         {
             var currPos = start;
             var found = false;
@@ -302,25 +525,25 @@ namespace Opencraft.Player.Emulation
                     break;
                 }
 
-                if (distance == 0 /*&& CanWalk(containingArea, containingAreaLoc, current, end)*/)
+                if (distance == 0)
                 {
-                    // arrived at end, build path tracing backwards
+                    // Arrived at end, build path tracing backwards
                     float3 centerOffset = new float3(0.5f, 0, 0.5f);
-                    //_path.Add(end + centerOffset );
                     int3 next = current;
+                    var sb = new StringBuilder($"PATH: ");
                     while (previousNode.ContainsKey(next))
                     {
-                        _path.Add(next + centerOffset );
-                        /*if (DistanceSquared(next, previousNode[next]) < 1)
-                        {
-                            Debug.LogWarning($"Path broken at {next}!");
-                            _path.Clear();
-                            return false;
-                        }*/
+                        float3 floatPos = next;
+                        
+                        _path.Add(floatPos + centerOffset);
+                        
+                        TerrainUtilities.DebugDrawTerrainBlock(in floatPos, Color.yellow, 6.0f);
+                        sb.Append($"[{next.x},{next.y},{next.z}]<-");
+                        
                         next = previousNode[next];
                     }
-                    _path.Add(start + centerOffset );
-                    
+                    //_path.Add(start + centerOffset );
+                    Debug.Log(sb.ToString());
                     return true;
                 }
 
@@ -354,11 +577,11 @@ namespace Opencraft.Player.Emulation
         /// </summary>
         /// <param name="a">A float value</param>
         /// <param name="b">Another float value</param>
-        /// <returns>True a is close enough to b</returns>
+        /// <returns>True if a is close enough to b</returns>
         private bool PosCloseEnough(float a, float b)
         {
-            float e = 0.05f;
-            return Mathf.Abs(a - b) <= e;
+            const float epsilon = 0.1f;
+            return Mathf.Abs(a - b) <= epsilon;
         }
         
         /// <summary>
@@ -474,12 +697,18 @@ namespace Opencraft.Player.Emulation
             // If we're jumping
             if (destY > origY) {
                 // There must be a block below the origin
-                if (!IsSolidBlock( locA,  _belowOffsets))
+                if (!IsSolidBlock(locA,  _belowOffsets))
+                {
+                    return false;
+                }
+                
+                // There cannot be a block above the origin
+                if (IsSolidBlock(locA,  _aboveOffsets, trueIfAny: true))
                 {
                     return false;
                 }
 
-               
+                // Check for surrounding blocks around start, prevents unnecessary jumps
                 if (movingX)
                 {
                     if (!IsSolidBlock(locA, _jumpXOffsets, trueIfAny: true))
@@ -498,9 +727,17 @@ namespace Opencraft.Player.Emulation
                 
             }
             
-            // If we're just falling there is no further validity to check
-            
-            return true;
+             // If we're falling
+             if (destY < origY)
+             {
+                 // There cannot be a block above the destination
+                 if (IsSolidBlock(locB,  _aboveOffsets, trueIfAny: true))
+                 {
+                     return false;
+                 }
+             }
+
+             return true;
         }
         
         /// <summary>

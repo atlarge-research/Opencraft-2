@@ -148,9 +148,34 @@ namespace Opencraft.Terrain.Utilities
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int FastCeil(float val)
+        {
+            return (val >= 0) ? (int)val : (int)val - 1;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int FastRound(float val)
+        {
+            var temp = (int)val;
+            return (val - temp <= 0.5) ? temp : temp + 1;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int3 FastFloor(float3 vals)
         {
             return new int3(FastFloor(vals.x), FastFloor(vals.y), FastFloor(vals.z));
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int3 FastRound(float3 vals)
+        {
+            return new int3(FastRound(vals.x), FastRound(vals.y), FastRound(vals.z));
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int3 FastCeil(float3 vals)
+        {
+            return new int3(FastCeil(vals.x), FastCeil(vals.y), FastCeil(vals.z));
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

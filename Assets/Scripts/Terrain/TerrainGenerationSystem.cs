@@ -70,7 +70,7 @@ namespace Opencraft.Terrain
             _terrainGenLayers.Dispose();
         }
         
-        [BurstCompile]
+        //[BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             if (!_terrainGenLayers.IsCreated)

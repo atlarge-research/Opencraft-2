@@ -19,29 +19,16 @@ namespace Opencraft.Terrain.Utilities
         
         // Draws outline of an area
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void DebugDrawTerrainArea(ref float3 terrainAreaPos, Color color, float duration = 0.0f)
+        public static void DebugDrawTerrainArea(in float3 terrainAreaPos, Color color, float duration = 0.0f)
         {
-            var d = Env.AREA_SIZE;
-            // Draw a bounding box
-            Debug.DrawLine(terrainAreaPos, terrainAreaPos + new float3(d, 0, 0),color,duration );
-            Debug.DrawLine(terrainAreaPos, terrainAreaPos + new float3(0, d, 0),color,duration );
-            Debug.DrawLine(terrainAreaPos, terrainAreaPos + new float3(0, 0, d),color,duration);
-            Debug.DrawLine(terrainAreaPos + new float3(d, d, 0), terrainAreaPos + new float3(d, 0, 0),color,duration);
-            Debug.DrawLine(terrainAreaPos + new float3(d, d, 0), terrainAreaPos + new float3(0, d, 0),color,duration);
-            Debug.DrawLine(terrainAreaPos + new float3(d, d, 0), terrainAreaPos + new float3(d, d, d),color,duration);
-            Debug.DrawLine(terrainAreaPos + new float3(0, d, d), terrainAreaPos + new float3(0, d, 0),color,duration);
-            Debug.DrawLine(terrainAreaPos + new float3(0, d, d), terrainAreaPos + new float3(0, 0, d),color,duration);
-            Debug.DrawLine(terrainAreaPos + new float3(0, d, d), terrainAreaPos + new float3(d, d, d),color,duration);
-            Debug.DrawLine(terrainAreaPos + new float3(d, 0, d), terrainAreaPos + new float3(d, 0, 0),color,duration);
-            Debug.DrawLine(terrainAreaPos + new float3(d, 0, d), terrainAreaPos + new float3(d, d, d),color,duration);
-            Debug.DrawLine(terrainAreaPos + new float3(d, 0, d), terrainAreaPos + new float3(0, 0, d),color,duration);
+            DebugDrawTerrainBlock(in terrainAreaPos, color, duration, Env.AREA_SIZE);
         }
         
         // Draws outline of a block
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void DebugDrawTerrainBlock(in float3 terrainBlockPos, Color color, float duration = 0.0f)
+        public static void DebugDrawTerrainBlock(in float3 terrainBlockPos, Color color, float duration = 0.0f, float size = 1.0f)
         {
-            var d = 1;
+            var d = size;
             // Draw a bounding box
             Debug.DrawLine(terrainBlockPos, terrainBlockPos + new float3(d, 0, 0),color,duration );
             Debug.DrawLine(terrainBlockPos, terrainBlockPos + new float3(0, d, 0),color,duration );

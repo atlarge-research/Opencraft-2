@@ -41,7 +41,7 @@ namespace Opencraft.Rendering
         {
 
             var baseLocation = t.Position;
-            TerrainUtilities.DebugDrawTerrainArea(ref baseLocation, Color.white);
+            TerrainUtilities.DebugDrawTerrainArea(in baseLocation, Color.white);
         }
     }
 }

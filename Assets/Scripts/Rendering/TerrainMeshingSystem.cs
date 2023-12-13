@@ -44,6 +44,7 @@ namespace Opencraft.Rendering
             // Max size of a terrain area is thus 255!
             // 24 coord, TexCoord as 5 bits, normals as 3 bits
             _vertexLayout[0] = new VertexAttributeDescriptor(attribute: VertexAttribute.Position, format: VertexAttributeFormat.SInt32, dimension: 1, stream: 0);
+            Debug.Log("MESHING SYSTEM IS ACTIVE");
         }
 
         protected override void OnDestroy()
@@ -80,7 +81,8 @@ namespace Opencraft.Rendering
                 terrainNeighbors= terrainNeighbors,
                 terrainBufferLookup = _terrainBlocksBufferLookup,
                 terrainColumnMinBufferLookup = _terrainColumnMinBufferLookup,
-                terrainColumnMaxBufferLookup = _terrainColumnMaxBufferLookup
+                terrainColumnMaxBufferLookup = _terrainColumnMaxBufferLookup,
+                UseDebug =  PolkaDOTS.ApplicationConfig.DebugEnabled.Value
             };
             // todo we can potentially have the handling of meshJob output happen on later frames to reduce
             // todo stuttering caused by large remesh jobs
@@ -124,6 +126,7 @@ namespace Opencraft.Rendering
         [ReadOnly] public BufferLookup<TerrainBlocks> terrainBufferLookup;
         [ReadOnly] public BufferLookup<TerrainColMinY> terrainColumnMinBufferLookup;
         [ReadOnly] public BufferLookup<TerrainColMaxY> terrainColumnMaxBufferLookup;
+        public bool UseDebug;
         public void Execute(int index)
         {
             Entity entity = areasToUpdate[index];
@@ -131,7 +134,8 @@ namespace Opencraft.Rendering
             TerrainArea terrainArea = terrainAreas[index];
             // When area is remeshed, outline it in red
             float3 terrainAreaLocation = terrainArea.location * Env.AREA_SIZE;
-            TerrainUtilities.DebugDrawTerrainArea(ref terrainAreaLocation, Color.red, 0.5f);
+            if (UseDebug)
+                TerrainUtilities.DebugDrawTerrainArea(in terrainAreaLocation, Color.red, 0.5f);
             
             // Mesh object vertex data
             Mesh.MeshData meshData = meshDataArray[index];
