@@ -1,7 +1,3 @@
-using Unity.Mathematics;
-using Unity.NetCode;
-using Unity.VisualScripting;
-
 namespace Opencraft.Player.Emulation
 {
     public enum SimulationBehaviour
@@ -39,22 +35,4 @@ namespace Opencraft.Player.Emulation
         /// </summary>
         West = 4
     }
-    
-    /*public class TargetPosition
-    {
-
-        public int3 GetTargetPosition()
-        {
-            switch (GameConfig.PlayerSimulationBehaviour.Value)
-            {
-                case SimulationBehaviour.BoundedRandom:
-                    break;
-                case SimulationBehaviour.FixedDirection:
-                    break;
-                default:
-                    break;
-            }
-            return int3.zero;
-        }
-    }*/
 }

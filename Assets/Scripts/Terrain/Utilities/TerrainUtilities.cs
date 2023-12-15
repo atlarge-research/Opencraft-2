@@ -17,6 +17,18 @@ namespace Opencraft.Terrain.Utilities
     public static class TerrainUtilities
     {
         
+        [Serializable]
+        public class TerrainChunkNotLoadedException : Exception
+        {
+            public TerrainChunkNotLoadedException() {  }
+
+            public TerrainChunkNotLoadedException(string message)
+                : base(String.Format("Terrain chunk not loaded: {0}", message))
+            {
+
+            }
+        }
+        
         // Draws outline of an area
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void DebugDrawTerrainArea(in float3 terrainAreaPos, Color color, float duration = 0.0f)
@@ -273,7 +285,7 @@ namespace Opencraft.Terrain.Utilities
                         currentEntity = currentNeighbors.neighborXN;
                         continue;
                     }
-                    Debug.LogWarning($"NeighborXN not found!");
+                    //Debug.LogWarning($"NeighborXN not found!");
                     notFound = true;
                     break;
                 }
@@ -286,7 +298,7 @@ namespace Opencraft.Terrain.Utilities
                         currentEntity = currentNeighbors.neighborXP;
                         continue;
                     } 
-                    Debug.LogWarning($"NeighborXP not found!");
+                    //Debug.LogWarning($"NeighborXP not found!");
                     notFound = true;
                     break;
                 }
@@ -299,7 +311,7 @@ namespace Opencraft.Terrain.Utilities
                         currentEntity = currentNeighbors.neighborYN;
                         continue;
                     } 
-                    Debug.LogWarning($"NeighborYN not found!");
+                    //Debug.LogWarning($"NeighborYN not found!");
                     notFound = true;
                     break;
                 }
@@ -312,7 +324,7 @@ namespace Opencraft.Terrain.Utilities
                         currentEntity = currentNeighbors.neighborYP;
                         continue;
                     } 
-                    Debug.LogWarning($"NeighborYP not found!");
+                    //Debug.LogWarning($"NeighborYP not found!");
                     notFound = true;
                     break;
                 }
@@ -325,7 +337,7 @@ namespace Opencraft.Terrain.Utilities
                         currentEntity = currentNeighbors.neighborZN;
                         continue;
                     } 
-                    Debug.LogWarning($"NeighborZN not found!");
+                    //Debug.LogWarning($"NeighborZN not found!");
                     notFound = true;
                     break;
                 }
@@ -338,7 +350,7 @@ namespace Opencraft.Terrain.Utilities
                         currentEntity = currentNeighbors.neighborZP;
                         continue;
                     } 
-                    Debug.LogWarning($"NeighborZP not found!");
+                    //Debug.LogWarning($"NeighborZP not found!");
                     notFound = true;
                     break;
                 }

@@ -1,20 +1,22 @@
 using System;
+using System.Security.Cryptography;
 using System.Text;
 using Opencraft.Player.Authoring;
 using Opencraft.Terrain.Authoring;
 using Opencraft.Terrain.Blocks;
 using Opencraft.Terrain.Utilities;
-using Opencraft.ThirdParty;
 using PolkaDOTS;
 using PolkaDOTS.Deployment;
-using Priority_Queue;
+using Sark.Pathfinding;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
 using Unity.Profiling;
+using Unity.Transforms;
 using UnityEngine;
+using TerrainUtilities = Opencraft.Terrain.Utilities.TerrainUtilities;
 
 namespace Opencraft.Player.Emulation
 {
@@ -23,7 +25,8 @@ namespace Opencraft.Player.Emulation
     /// observing surroundings. Uses an adapted version of the A* search algorithm
     /// </summary>
     [UpdateInGroup(typeof(GhostInputSystemGroup))]
-    [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
+    [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation | WorldSystemFilterFlags.ThinClientSimulation)]
+    [BurstCompile]
     public partial struct PlayerSimulationSystem : ISystem
     {
         private ProfilerMarker _markerPlayerSimulation;
@@ -50,10 +53,13 @@ namespace Opencraft.Player.Emulation
         private CardinalDirection _previousDirection;
         
         // Angles that a simulated player can look
-        private static float LEFT = -90 * Mathf.Deg2Rad;
-        private static float RIGHT = 90 * Mathf.Deg2Rad;
-        private static float FORWARD = 0;
-        private static float BACK = -180 * Mathf.Deg2Rad;
+        private static readonly float LEFT = -90 * Mathf.Deg2Rad;
+        private static readonly float RIGHT = 90 * Mathf.Deg2Rad;
+        private static readonly float FORWARD = 0;
+        private static readonly float BACK = -180 * Mathf.Deg2Rad;
+
+        private static readonly int[] _fixedPosSecondaryOffsets = new[] { 0, 0, 0, -2, 2, -2, 2, -2, 2 };
+        private static readonly int[] _fixedPosPrimaryOffsets = new[] { 10, 6, 2, 10, 10, 6, 6, 2, 2 };
         
         // Area entity and location containing the player
         private Entity _containingArea;
@@ -62,7 +68,16 @@ namespace Opencraft.Player.Emulation
         private CardinalDirection _cardinalDirection;
         private int2 _boundedArea;
         private int _simulationSeed;
-        
+
+        // If we encounter unloaded chunks, wait an amount of ticks for them to load
+        private static readonly int _ticksToWait = 60; // e.g. roughly 1 second at 60 tps
+        private int _waitingTicks;
+
+        private bool _notLoaded;
+
+        private SimulationBehaviour _chosenBehaviour;
+
+        private FixedString128Bytes _worldName;
         
         public void OnCreate(ref SystemState state)
         {
@@ -134,11 +149,22 @@ namespace Opencraft.Player.Emulation
             _cardinalDirection = (CardinalDirection)(ApplicationConfig.UserID % 4);
             // Bounded area set to a fixed size, todo make this a parameter
             _boundedArea = new int2(32, 32);
-            // Pseudorandom seed starts as userID
-            _simulationSeed = ApplicationConfig.UserID;
+            // Simulation seed is a hash of the world name (which includes the user ID) so same userID will be same seed
+            _worldName = state.WorldUnmanaged.Name;
+            var md5Hasher = MD5.Create();
+            var hashed = md5Hasher.ComputeHash(Encoding.UTF8.GetBytes(_worldName.ToString()));
+            _simulationSeed = BitConverter.ToInt32(hashed, 0);
 
             _markerPlayerSimulation = new ProfilerMarker("PlayerSimulationMarker");
 
+            var builder = new EntityQueryBuilder(Allocator.Temp)
+                .WithAny<PolkaDOTS.Player, TerrainArea>();
+            state.RequireForUpdate(state.GetEntityQuery(builder));
+
+            _waitingTicks = 0;
+            _notLoaded = false;
+
+            _chosenBehaviour = GameConfig.PlayerSimulationBehaviour.Value;
         }
 
         public void OnDestroy(ref SystemState state)
@@ -154,22 +180,49 @@ namespace Opencraft.Player.Emulation
             _playerOffsets.Dispose();
         }
 
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
+            if (_waitingTicks > 0)
+            {
+                _waitingTicks--;
+                return;
+            }
+            
             _markerPlayerSimulation.Begin();
             _terrainBlockLookup.Update(ref state);
             _terrainNeighborLookup.Update(ref state);
             
             foreach (var (player, input) in SystemAPI.Query<PlayerAspect, RefRW<PlayerInput>>().WithAll<GhostOwnerIsLocal>())
             {
-                // Wait for the movement system to run at least once to set the containing area
-                if (player.ContainingArea.Area == Entity.Null)
-                   break;
                 // Get players current position (both continuous and discrete)
                 float3 pos = player.Transform.ValueRO.Position;
                 int3 blockPos = NoiseUtilities.FastFloor(pos);
-                _containingArea = player.ContainingArea.Area;
-                _containingAreaLoc = player.ContainingArea.AreaLocation;
+                
+                // Simulated clients have no movement system to find the containing area, so do it here
+                if (state.WorldUnmanaged.IsSimulatedClient())
+                {
+                    var terrainAreasQuery = SystemAPI.QueryBuilder().WithAll<TerrainArea, LocalTransform>().Build();
+                    NativeArray<Entity>  terrainAreasEntities = terrainAreasQuery.ToEntityArray(state.WorldUpdateAllocator);
+                    NativeArray<TerrainArea>  terrainAreas = terrainAreasQuery.ToComponentDataArray<TerrainArea>(state.WorldUpdateAllocator);
+                    var playerAreaLoc = TerrainUtilities.GetContainingAreaLocation(ref pos);
+                    if (!TerrainUtilities.GetTerrainAreaByPosition(ref playerAreaLoc, in terrainAreas, out int containingAreaIndex))
+                    {
+                        //Debug.LogWarning("Simulated player not in an area!");
+                        break;
+                    }
+                    _containingArea = terrainAreasEntities[containingAreaIndex];
+                    _containingAreaLoc = playerAreaLoc;
+                }
+                else
+                {
+                    // Wait for the movement system to run at least once to set the containing area
+                    if (player.ContainingArea.Area == Entity.Null)
+                        break;
+                    _containingArea = player.ContainingArea.Area;
+                    _containingAreaLoc = player.ContainingArea.AreaLocation;
+                }
+                
                 
                 // Check if we have arrived at the next position in the path
                 if (!_path.IsEmpty && BlockCloseEnough(pos, _path[^1]))
@@ -179,7 +232,7 @@ namespace Opencraft.Player.Emulation
                     _path.Length -= 1;
                     if (_path.IsEmpty)
                     {
-                        Debug.Log("Target reached!");
+                        Debug.Log($"{_worldName} player simulation reached target {blockPos}");
                         _path.Clear(); // setup for reuse
                     }
                 }
@@ -194,31 +247,21 @@ namespace Opencraft.Player.Emulation
                         {
                             continue;
                         }
-                        Debug.Log($"Player simulation searching for path from {blockPos} to {target}");
+                        //Debug.Log($"Player simulation searching for path from {blockPos} to {target}");
                         if (AStar(blockPos, target))
                         {
-                            /*
-                            var sb = new StringBuilder($"Player simulation found path: ");
-                            foreach (float3 node in _path)
-                            {
-                                int3 n = NoiseUtilities.FastFloor(node);
-                                float3 fn = new float3(n);
-                                TerrainUtilities.DebugDrawTerrainBlock(in fn, Color.yellow, 6.0f);
-                                sb.Append($"[{n.x},{n.y},{n.z}]<-");
-                            }
-                            Debug.Log(sb.ToString());*/
+                            Debug.Log($"{_worldName} player simulation set new target {target}");
                             foundPath = true;
                             break;
                         }
-                        
-                        Debug.Log($"Player simulation could not find a path from {blockPos} to {target}, will choose new target");
+                        //Debug.Log($"Player simulation could not find a path from {blockPos} to {target}, will choose new target");
                         
                     }
 
                     if (!foundPath)
                     {
-                        Debug.LogError("Player simulation could not find a path in 9 attempts! Disabling player simulation.");
-                        state.Enabled = false;
+                        Debug.Log($"{_worldName} player simulation could not find a path in 9 attempts, waiting to try again");
+                        _waitingTicks = _ticksToWait;
                         _markerPlayerSimulation.End();
                         return;
                     }
@@ -231,18 +274,18 @@ namespace Opencraft.Player.Emulation
                 // Check if we are off-path
                 if (Distance(blockPos, nextBlockInt) > 2)
                 {
-                    Debug.Log($"Player simulation path has strayed, searching for a correction!");
+                    Debug.Log($"{_worldName} player simulation path has strayed, searching for a correction");
                     // Add steps to get back on the original path
                     if (AStar( blockPos, nextBlockInt))
                     {
-                        Debug.Log($"Player simulation found a correction path from {blockPos} to {nextBlockInt}!");
+                        //Debug.Log($"Player simulation found a correction path from {blockPos} to {nextBlockInt}!");
                         nextBlock = _path[^1];
                         nextBlockInt = NoiseUtilities.FastFloor(nextBlock);
                     }
                     else
                     {
                         // Failed to find a path
-                        Debug.LogError($"Player simulation could not find a correction path from {blockPos} to {nextBlockInt}, will choose new target");
+                        Debug.Log($"{_worldName} player simulation could not find a correction path from {blockPos} to {nextBlockInt}, will choose new target");
                         _path.Clear();
                         continue;
                     }
@@ -380,16 +423,28 @@ namespace Opencraft.Player.Emulation
         /// <returns>True if a target position was found</returns>
         private bool FindTargetPos(int3 playerPos, int attempt, out int3 target)
         {
-            switch (GameConfig.PlayerSimulationBehaviour.Value)
+            bool ret;
+            switch (_chosenBehaviour)
             {
                 case SimulationBehaviour.FixedDirection:
-                    return FindTargetPosFixedDirection(playerPos, attempt, out target);
+                    ret = FindTargetPosFixedDirection(playerPos, attempt, out target);
                     break;
                 case SimulationBehaviour.BoundedRandom:
                 default:
-                    return FindTargetPosBoundedRandom(playerPos, attempt, out target);
-                    break;
+                   ret = FindTargetPosBoundedRandom(playerPos, attempt, out target);
+                   break;
             }
+            
+            if (_notLoaded)
+            {
+                // We encountered an unloaded chunk
+                _notLoaded = false; // clear flag
+                target = int3.zero;
+                return false;
+            }
+
+            return ret;
+
         }
 
         /// <summary>
@@ -402,9 +457,9 @@ namespace Opencraft.Player.Emulation
         private bool FindTargetPosFixedDirection(int3 playerPos, int attempt, out int3 target)
         {
             // Secondary offset allows simulated players to go around obstacles 
-            var secondaryOffset = new[] { 0, -2, 2, 0, -2, 2, 0, -2, 2}[attempt];
-            var primaryOffset = new[] { 10, 10, 10, 6, 6, 6, 2, 2, 2 }[attempt];
-           
+            int primaryOffset = _fixedPosPrimaryOffsets[attempt];
+            int secondaryOffset = _fixedPosSecondaryOffsets[attempt];
+            
             int3 offset;
             switch (_cardinalDirection)
             {
@@ -462,7 +517,7 @@ namespace Opencraft.Player.Emulation
             int zVal = negZBound + NoiseUtilities.FastFloor(randVal2 * rangeZ);
             int3 startingTarget = new int3(xVal, playerPos.y, zVal);
             
-            Debug.Log($"+x {posXBound} -x {negXBound} +z {posZBound} -z {negZBound} rv1 {randVal1} rv2 {randVal2}");
+            //Debug.Log($"+x {posXBound} -x {negXBound} +z {posZBound} -z {negZBound} rv1 {randVal1} rv2 {randVal2}");
             
             if (FindAvailablePos(startingTarget, out target))
                 return true;
@@ -506,12 +561,12 @@ namespace Opencraft.Player.Emulation
             
             NativeHashMap<int3, int3> previousNode = new NativeHashMap<int3, int3>(32, Allocator.Temp);
             
-            SimplePriorityQueue<int3, int> toVisit = new SimplePriorityQueue<int3, int>();
+            NativePriorityQueue<int3> toVisit = new NativePriorityQueue<int3>(32, Allocator.Temp);
             int baseCost = DistanceSquared(start, end);
             toVisit.Enqueue(start, baseCost);
             
             
-            while (toVisit.Count > 0)
+            while (toVisit.Length > 0)
             {
                 int3 current = toVisit.Dequeue(out int priority);
                 visited.Add(current);
@@ -530,7 +585,7 @@ namespace Opencraft.Player.Emulation
                     // Arrived at end, build path tracing backwards
                     float3 centerOffset = new float3(0.5f, 0, 0.5f);
                     int3 next = current;
-                    var sb = new StringBuilder($"PATH: ");
+                    //var sb = new StringBuilder($"PATH: ");
                     while (previousNode.ContainsKey(next))
                     {
                         float3 floatPos = next;
@@ -538,17 +593,26 @@ namespace Opencraft.Player.Emulation
                         _path.Add(floatPos + centerOffset);
                         
                         TerrainUtilities.DebugDrawTerrainBlock(in floatPos, Color.yellow, 6.0f);
-                        sb.Append($"[{next.x},{next.y},{next.z}]<-");
+                        //sb.Append($"[{next.x},{next.y},{next.z}]<-");
                         
                         next = previousNode[next];
                     }
                     //_path.Add(start + centerOffset );
-                    Debug.Log(sb.ToString());
+                    //Debug.Log(sb.ToString());
                     return true;
                 }
 
                 
                 FindWalkable(current);
+                
+                if(_notLoaded)
+                {
+                    // Cannot finish search as blocks are not loaded, thus cannot determine if they are walkable.
+                    // clear the flag
+                    _notLoaded = false;
+                    return false;
+                }
+
                 foreach (int3 neighbor in _walkable)
                 {
                     if (visited.Contains(neighbor))
@@ -557,11 +621,11 @@ namespace Opencraft.Player.Emulation
                     }
 
                     var nCost = priority + 1 + DistanceSquared(neighbor, end);
-                    if (!toVisit.Contains(neighbor, out _))
+                    if (!toVisit.Contains(neighbor, out var nPriority))
                     {
                         toVisit.Enqueue(neighbor, nCost);
                         previousNode[neighbor] = current;
-                    } else if (toVisit.Contains(neighbor, out var nPriority) && nPriority > nCost)
+                    } else if (nPriority > nCost)
                     {
                         toVisit.UpdatePriority(neighbor, nCost);
                         previousNode[neighbor] = current;
@@ -663,7 +727,7 @@ namespace Opencraft.Player.Emulation
                 return false;
             }
 
-            // Only one coord at a time
+            // Only one cord at a time
             bool movingX = origX != destX;
             bool movingY = origY != destY;
             bool movingZ = origZ != destZ;
@@ -749,7 +813,7 @@ namespace Opencraft.Player.Emulation
         /// <param name="debug">Whether to print additional debugging information</param>
         /// <returns>True if all blocks are solid OR any block is solid and trueIfAny is true</returns>
         [BurstCompile]
-        private bool IsSolidBlock(int3 pos, NativeHashSet<int3> offsets, bool trueIfAny = false, bool debug = false)
+        private bool IsSolidBlock(int3 pos, NativeHashSet<int3> offsets, bool trueIfAny = false, bool debug = false )
         {
             // Setup search inputs
             TerrainUtilities.BlockSearchInput.DefaultBlockSearchInput(ref BSI);
@@ -778,7 +842,9 @@ namespace Opencraft.Player.Emulation
                 }
                 else
                 {
-                    Debug.LogWarning($"Player sim solid block check on location that is not loaded: {pos} + {offset} in area {BSO.containingAreaPos}");
+                    //throw new TerrainUtilities.TerrainChunkNotLoadedException($"IsSolidBlock checked {pos} + {offset} in unloaded chunk {BSO.containingAreaPos}");
+                    _notLoaded = true;
+                    return false;
                 }
             }
 

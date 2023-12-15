@@ -27,15 +27,42 @@ namespace Opencraft.Player.Multiplay
                 .WithAll<PolkaDOTS.NewPlayer>()
                 .WithAll<GhostOwnerIsLocal>()
                 .Build(this);
-            RequireForUpdate<PlayerSpawner>();
+            if (!World.Unmanaged.IsSimulatedClient())
+            {
+                RequireForUpdate<PlayerSpawner>();
+            }
         }
         protected override void OnUpdate()
         {
+            var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
+            
+            // Simulated players do not need to deal with objects
+            if (World.Unmanaged.IsSimulatedClient())
+            {
+                // Create a spawn player rpc
+                foreach (var (id, netEntity) in SystemAPI.Query<RefRO<NetworkId>>().WithEntityAccess()
+                             .WithAll<NetworkStreamInGame>())
+                {
+                    var req = commandBuffer.CreateEntity();
+                    FixedString32Bytes name = new FixedString32Bytes(World.Unmanaged.Name);
+                    var spawnPlayerRequest = new SpawnPlayerRequest
+                        { Username =  name };
+                    commandBuffer.AddComponent(req, spawnPlayerRequest);
+                    Debug.Log($"Sending spawn player RPC for user { name }");
+                    commandBuffer.AddComponent(req, new SendRpcCommandRequest { TargetConnection = netEntity });
+                    Enabled = false;
+                }
+                
+                commandBuffer.Playback(EntityManager);
+              
+                return;
+            }
+            
             PolkaDOTS.Multiplay.Multiplay multiplay = PolkaDOTS.Multiplay.MultiplaySingleton.Instance;
             if (multiplay.IsUnityNull())
                 return;
             
-            var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
+            
             
             var playerSpawner = SystemAPI.GetSingleton<PlayerSpawner>();
             
@@ -148,4 +175,41 @@ namespace Opencraft.Player.Multiplay
         }
         
     }
+    
+    
+    /*// Stub version of the link system run on thin clients
+    [WorldSystemFilter(WorldSystemFilterFlags.ThinClientSimulation)]
+    [UpdateInGroup(typeof(InitializationSystemGroup))]
+    public partial class SimulatedClientPlayerLinkSystem : SystemBase
+    {
+        protected override void OnCreate()
+        {
+            RequireForUpdate<NetworkStreamInGame>();
+            RequireForUpdate<PlayerSpawner>(); // Don't start until scene has been loaded
+        }
+        protected override void OnUpdate()
+        {
+
+            var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
+            
+            // Create a spawn player rpc
+            foreach (var (id, netEntity) in SystemAPI.Query<RefRO<NetworkId>>().WithEntityAccess()
+                         .WithAll<NetworkStreamInGame>())
+            {
+                var req = commandBuffer.CreateEntity();
+                FixedString32Bytes name = new FixedString32Bytes(World.Unmanaged.Name);
+                var spawnPlayerRequest = new SpawnPlayerRequest
+                    { Username =  name };
+                commandBuffer.AddComponent(req, spawnPlayerRequest);
+                Debug.Log($"Sending spawn player RPC for user { name }");
+                commandBuffer.AddComponent(req, new SendRpcCommandRequest { TargetConnection = netEntity });
+            }
+        
+
+            commandBuffer.Playback(EntityManager);
+            Enabled = false;
+
+        }
+        
+    }*/
 }

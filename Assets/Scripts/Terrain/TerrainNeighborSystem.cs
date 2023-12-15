@@ -10,7 +10,7 @@ using Unity.NetCode;
 namespace Opencraft.Terrain
 {
     [BurstCompile]
-    [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation | WorldSystemFilterFlags.ClientSimulation)]
+    [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation | WorldSystemFilterFlags.ClientSimulation  | WorldSystemFilterFlags.ThinClientSimulation)]
     [UpdateInGroup(typeof(InitializationSystemGroup))]
 #if UNITY_CLIENT
     [UpdateBefore(typeof(TerrainRenderInitSystem))]
