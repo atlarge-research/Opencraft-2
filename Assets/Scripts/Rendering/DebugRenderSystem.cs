@@ -9,7 +9,7 @@ namespace Opencraft.Rendering
 {
     [RequireMatchingQueriesForUpdate]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
-    [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation, WorldSystemFilterFlags.Editor)]
+    [WorldSystemFilter(WorldSystemFilterFlags.Presentation, WorldSystemFilterFlags.Editor)]
     [BurstCompile]
     // Draws bounding boxing on terrain area borders, only in the editor.
     public partial struct DebugRenderSystem : ISystem

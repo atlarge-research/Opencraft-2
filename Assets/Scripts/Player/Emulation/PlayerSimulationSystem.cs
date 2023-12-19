@@ -72,12 +72,20 @@ namespace Opencraft.Player.Emulation
         // If we encounter unloaded chunks, wait an amount of ticks for them to load
         private static readonly int _ticksToWait = 60; // e.g. roughly 1 second at 60 tps
         private int _waitingTicks;
-
+        
+        // Flag for when we encounter an unloaded chunk
         private bool _notLoaded;
-
+        
+        // Determines how we pick the target locations
         private SimulationBehaviour _chosenBehaviour;
-
+        
+        // World metadata used to compute a pseudo-random seed
         private FixedString128Bytes _worldName;
+        
+        // Reusable A* collections
+        private NativeHashSet<int3> _visited;
+        private NativeHashMap<int3, int3> _previousNode;
+        private NativePriorityQueue<int3> _toVisit;
         
         public void OnCreate(ref SystemState state)
         {
@@ -165,6 +173,12 @@ namespace Opencraft.Player.Emulation
             _notLoaded = false;
 
             _chosenBehaviour = GameConfig.PlayerSimulationBehaviour.Value;
+            
+            _visited = new NativeHashSet<int3>(64, Allocator.Persistent);
+            
+            _previousNode = new NativeHashMap<int3, int3>(64, Allocator.Persistent);
+            
+            _toVisit = new NativePriorityQueue<int3>(64, Allocator.Persistent);
         }
 
         public void OnDestroy(ref SystemState state)
@@ -178,6 +192,9 @@ namespace Opencraft.Player.Emulation
             _belowOffsets.Dispose();
             _aboveOffsets.Dispose();
             _playerOffsets.Dispose();
+            _visited.Dispose();
+            _previousNode.Dispose();
+            _toVisit.Dispose();
         }
 
         [BurstCompile]
@@ -495,6 +512,8 @@ namespace Opencraft.Player.Emulation
         /// <returns>True if a target position was found</returns>
         private bool FindTargetPosBoundedRandom(int3 playerPos, int attempt, out int3 target)
         {
+            target = int3.zero;
+            
             int startSeed = _simulationSeed + attempt;
             // Find local bounds within a wider bounding area
             int maxOffset = 10;
@@ -516,13 +535,12 @@ namespace Opencraft.Player.Emulation
             int xVal = negXBound + NoiseUtilities.FastFloor(randVal1 * rangeX);
             int zVal = negZBound + NoiseUtilities.FastFloor(randVal2 * rangeZ);
             int3 startingTarget = new int3(xVal, playerPos.y, zVal);
-            
-            //Debug.Log($"+x {posXBound} -x {negXBound} +z {posZBound} -z {negZBound} rv1 {randVal1} rv2 {randVal2}");
+
+            if (startingTarget.Equals(playerPos))
+                return false;
             
             if (FindAvailablePos(startingTarget, out target))
                 return true;
-            
-            target = int3.zero;
             return false;
         }
 
@@ -557,19 +575,20 @@ namespace Opencraft.Player.Emulation
         /// <returns>True if a path could be found. The resulting path is stored in _path.</returns>
         private bool AStar(int3 start, int3 end)
         {
-            NativeHashSet<int3> visited = new NativeHashSet<int3>(32, Allocator.Temp);
+            _visited.Clear();
             
-            NativeHashMap<int3, int3> previousNode = new NativeHashMap<int3, int3>(32, Allocator.Temp);
+            _previousNode.Clear();
             
-            NativePriorityQueue<int3> toVisit = new NativePriorityQueue<int3>(32, Allocator.Temp);
+            _toVisit.Clear();
+            
             int baseCost = DistanceSquared(start, end);
-            toVisit.Enqueue(start, baseCost);
+            _toVisit.Enqueue(start, baseCost);
             
             
-            while (toVisit.Length > 0)
+            while (_toVisit.Length > 0)
             {
-                int3 current = toVisit.Dequeue(out int priority);
-                visited.Add(current);
+                int3 current = _toVisit.Dequeue(out int priority);
+                _visited.Add(current);
 
                 double distance = Distance(current, end);
                 
@@ -586,7 +605,7 @@ namespace Opencraft.Player.Emulation
                     float3 centerOffset = new float3(0.5f, 0, 0.5f);
                     int3 next = current;
                     //var sb = new StringBuilder($"PATH: ");
-                    while (previousNode.ContainsKey(next))
+                    while (_previousNode.ContainsKey(next))
                     {
                         float3 floatPos = next;
                         
@@ -595,7 +614,7 @@ namespace Opencraft.Player.Emulation
                         TerrainUtilities.DebugDrawTerrainBlock(in floatPos, Color.yellow, 6.0f);
                         //sb.Append($"[{next.x},{next.y},{next.z}]<-");
                         
-                        next = previousNode[next];
+                        next = _previousNode[next];
                     }
                     //_path.Add(start + centerOffset );
                     //Debug.Log(sb.ToString());
@@ -615,20 +634,20 @@ namespace Opencraft.Player.Emulation
 
                 foreach (int3 neighbor in _walkable)
                 {
-                    if (visited.Contains(neighbor))
+                    if (_visited.Contains(neighbor))
                     {
                         continue;
                     }
 
                     var nCost = priority + 1 + DistanceSquared(neighbor, end);
-                    if (!toVisit.Contains(neighbor, out var nPriority))
+                    if (!_toVisit.Contains(neighbor, out var nPriority))
                     {
-                        toVisit.Enqueue(neighbor, nCost);
-                        previousNode[neighbor] = current;
+                        _toVisit.Enqueue(neighbor, nCost);
+                        _previousNode[neighbor] = current;
                     } else if (nPriority > nCost)
                     {
-                        toVisit.UpdatePriority(neighbor, nCost);
-                        previousNode[neighbor] = current;
+                        _toVisit.UpdatePriority(neighbor, nCost);
+                        _previousNode[neighbor] = current;
                     }
                 }
             }

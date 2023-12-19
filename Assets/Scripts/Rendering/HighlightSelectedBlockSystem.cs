@@ -15,7 +15,7 @@ namespace Opencraft.Rendering
 {
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateAfter(typeof(PlayerSelectedBlockSystem))]
-    [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
+    [WorldSystemFilter(WorldSystemFilterFlags.Presentation)]
     [BurstCompile]
     
     public partial struct HighlightSelectedBlockSystem : ISystem

@@ -4,13 +4,14 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Entities.Graphics;
 using Unity.Mathematics;
+using Unity.NetCode;
 using Unity.Rendering;
 using UnityEngine;
 
 namespace Opencraft.Rendering
 {
     // Adds components to TerrainArea entities on client side for meshing and rendering purposes
-    [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
+    [WorldSystemFilter(WorldSystemFilterFlags.Presentation)]
     [UpdateInGroup(typeof(InitializationSystemGroup))]
     [UpdateAfter(typeof(TerrainNeighborSystem))]
     public partial class TerrainRenderInitSystem : SystemBase
@@ -20,6 +21,12 @@ namespace Opencraft.Rendering
 
         protected override void OnCreate()
         {
+            /*if (World.IsSimulatedClient())
+            {
+                Enabled = false;
+                return;
+            }*/
+
             RequireForUpdate<TerrainArea>();
             RequireForUpdate<MaterialBank>();
             RequireForUpdate<NewSpawn>();

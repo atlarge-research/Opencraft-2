@@ -476,8 +476,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7670ed7fdc2d435abe14606c6942102a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  editorArgs: -playType SimulatedClient -emulationType Simulation -userID 1 -numSimulatedPlayers
-    2 -duration 20
+  editorArgs: -userID 1
   useDeploymentConfig: 0
   deploymentConfig: "{\n\t\"nodes\":[\n\t\t{\n\t\t\t\"nodeID\":0,\n\t\t\t\"nodeIP\":\"\",\n\t\t\t\"worldConfigs\":[\n\t\t\t\t{\n\t\t\t\t\t\"worldName\":
     \"GameServer\",\n\t\t\t\t\t\"worldType\":\"Server\",\n\t\t\t\t\t\"initializationMode\":\"Connect\",\n\t\t\t\t\t\"multiplayStreamingRoles\":\"Disabled\",\n\t\t\t\t\t\"serverNodeID\":0,\n\t\t\t\t\t\"streamingNodeID\":-1,\n\t\t\t\t\t\"numThinClients\":0,\n\t\t\t\t\t\"services\":[],\n\t\t\t\t\t\"serviceFilterType\":\"Includes\"\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"worldName\":

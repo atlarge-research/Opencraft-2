@@ -82,14 +82,14 @@ namespace Opencraft.Terrain.Authoring
         [GhostField] public BlockType type;
     }
     
-    [InternalBufferCapacity(512)]
+    [InternalBufferCapacity(256)]
     // The buffer component to store heightmap column min
     public struct TerrainColMinY : IBufferElementData
     {
         [GhostField] public byte minY;
     }
     
-    [InternalBufferCapacity(512)]
+    [InternalBufferCapacity(256)]
     // The buffer component to store heightmap column max
     public struct TerrainColMaxY : IBufferElementData
     {

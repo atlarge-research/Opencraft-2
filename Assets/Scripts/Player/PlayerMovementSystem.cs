@@ -37,6 +37,11 @@ namespace Opencraft.Player
 
         public void OnCreate(ref SystemState state)
         {
+            if (state.WorldUnmanaged.IsSimulatedClient())
+            {
+                state.Enabled = false;
+                return;
+            }
             state.RequireForUpdate<TerrainSpawner>();
             state.RequireForUpdate<NetworkTime>();
             state.RequireForUpdate<PolkaDOTS.Player>();
