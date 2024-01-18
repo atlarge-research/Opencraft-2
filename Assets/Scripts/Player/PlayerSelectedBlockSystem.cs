@@ -2,6 +2,7 @@
 using Opencraft.Terrain.Authoring;
 using Opencraft.Terrain.Blocks;
 using Opencraft.Terrain.Utilities;
+using PolkaDOTS;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -47,7 +48,7 @@ namespace Opencraft.Player
             _terrainBlockLookup.Update(ref state);
             _terrainNeighborLookup.Update(ref state);
             
-            foreach (var player in SystemAPI.Query<PlayerAspect>().WithAll<Simulate>())
+            foreach (var player in SystemAPI.Query<PlayerAspect>().WithAll<Simulate, PlayerInGame>())
             {
                 player.SelectedBlock.blockLoc = new int3(-1);
                 player.SelectedBlock.terrainArea = Entity.Null;

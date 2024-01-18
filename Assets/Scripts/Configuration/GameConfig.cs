@@ -11,5 +11,7 @@ namespace Opencraft
     public static class GameConfig
     {
         public static readonly CommandLineParser.EnumArgument<SimulationBehaviour> PlayerSimulationBehaviour = new CommandLineParser.EnumArgument<SimulationBehaviour>("-playerSimulationBehaviour", SimulationBehaviour.BoundedRandom);
+        public static readonly CommandLineParser.StringArgument TerrainType = new CommandLineParser.StringArgument("-terrainType", "default");
+        
     }
 }

@@ -10,8 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ac255652e50945d8a4e0ec00804a4230, type: 3}
-  m_Name: TerrainLayerCollection
+  m_Name: RollingHillsTerrainLayers
   m_EditorClassIdentifier: 
+  configName: RollingHills
   layers:
   - {fileID: 11400000, guid: b294ba7c0c4a08144916c18d0f467747, type: 2}
   - {fileID: 11400000, guid: 0bc928c0fbae2694a9c4c010f4687eb4, type: 2}
@@ -20,3 +21,4 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 5a676bee5116cc047acabfa4f7d19241, type: 2}
   - {fileID: 11400000, guid: 04e8d21d759b887479e8717cf913597d, type: 2}
   - {fileID: 11400000, guid: 73e6007e32e2599449c029eab6a24533, type: 2}
+  areaColumnHeight: 3

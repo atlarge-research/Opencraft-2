@@ -5,10 +5,6 @@
         // 2^AREA_POW = blocks per area side
         public const int AREA_POW = 4;
         
-        // How many terrain areas from world bottom to world top
-        public const int AREA_COLUMN_HEIGHT = 4;
-        public const int HALF_AREA_COLUMN_HEIGHT = 4;
-        
         public const int INITIAL_COLUMNS_X = 3;
         public const int INITIAL_COLUMNS_Z = 3;
         public const int PLAYER_VIEW_RANGE = 2;
@@ -37,8 +33,6 @@
         public const int AREA_SIZE_WITH_PADDING = AREA_SIZE + AREA_PADDING * 2;
         public const int AREA_SIZE_WITH_PADDING_POW_2 = AREA_SIZE_WITH_PADDING * AREA_SIZE_WITH_PADDING;
         public const int AREA_SIZE_WITH_PADDING_POW_3 = AREA_SIZE_WITH_PADDING * AREA_SIZE_WITH_PADDING_POW_2;
-        
-        public const int WORLD_HEIGHT = AREA_COLUMN_HEIGHT * AREA_SIZE;
 
         #endregion
     }

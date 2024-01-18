@@ -170,8 +170,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   TerrainArea: {fileID: 3194879136077857405, guid: fbe285af02efd794da108f614fa73983,
     type: 3}
+  TerrainConfiguration: {fileID: 3194879136077857405, guid: b5e6d2c9e04e20ca7afceb12dff6319c,
+    type: 3}
   TerrainMaterial: {fileID: 2100000, guid: b53eef138330bed4a8a6bd3b9a48b63e, type: 2}
-  layerCollection: {fileID: 11400000, guid: bf78fd0d717835f4ebfb0ab97738fcc3, type: 2}
 --- !u!114 &176225512
 MonoBehaviour:
   m_ObjectHideFlags: 0

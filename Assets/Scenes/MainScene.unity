@@ -476,7 +476,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7670ed7fdc2d435abe14606c6942102a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  editorArgs: -userID 1
+  editorArgs: '-terrainType Flat -simulationTickRate 20 -networkTickRate 20 '
   useDeploymentConfig: 0
   deploymentConfig: "{\n\t\"nodes\":[\n\t\t{\n\t\t\t\"nodeID\":0,\n\t\t\t\"nodeIP\":\"\",\n\t\t\t\"worldConfigs\":[\n\t\t\t\t{\n\t\t\t\t\t\"worldName\":
     \"GameServer\",\n\t\t\t\t\t\"worldType\":\"Server\",\n\t\t\t\t\t\"initializationMode\":\"Connect\",\n\t\t\t\t\t\"multiplayStreamingRoles\":\"Disabled\",\n\t\t\t\t\t\"serverNodeID\":0,\n\t\t\t\t\t\"streamingNodeID\":-1,\n\t\t\t\t\t\"numThinClients\":0,\n\t\t\t\t\t\"services\":[],\n\t\t\t\t\t\"serviceFilterType\":\"Includes\"\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"worldName\":
@@ -821,6 +821,64 @@ RectTransform:
     type: 3}
   m_PrefabInstance: {fileID: 2111867266}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1288104458
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1288104459}
+  - component: {fileID: 1288104461}
+  - component: {fileID: 1288104460}
+  m_Layer: 0
+  m_Name: Terrain
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1288104459
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1288104458}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 7.338035, y: -0.25584126, z: 9.434171}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1288104460
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1288104458}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 97ae7136ae5a413dad7c1ebdec9b93c5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  terrainConfigBank: {fileID: 11400000, guid: 42f17083995c4266892cf0621fa5e99e, type: 2}
+--- !u!114 &1288104461
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1288104458}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f16bdd52a00647b1a3d3fbf4361fd92e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1913125884
 GameObject:
   m_ObjectHideFlags: 0
@@ -1269,3 +1327,4 @@ SceneRoots:
   - {fileID: 811246997}
   - {fileID: 1913125886}
   - {fileID: 1924636148}
+  - {fileID: 1288104459}

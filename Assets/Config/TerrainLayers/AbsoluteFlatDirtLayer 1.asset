@@ -9,12 +9,16 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 83423c6821253f946aa2dd9db23584ed, type: 3}
-  m_Name: GlobalEntitySceneDependency
+  m_Script: {fileID: 11500000, guid: c8dc7565f1544ab096b804d358a1a4e4, type: 3}
+  m_Name: AbsoluteFlatDirtLayer 1
   m_EditorClassIdentifier: 
-  cacheGUID:
-    Value:
-      x: 1700868938
-      y: 2258953530
-      z: 4084636585
-      w: 1367957563
+  layerType: 0
+  layerName: Flat dirt base layer
+  index: 300
+  blockType: 2
+  frequency: 50
+  exponent: 1
+  minHeight: 1
+  maxHeight: 1
+  chance: 0
+  structureType: 0

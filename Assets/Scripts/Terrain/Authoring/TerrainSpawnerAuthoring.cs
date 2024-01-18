@@ -1,10 +1,13 @@
 using Opencraft.Terrain.Blocks;
 using Opencraft.Terrain.Layers;
 using Opencraft.Terrain.Structures;
+using PolkaDOTS;
 using Unity.Entities;
 using Unity.Mathematics;
+using Unity.NetCode;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Opencraft.Terrain.Authoring
 {
@@ -16,13 +19,13 @@ namespace Opencraft.Terrain.Authoring
     }
     
     
-    
-    
     // Singleton holding the TerrainArea prefab entity we instantiate, and some world settings
     public struct TerrainSpawner : IComponentData, ISingleton
     {
         public Entity TerrainArea;
+        public Entity TerrainConfiguration;
     }
+    
 
     // Manage component of materials used on terrain area meshes
     public class MaterialBank : IComponentData, ISingleton
@@ -49,18 +52,19 @@ namespace Opencraft.Terrain.Authoring
     public class TerrainSpawnerAuthoring : MonoBehaviour
     {
         public GameObject TerrainArea;
+        public GameObject TerrainConfiguration;
         public Material TerrainMaterial;
-        public LayerCollection layerCollection = null;
-
         class Baker : Baker<TerrainSpawnerAuthoring>
         {
             public override void Bake(TerrainSpawnerAuthoring authoring)
             {
                 var entity = GetEntity(TransformUsageFlags.Dynamic);
+                
                 // Create a TerrainSpawner component and fill its fields
                 TerrainSpawner terrainSpawner = new TerrainSpawner
                 {
                     TerrainArea = GetEntity(authoring.TerrainArea, TransformUsageFlags.Dynamic),
+                    TerrainConfiguration= GetEntity(authoring.TerrainConfiguration, TransformUsageFlags.None),
                 };
                 MaterialBank materialBank = new MaterialBank() { TerrainMaterial = authoring.TerrainMaterial };
 
@@ -78,25 +82,45 @@ namespace Opencraft.Terrain.Authoring
                 AddComponent(entity, terrainSpawner);
                 AddComponentObject(entity, materialBank);
                 
-                authoring.layerCollection.SortLayers();
-                foreach(var layer in authoring.layerCollection.Layers)
+                // Create entities for terrain configuration 
+               /* foreach (var config in authoring.terrainConfigBank.Configs)
                 {
-                    Entity layerEntity = CreateAdditionalEntity(TransformUsageFlags.None, entityName:layer.LayerName);
-                    AddComponent(layerEntity, new TerrainGenerationLayer
+                    Entity terrainConfigEntity =
+                        CreateAdditionalEntity(TransformUsageFlags.None, entityName: config.Name);
+                    AddComponent(terrainConfigEntity, new WorldParameters
                     {
-                        layerType=layer.LayerType,
-                        index=layer.Index,
-                        blockType=layer.BlockType,
-                        structureType = layer.StructureType,
-                        frequency = layer.Frequency,
-                        exponent =layer.Exponent,
-                        //baseHeight = layer.BaseHeight,
-                        minHeight = layer.MinHeight,
-                        maxHeight= layer.MaxHeight,
-                        amplitude = layer.MaxHeight - layer.MinHeight,
-                        chance = layer.Chance,
+                        WorldHeight =  config.WorldHeight,
+                        ColumnHeight = config.AreaColumnHeight
                     });
-                }
+                    if (config.Name == "Flat")
+                        AddComponent<FlatTerrainConfig>(terrainConfigEntity);
+                    else
+                        AddComponent<RollingTerrainConfig>(terrainConfigEntity);
+                    
+                    
+                    foreach(var layer in config.Layers)
+                    {
+                        Entity layerEntity = CreateAdditionalEntity(TransformUsageFlags.None, entityName:layer.LayerName);
+                        AddComponent(layerEntity, new TerrainGenerationLayer
+                        {
+                            layerType=layer.LayerType,
+                            index=layer.Index,
+                            blockType=layer.BlockType,
+                            structureType = layer.StructureType,
+                            frequency = layer.Frequency,
+                            exponent =layer.Exponent,
+                            //baseHeight = layer.BaseHeight,
+                            minHeight = layer.MinHeight,
+                            maxHeight= layer.MaxHeight,
+                            amplitude = layer.MaxHeight - layer.MinHeight,
+                            chance = layer.Chance,
+                        });
+                        if (config.Name == "Flat")
+                            AddComponent<FlatTerrainConfig>(layerEntity);
+                        else
+                            AddComponent<RollingTerrainConfig>(layerEntity);
+                    }
+                }*/
                 
             }
         }

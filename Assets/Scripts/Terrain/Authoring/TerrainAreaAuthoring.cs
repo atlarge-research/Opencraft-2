@@ -27,6 +27,8 @@ namespace Opencraft.Terrain.Authoring
                 AddComponent(entity, terrainNeighbors);
                 AddComponent<TerrainArea>(entity);
                 AddComponent<NewSpawn>(entity);
+                SetComponentEnabled<NewSpawn>(entity, true);
+                
                 AddComponent<Remesh>(entity);
                 
                 AddComponent<GenStructures>(entity);

@@ -1,3 +1,4 @@
+using PolkaDOTS;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
@@ -76,6 +77,7 @@ namespace Opencraft.Player.Authoring
                 AddComponent(entity, new PolkaDOTS.NewPlayer());
                 AddComponent(entity, new PlayerContainingArea());
                 AddComponent(entity, new SelectedBlock());
+                AddComponent(entity, new PlayerInGame());
             }
         }
     }

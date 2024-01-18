@@ -1,4 +1,6 @@
 ﻿using Opencraft.Player.Authoring;
+using Opencraft.Terrain.Authoring;
+using PolkaDOTS;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
@@ -20,9 +22,13 @@ namespace Opencraft.Player
     {
         private BeginSimulationEntityCommandBufferSystem m_CommandBufferSystem;
         private EntityQuery playerQuery;
+        private WorldParameters _worldParameters;
         protected override void OnCreate()
         {
             RequireForUpdate<PlayerSpawner>();
+            RequireForUpdate<TerrainSpawner>();
+            //RequireForUpdate<WorldParameters>();
+            RequireForUpdate<PlayerSpawn>();
             // Only update if there are requests to handle
             var builder = new EntityQueryBuilder(Allocator.Temp)
                 .WithAll<ReceiveRpcCommandRequest>()
@@ -42,6 +48,8 @@ namespace Opencraft.Player
         {
             var prefab = SystemAPI.GetSingleton<PlayerSpawner>().Player;
             EntityManager.GetName(prefab, out var prefabName);
+            
+            var playerSpawn = SystemAPI.GetSingleton<PlayerSpawn>();
 
             var commandBuffer = m_CommandBufferSystem.CreateCommandBuffer();
             ComponentLookup<NetworkId> networkIdFromEntity = GetComponentLookup<NetworkId>(true);
@@ -75,12 +83,13 @@ namespace Opencraft.Player
                         Debug.Log(
                             $"Linking user '{reqSpawn.Username}@conn{networkId.Value}' to existing player!");
                         commandBuffer.SetComponent(playerEntity, new GhostOwner { NetworkId = networkId.Value });
+                        commandBuffer.SetComponentEnabled<PlayerInGame>(playerEntity, true);
                         //commandBuffer.SetComponent(playerEntity, player);
                         found = true;
                         break;
                     }
                 }
-
+                
                 if (!found)
                 {
                     Debug.Log(
@@ -89,9 +98,11 @@ namespace Opencraft.Player
                     var player = commandBuffer.Instantiate(prefab);
                     commandBuffer.SetComponent(player, new GhostOwner { NetworkId = networkId.Value });
                     commandBuffer.SetComponent(player, new PolkaDOTS.Player{ Username = reqSpawn.Username });
+                    commandBuffer.SetComponentEnabled<PlayerInGame>(player, true);
                     // Move spawned player object to set position
+                    
                     commandBuffer.SetComponent(player,
-                        LocalTransform.FromPosition(new float3(0.5f, 30f , 0.5f)));
+                        LocalTransform.FromPosition(playerSpawn.location));
                     
                 }
 
@@ -99,8 +110,7 @@ namespace Opencraft.Player
                 commandBuffer.DestroyEntity(entity);
             }).Run(); // On main thread, unlikely enough players will connect on same frame to require parallel execution
             
-            // DestroyPlayerRPC only used during Multiplay, otherwise a client DC will automatically destroy the associated
-            // players through Netcode for Entities
+            // DestroyPlayerRPC only used during Multiplay
             Entities.WithName("HandleDestroyPlayerRPCs").ForEach((Entity entity,
                 in ReceiveRpcCommandRequest _, in DestroyPlayerRequest reqDestroy) =>
             {

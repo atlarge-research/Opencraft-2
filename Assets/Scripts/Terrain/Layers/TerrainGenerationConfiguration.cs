@@ -6,12 +6,25 @@ using UnityEngine;
 namespace Opencraft.Terrain.Layers
 {
     [CreateAssetMenu(fileName = "New Layer Collection", menuName = "OpenCraft/Layer Collection", order = -100)]
-    public class LayerCollection : ScriptableObject
+    public class TerrainGenerationConfiguration : ScriptableObject
     {
+        [SerializeField]
+        private string configName = "";
+        
         [SerializeField]
         private LayerConfig[] layers = null;
 
+        [SerializeField]
+        private int areaColumnHeight = 1;
+
+        public string Name => configName;
+        
         public LayerConfig[] Layers { get { return layers; } }
+
+        public int AreaColumnHeight
+        {
+            get { return areaColumnHeight; }
+        }
 
         public void SortLayers()
         {

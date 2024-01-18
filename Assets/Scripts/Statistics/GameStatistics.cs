@@ -1,7 +1,10 @@
 ﻿using Opencraft.Terrain.Authoring;
 using PolkaDOTS;
+using Unity.Collections;
 using Unity.Entities;
+using Unity.Entities.Content;
 using Unity.NetCode;
+using Unity.NetCode.LowLevel.Unsafe;
 using Unity.Profiling;
 using UnityEngine;
 #if UNITY_EDITOR
@@ -25,8 +28,12 @@ namespace Opencraft.Statistics
         
         public void OnCreate(ref SystemState state)
         {
-            _terrainAreaQuery = state.EntityManager.CreateEntityQuery(typeof(TerrainArea));
-            _playerQuery = state.EntityManager.CreateEntityQuery(typeof(PolkaDOTS.Player));
+            _terrainAreaQuery= new EntityQueryBuilder(Allocator.Temp)
+                .WithAll<TerrainArea>()
+                .Build(state.EntityManager);
+            _playerQuery = new EntityQueryBuilder(Allocator.Temp)
+                .WithAll<PolkaDOTS.Player, PlayerInGame>()
+                .Build(state.EntityManager);
             first = true;
         }
         

@@ -66,7 +66,7 @@ namespace Opencraft.Player.Emulation
         private int3 _containingAreaLoc;
 
         private CardinalDirection _cardinalDirection;
-        private int2 _boundedArea;
+        private int4 _boundedArea;
         private int _simulationSeed;
 
         // If we encounter unloaded chunks, wait an amount of ticks for them to load
@@ -87,12 +87,17 @@ namespace Opencraft.Player.Emulation
         private NativeHashMap<int3, int3> _previousNode;
         private NativePriorityQueue<int3> _toVisit;
         
+        // World generation information
+        private int _columnHeight;
+
+        private bool _debug;
+        
         public void OnCreate(ref SystemState state)
         {
             if (ApplicationConfig.EmulationType != EmulationType.Simulation)
                 state.Enabled = false;
             
-
+            state.RequireForUpdate<WorldParameters>();
             _terrainBlockLookup = state.GetBufferLookup<TerrainBlocks>(true);
             _terrainNeighborLookup = state.GetComponentLookup<TerrainNeighbors>(true);
             
@@ -156,7 +161,7 @@ namespace Opencraft.Player.Emulation
             // Cardinal direction determined by user ID to evenly distribute
             _cardinalDirection = (CardinalDirection)(ApplicationConfig.UserID % 4);
             // Bounded area set to a fixed size, todo make this a parameter
-            _boundedArea = new int2(32, 32);
+            _boundedArea = new int4(-16,16,-16,16);
             // Simulation seed is a hash of the world name (which includes the user ID) so same userID will be same seed
             _worldName = state.WorldUnmanaged.Name;
             var md5Hasher = MD5.Create();
@@ -179,6 +184,10 @@ namespace Opencraft.Player.Emulation
             _previousNode = new NativeHashMap<int3, int3>(64, Allocator.Persistent);
             
             _toVisit = new NativePriorityQueue<int3>(64, Allocator.Persistent);
+            
+            _columnHeight = -1;
+
+            _debug = false;
         }
 
         public void OnDestroy(ref SystemState state)
@@ -207,11 +216,26 @@ namespace Opencraft.Player.Emulation
             }
             
             _markerPlayerSimulation.Begin();
+            
+            SystemAPI.TryGetSingleton<ClientServerTickRate>(out var tickRate);
+            tickRate.ResolveDefaults();
+            var adjustmentInputAmount = 1; // / (60 / tickRate.SimulationTickRate);
+            
             _terrainBlockLookup.Update(ref state);
             _terrainNeighborLookup.Update(ref state);
-            
+            // Fetch world generation information from the WorldParameters singleton
+            if (_columnHeight== -1)
+            {
+                var worldParameters = SystemAPI.GetSingleton<WorldParameters>();
+                _columnHeight = worldParameters.ColumnHeight;
+            }
+
             foreach (var (player, input) in SystemAPI.Query<PlayerAspect, RefRW<PlayerInput>>().WithAll<GhostOwnerIsLocal>())
             {
+                // Clear previous frame inputs
+                input.ValueRW.Movement.y = 0;
+                input.ValueRW.Movement.x = 0;
+                
                 // Get players current position (both continuous and discrete)
                 float3 pos = player.Transform.ValueRO.Position;
                 int3 blockPos = NoiseUtilities.FastFloor(pos);
@@ -222,8 +246,8 @@ namespace Opencraft.Player.Emulation
                     var terrainAreasQuery = SystemAPI.QueryBuilder().WithAll<TerrainArea, LocalTransform>().Build();
                     NativeArray<Entity>  terrainAreasEntities = terrainAreasQuery.ToEntityArray(state.WorldUpdateAllocator);
                     NativeArray<TerrainArea>  terrainAreas = terrainAreasQuery.ToComponentDataArray<TerrainArea>(state.WorldUpdateAllocator);
-                    var playerAreaLoc = TerrainUtilities.GetContainingAreaLocation(ref pos);
-                    if (!TerrainUtilities.GetTerrainAreaByPosition(ref playerAreaLoc, in terrainAreas, out int containingAreaIndex))
+                    var playerAreaLoc = TerrainUtilities.GetContainingAreaLocation(in pos);
+                    if (!TerrainUtilities.GetTerrainAreaByPosition(in playerAreaLoc, in terrainAreas, out int containingAreaIndex))
                     {
                         //Debug.LogWarning("Simulated player not in an area!");
                         break;
@@ -243,7 +267,7 @@ namespace Opencraft.Player.Emulation
                 
                 // Check if we have arrived at the next position in the path
                 if (!_path.IsEmpty && BlockCloseEnough(pos, _path[^1]))
-                {
+                { 
                     float3 nb = new float3(blockPos);
                     TerrainUtilities.DebugDrawTerrainBlock(in nb, Color.red, 6.0f);
                     _path.Length -= 1;
@@ -262,22 +286,24 @@ namespace Opencraft.Player.Emulation
                     {
                         if (!FindTargetPos(blockPos, attempt, out int3 target))
                         {
+                            Debug.Log($"    {attempt}: Could not find target at {blockPos}");
                             continue;
                         }
-                        //Debug.Log($"Player simulation searching for path from {blockPos} to {target}");
-                        if (AStar(blockPos, target))
+                        Debug.Log($"Player simulation searching for path from {pos} = {blockPos} to {target}");
+                        if (AStar(blockPos, target, _debug))
                         {
                             Debug.Log($"{_worldName} player simulation set new target {target}");
+                            _debug = false;
                             foundPath = true;
                             break;
                         }
-                        //Debug.Log($"Player simulation could not find a path from {blockPos} to {target}, will choose new target");
-                        
+                        Debug.Log($"Player simulation could not find a path from {blockPos} to {target}, will choose new target");
                     }
 
                     if (!foundPath)
                     {
                         Debug.Log($"{_worldName} player simulation could not find a path in 9 attempts, waiting to try again");
+                        _debug = true;
                         _waitingTicks = _ticksToWait;
                         _markerPlayerSimulation.End();
                         return;
@@ -289,13 +315,14 @@ namespace Opencraft.Player.Emulation
                 int3 nextBlockInt = NoiseUtilities.FastFloor(nextBlock);
                 
                 // Check if we are off-path
-                if (Distance(blockPos, nextBlockInt) > 2)
+                if (Distance(blockPos, nextBlockInt) > 2.5)
                 {
-                    Debug.Log($"{_worldName} player simulation path has strayed, searching for a correction");
+                    Debug.Log($"{_worldName} player simulation path has strayed from {nextBlockInt} to {blockPos}, searching for a correction");
                     // Add steps to get back on the original path
-                    if (AStar( blockPos, nextBlockInt))
+                    if (AStar( blockPos, nextBlockInt, _debug ))
                     {
                         //Debug.Log($"Player simulation found a correction path from {blockPos} to {nextBlockInt}!");
+                        _debug = false;
                         nextBlock = _path[^1];
                         nextBlockInt = NoiseUtilities.FastFloor(nextBlock);
                     }
@@ -311,7 +338,11 @@ namespace Opencraft.Player.Emulation
                 // Determine inputs necessary to work towards next block
                 var zDiff = nextBlock.z - pos.z;
                 var xDiff = nextBlock.x - pos.x;
-                const float epsilon = 0.1f;
+                // Tricky problem, player speed is set to 6 meters per second regardless of tickrate,
+                // but moving at a diagonal means we do not move at 6 mps forward, but instead roughly 3 mps
+                // these epsilon thresholds must then also change depending on tickrate
+                float primaryEpsilon = 3.0f / tickRate.SimulationTickRate; // eg .05 at 60 tps, .15 at 20 tps
+                float secondaryEpsilon = primaryEpsilon / 1.5f;
 
                 CardinalDirection primaryDirection = CardinalDirection.None;
                 CardinalDirection secondaryDirection = CardinalDirection.None;
@@ -320,21 +351,21 @@ namespace Opencraft.Player.Emulation
                 if (math.abs(zDiff) >= math.abs(xDiff))
                 {
                     // Forward or back primary
-                    if (zDiff >= epsilon)
+                    if (zDiff >= primaryEpsilon)
                     {
                         primaryDirection = CardinalDirection.North;
                     }
-                    else if (zDiff <= -epsilon)
+                    else if (zDiff <= -primaryEpsilon)
                     {
                         primaryDirection = CardinalDirection.South;
                     }
                     
                     // Left or right secondary
-                    if (xDiff >= epsilon)
+                    if (xDiff >= secondaryEpsilon)
                     {
                         secondaryDirection = CardinalDirection.East;
                     }
-                    else if (xDiff <= -epsilon)
+                    else if (xDiff <= -secondaryEpsilon)
                     {
                         secondaryDirection = CardinalDirection.West;
                     }
@@ -343,21 +374,21 @@ namespace Opencraft.Player.Emulation
                 else
                 {
                     // Left or right primary
-                    if (xDiff >= epsilon)
+                    if (xDiff >= primaryEpsilon)
                     {
                         primaryDirection = CardinalDirection.East;
                     }
-                    else if (xDiff <= -epsilon)
+                    else if (xDiff <= -primaryEpsilon)
                     {
                         primaryDirection = CardinalDirection.West;
                     }
                     
                     // Forward or back secondary
-                    if (zDiff >= epsilon)
+                    if (zDiff >= secondaryEpsilon)
                     {
                         secondaryDirection = CardinalDirection.North;
                     }
-                    else if (zDiff <= -epsilon)
+                    else if (zDiff <= -secondaryEpsilon)
                     {
                         secondaryDirection = CardinalDirection.South;
                     }
@@ -370,6 +401,7 @@ namespace Opencraft.Player.Emulation
                 // without moving forward and calculate secondary directions
                 if (primaryDirection == CardinalDirection.None)
                 {
+                    //Debug.LogWarning($"Current direction set to none! z diff {zDiff} x diff {xDiff}");
                     input.ValueRW.Movement.y = 0;
                     currentDirection = _previousDirection;
                 }
@@ -384,30 +416,30 @@ namespace Opencraft.Player.Emulation
                     case CardinalDirection.North:
                         input.ValueRW.Yaw = FORWARD;
                         if(secondaryDirection == CardinalDirection.East)
-                            input.ValueRW.Movement.x = 1;
+                            input.ValueRW.Movement.x = adjustmentInputAmount;
                         if(secondaryDirection == CardinalDirection.West)
-                            input.ValueRW.Movement.x = -1;
+                            input.ValueRW.Movement.x = -adjustmentInputAmount;
                         break;
                     case CardinalDirection.East:
                         input.ValueRW.Yaw = RIGHT;
                         if(secondaryDirection == CardinalDirection.South)
-                            input.ValueRW.Movement.x = 1;
+                            input.ValueRW.Movement.x = adjustmentInputAmount;
                         if(secondaryDirection == CardinalDirection.North)
-                            input.ValueRW.Movement.x = -1;
+                            input.ValueRW.Movement.x = -adjustmentInputAmount;
                         break;
                     case CardinalDirection.South:
                         input.ValueRW.Yaw = BACK;
                         if(secondaryDirection == CardinalDirection.West)
-                            input.ValueRW.Movement.x = 1;
+                            input.ValueRW.Movement.x = adjustmentInputAmount;
                         if(secondaryDirection == CardinalDirection.East)
-                            input.ValueRW.Movement.x = -1;
+                            input.ValueRW.Movement.x = -adjustmentInputAmount;
                         break;
                     case CardinalDirection.West:
                         input.ValueRW.Yaw = LEFT;
                         if(secondaryDirection == CardinalDirection.North)
-                            input.ValueRW.Movement.x = 1;
+                            input.ValueRW.Movement.x = adjustmentInputAmount;
                         if(secondaryDirection == CardinalDirection.South)
-                            input.ValueRW.Movement.x = -1;
+                            input.ValueRW.Movement.x = -adjustmentInputAmount;
                         break;
                     case CardinalDirection.None:
                     default:
@@ -518,9 +550,9 @@ namespace Opencraft.Player.Emulation
             // Find local bounds within a wider bounding area
             int maxOffset = 10;
             int posXBound = math.min(playerPos.x + maxOffset, _boundedArea.x);
-            int negXBound = math.max(playerPos.x - maxOffset, -_boundedArea.x);
-            int posZBound = math.min(playerPos.z + maxOffset, _boundedArea.y);
-            int negZBound = math.max(playerPos.z - maxOffset, -_boundedArea.y);
+            int negXBound = math.max(playerPos.x - maxOffset, _boundedArea.y);
+            int posZBound = math.min(playerPos.z + maxOffset, _boundedArea.z);
+            int negZBound = math.max(playerPos.z - maxOffset, _boundedArea.w);
             
             // Get random values based on seed and current position
             int blockHash = TerrainUtilities.BlockLocationHash(playerPos.x, playerPos.y, playerPos.z);
@@ -550,21 +582,31 @@ namespace Opencraft.Player.Emulation
         /// <param name="start">Position to search from (on x and z)</param>
         /// <param name="target">Resulting position a player can stand in</param>
         /// <returns>True if there is an available position.</returns>
-        private bool FindAvailablePos( int3 start, out int3 target)
-        {
+        private bool FindAvailablePos( int3 start, out int3 target) {
             var currPos = start;
-            var found = false;
-            for (var currY = start.y+3; currY > start.y - 5; currY--)
-            {
-                currPos = new int3(currPos.x, currY, currPos.z);
-                if (!IsSolidBlock(currPos, _belowOffsets) ||
-                    IsSolidBlock(currPos, _playerOffsets, true)) continue;
-                found = true;
-                break;
-            }
-            target = currPos;
+            target = start;
             
-            return found;
+            // Check going down
+            for (var currY = start.y; currY > start.y - 5; currY--)
+            {
+                currPos.y = currY;
+                if (IsSolidBlock(currPos, _belowOffsets) && !IsSolidBlock(currPos, _playerOffsets, true)) {
+                    target = currPos;
+                    return true;
+                }
+            }
+            
+            // Check going up
+            for (var currY = start.y+1; currY < start.y +3; currY++)
+            {
+                currPos.y = currY;
+                if (IsSolidBlock(currPos, _belowOffsets) && !IsSolidBlock(currPos, _playerOffsets, true)) {
+                    target = currPos;
+                    return true;
+                }
+            }
+            
+            return false;
         }
         
         /// <summary>
@@ -572,8 +614,9 @@ namespace Opencraft.Player.Emulation
         /// </summary>
         /// <param name="start">Starting block</param>
         /// <param name="end">Target block</param>
+        /// <param name="debug">Print debugging statements</param>
         /// <returns>True if a path could be found. The resulting path is stored in _path.</returns>
-        private bool AStar(int3 start, int3 end)
+        private bool AStar(int3 start, int3 end, bool debug = false)
         {
             _visited.Clear();
             
@@ -593,9 +636,9 @@ namespace Opencraft.Player.Emulation
                 double distance = Distance(current, end);
                 
                 // Early out if search space has become too big
-                if (distance > 20 )
+                if (distance > 50 )
                 {
-                    Debug.LogWarning("AStar overflowed!");
+                    //Debug.LogWarning($"AStar overflowed, distance={distance}!");
                     break;
                 }
 
@@ -622,16 +665,18 @@ namespace Opencraft.Player.Emulation
                 }
 
                 
-                FindWalkable(current);
+                FindWalkable(current, debug);
                 
                 if(_notLoaded)
                 {
                     // Cannot finish search as blocks are not loaded, thus cannot determine if they are walkable.
                     // clear the flag
                     _notLoaded = false;
+                    if(debug)
+                        Debug.LogWarning("AStar halted as encountered unloaded blocks, retrying...");
                     return false;
                 }
-
+                
                 foreach (int3 neighbor in _walkable)
                 {
                     if (_visited.Contains(neighbor))
@@ -656,14 +701,14 @@ namespace Opencraft.Player.Emulation
         }
         
         /// <summary>
-        /// Check if two floats are very close, e.g. within 0.05f
+        /// Check if two floats are very close
         /// </summary>
         /// <param name="a">A float value</param>
         /// <param name="b">Another float value</param>
         /// <returns>True if a is close enough to b</returns>
         private bool PosCloseEnough(float a, float b)
         {
-            const float epsilon = 0.1f;
+            const float epsilon = 0.2f;
             return Mathf.Abs(a - b) <= epsilon;
         }
         
@@ -706,14 +751,15 @@ namespace Opencraft.Player.Emulation
         /// Find the neighboring block positions around start that can be walked to
         /// </summary>
         /// <param name="start">Starting block</param>
+        /// <param name="debug">Print debugging statements</param>
         /// <returns></returns>
         /// <remarks>Walkable neighboring blocks stored in _walkable</remarks>
-        private void FindWalkable(int3 start)
+        private void FindWalkable(int3 start, bool debug = false)
         {
             _walkable.Clear();
             foreach (var offset in _surroundingOffsets) {
                 var target = start + offset;
-                if (CanWalk(start, target))
+                if (CanWalk(start, target, debug))
                 {
                     _walkable.Add(target);
                 }
@@ -725,10 +771,11 @@ namespace Opencraft.Player.Emulation
         /// </summary>
         /// <param name="locA">Starting block position</param>
         /// <param name="locB">Starting block position</param>
+        /// <param name="debug">Print debugging statements</param>
         /// <returns>True if a player can walk from locA to locB</returns>
         /// <remarks>locA and locB must be within 1 block</remarks>>
         [BurstCompile]
-        private bool CanWalk(int3 locA, int3 locB)
+        private bool CanWalk(int3 locA, int3 locB, bool debug = false)
         {
             int origX = locA.x, origY = locA.y, origZ = locA.z;
             int destX = locB.x, destY = locB.y, destZ = locB.z;
@@ -839,6 +886,7 @@ namespace Opencraft.Player.Emulation
             BSI.basePos = pos;
             BSI.areaEntity = _containingArea;
             BSI.terrainAreaPos = _containingAreaLoc;
+            BSI.columnHeight = _columnHeight;
 
             bool foundAir = false;
             foreach (int3 offset in offsets)
@@ -861,9 +909,18 @@ namespace Opencraft.Player.Emulation
                 }
                 else
                 {
-                    //throw new TerrainUtilities.TerrainChunkNotLoadedException($"IsSolidBlock checked {pos} + {offset} in unloaded chunk {BSO.containingAreaPos}");
-                    _notLoaded = true;
-                    return false;
+                    if (BSO.result == TerrainUtilities.BlockSearchResult.NotLoaded)
+                    {
+                        //Debug.LogWarning($"IsSolidBlock checked {BSO.localPos} in unloaded chunk {BSO.containingAreaPos}");
+                        _notLoaded = true;
+                        return false;
+                    }
+                    // all OOB blocks treated as always air
+                    if (BSO.result == TerrainUtilities.BlockSearchResult.OutOfBounds)
+                    {
+                        foundAir = true;
+                    }
+                    
                 }
             }
 

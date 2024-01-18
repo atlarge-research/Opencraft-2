@@ -2,6 +2,7 @@
 using Opencraft.Terrain.Authoring;
 using Opencraft.Terrain.Blocks;
 using Opencraft.Terrain.Utilities;
+using PolkaDOTS;
 using Unity.Entities;
 using Unity.Burst;
 using Unity.Mathematics;
@@ -9,6 +10,7 @@ using Unity.Profiling;
 using Unity.Collections;
 using Unity.NetCode;
 using Unity.Transforms;
+using UnityEngine;
 
 namespace Opencraft.Player
 {
@@ -37,11 +39,13 @@ namespace Opencraft.Player
 
         public void OnCreate(ref SystemState state)
         {
-            if (state.WorldUnmanaged.IsSimulatedClient())
+            // Predicting movement on simulated clients seems unavoidable. If they do not predict, simulated movement
+            // becomes fragile due to 2x RTT delays in player positioning
+            /*if (state.WorldUnmanaged.IsSimulatedClient())
             {
                 state.Enabled = false;
                 return;
-            }
+            }*/
             state.RequireForUpdate<TerrainSpawner>();
             state.RequireForUpdate<NetworkTime>();
             state.RequireForUpdate<PolkaDOTS.Player>();
@@ -52,20 +56,20 @@ namespace Opencraft.Player
             _terrainNeighborLookup = state.GetComponentLookup<TerrainNeighbors>(true);
             float d = 0.25f;
             _playerSupportOffsets = new NativeHashSet<float3>(4, Allocator.Persistent);
-            _playerSupportOffsets .Add(new float3(d,-1.1f,d));
-            _playerSupportOffsets .Add(new float3(d,-1.1f,-d));
-            _playerSupportOffsets .Add(new float3(-d,-1.1f,-d));
-            _playerSupportOffsets .Add(new float3(-d,-1.1f,d));
+            _playerSupportOffsets.Add(new float3(d,-1.2f,d));
+            _playerSupportOffsets.Add(new float3(d,-1.2f,-d));
+            _playerSupportOffsets.Add(new float3(-d,-1.2f,-d));
+            _playerSupportOffsets.Add(new float3(-d,-1.2f,d));
             
             _playerCollisionOffsets= new NativeHashSet<float3>(8, Allocator.Persistent);
             _playerCollisionOffsets.Add(new float3(d,0f,d));
             _playerCollisionOffsets.Add(new float3(d,0f,-d));
             _playerCollisionOffsets.Add(new float3(-d,0f,-d));
             _playerCollisionOffsets.Add(new float3(-d,0f,d));
-            _playerCollisionOffsets.Add(new float3(d,-1.0f,d));
-            _playerCollisionOffsets.Add(new float3(d,-1.0f,-d));
-            _playerCollisionOffsets.Add(new float3(-d,-1.0f,-d));
-            _playerCollisionOffsets.Add(new float3(-d,-1.0f,d));
+            _playerCollisionOffsets.Add(new float3(d,-1f,d));
+            _playerCollisionOffsets.Add(new float3(d,-1f,-d));
+            _playerCollisionOffsets.Add(new float3(-d,-1f,-d));
+            _playerCollisionOffsets.Add(new float3(-d,-1f,d));
             
             TerrainUtilities.BlockSearchInput.DefaultBlockSearchInput(ref BSI);
             TerrainUtilities.BlockSearchOutput.DefaultBlockSearchOutput(ref BSO);
@@ -94,7 +98,7 @@ namespace Opencraft.Player
             terrainAreasEntities = terrainAreasQuery.ToEntityArray(state.WorldUpdateAllocator);
             terrainAreas = terrainAreasQuery.ToComponentDataArray<TerrainArea>(state.WorldUpdateAllocator);
 
-            foreach (var player in SystemAPI.Query<PlayerAspect>().WithAll<Simulate>())
+            foreach (var player in SystemAPI.Query<PlayerAspect>().WithAll<Simulate, PlayerInGame>())
             {
                 if (!player.AutoCommandTarget.Enabled)
                 {
@@ -108,12 +112,13 @@ namespace Opencraft.Player
                 // Check the terrain areas underneath the player
                 int containingAreaIndex = GetPlayerContainingArea(pos, out int3 containingAreaLoc);
                 PlayerSupportState supportState = PlayerSupportState.Unsupported;
+                int supportedY = -1;
                 if (containingAreaIndex != -1)
                 {
                     player.ContainingArea.Area = terrainAreasEntities[containingAreaIndex];
                     player.ContainingArea.AreaLocation = containingAreaLoc;
                     supportState =
-                        CheckPlayerSupported(player.ContainingArea.Area, containingAreaLoc, player.Transform.ValueRO.Position);
+                        CheckPlayerSupported(player.ContainingArea.Area, containingAreaLoc, player.Transform.ValueRO.Position, ref supportedY);
                 }
                 else
                 {
@@ -135,14 +140,14 @@ namespace Opencraft.Player
                 if (player.Player.JumpVelocity > 0)
                 {
                     player.Player.JumpVelocity -= velocityDecrementStep;
-                    verticalMovement = 1;
+                    verticalMovement = 1f;
                 }
                 else
                 {
                     // If jumpvelocity is low enough start moving down again when unsupported
                     if (supportState == PlayerSupportState.Unsupported)
-                        verticalMovement = -1;
-                }
+                        verticalMovement = -1f;
+                } 
                 
                 float2 input = player.Input.Movement;
                 float3 wantedMove = new float3(input.x, verticalMovement, input.y);
@@ -158,7 +163,7 @@ namespace Opencraft.Player
 
                 m_MarkerStep.Begin();
 
-                MovePlayerCheckCollisions(SystemAPI.Time.DeltaTime, ref pos, ref wantedMove, player.ContainingArea.Area, containingAreaLoc);
+                MovePlayerCheckCollisions(SystemAPI.Time.DeltaTime, ref pos, ref wantedMove, player.ContainingArea.Area, containingAreaLoc, supportState, supportedY);
                 
                 m_MarkerStep.End();
 
@@ -171,9 +176,9 @@ namespace Opencraft.Player
         // Checks if the blocks under a player exist in the terrain
         private int GetPlayerContainingArea(float3 pos, out int3 containingAreaLoc)
         {
-            var playerAreaLoc = TerrainUtilities.GetContainingAreaLocation(ref pos);
+            var playerAreaLoc = TerrainUtilities.GetContainingAreaLocation(in pos);
             
-            if (!TerrainUtilities.GetTerrainAreaByPosition(ref playerAreaLoc, in terrainAreas, out int containingAreaIndex))
+            if (!TerrainUtilities.GetTerrainAreaByPosition(in playerAreaLoc, in terrainAreas, out int containingAreaIndex))
             {
                 containingAreaLoc = new int3(-1);
                 return -1;
@@ -186,7 +191,7 @@ namespace Opencraft.Player
 
         [BurstCompile]
         // Checks if the blocks under a player exist in the terrain
-        private PlayerSupportState CheckPlayerSupported(Entity containingArea, int3 containingAreaLoc, float3 pos)
+        private PlayerSupportState CheckPlayerSupported(Entity containingArea, int3 containingAreaLoc, float3 pos, ref int supportedY)
         {
             // Setup search inputs
             TerrainUtilities.BlockSearchInput.DefaultBlockSearchInput(ref BSI);
@@ -202,8 +207,11 @@ namespace Opencraft.Player
                 if (TerrainUtilities.GetBlockAtPositionByOffset(in BSI, ref BSO,
                         ref _terrainNeighborLookup, ref _terrainBlockLookup))
                 {
-                    if(BSO.blockType != BlockType.Air)
+                    if (BSO.blockType != BlockType.Air)
+                    {
+                        supportedY = BSI.basePos.y;
                         return PlayerSupportState.Supported;
+                    }
                 }
 
             }
@@ -215,9 +223,21 @@ namespace Opencraft.Player
         [BurstCompile]
         // Checks if there are blocks in the way of the player's movement
         private void MovePlayerCheckCollisions(float deltaTime, ref float3 pos, ref float3 wantedMove,
-            Entity containingArea, int3 containingAreaLoc)
+            Entity containingArea, int3 containingAreaLoc, PlayerSupportState supportState, int supportY)
         {
             float3 newPosition = pos + wantedMove;
+            // Prevent falling out of bounds
+            if (newPosition.y < 1.0f)
+                newPosition.y = 1.0f;
+            
+            // Prevent clipping into supporting block when tick rate is low
+            if (supportState == PlayerSupportState.Supported && newPosition.y < supportY+2)
+            {
+                //Debug.Log($"Prevented clip into y={supportY}");
+                newPosition.y = supportY + 2;
+            }
+            
+            
             // Setup search inputs
             TerrainUtilities.BlockSearchInput.DefaultBlockSearchInput(ref BSI);
             BSI.offset = int3.zero;
