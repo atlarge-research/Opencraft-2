@@ -1,4 +1,3 @@
-using System;
 using System.Runtime.CompilerServices;
 using Opencraft.Terrain.Authoring;
 using Opencraft.Terrain.Blocks;
@@ -111,7 +110,7 @@ namespace Opencraft.Rendering
     }
 
 
-    // Greedy meshing algorithm adapted by https://vercidium.com/blog/voxel-world-optimisations/
+    // Greedy meshing algorithm adapted from https://vercidium.com/blog/voxel-world-optimisations/
     // One mesh per terrain area, one quad face per run
     // X and Z runs extend along y axis, Y runs extend along X axis.
     [BurstCompile]
@@ -183,7 +182,7 @@ namespace Opencraft.Rendering
             NativeArray<ushort> indices = meshData.GetIndexData<ushort>();
             
             // Precalculate the map-relative Y position of the chunk in the map
-            int chunkY = (int)terrainAreaLocation.y * Env.AREA_SIZE;
+            int chunkY =  terrainArea.location.y * Env.AREA_SIZE;
             // Allocate variables on the stack
             // iBPS is i * bps, kBPS2 is k*bps*bps. S means shifted, x1 means x + 1
             int access, heightMapAccess, iBPS, kBPS2, i1, k1, j, j1, jS, jS1, topJ,

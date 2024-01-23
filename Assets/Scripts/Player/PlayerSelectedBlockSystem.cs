@@ -4,10 +4,8 @@ using Opencraft.Terrain.Blocks;
 using Opencraft.Terrain.Utilities;
 using PolkaDOTS;
 using Unity.Burst;
-using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
-using Unity.Transforms;
 
 
 namespace Opencraft.Player
@@ -31,7 +29,7 @@ namespace Opencraft.Player
         public void OnCreate(ref SystemState state)
         {
 
-            state.RequireForUpdate<PolkaDOTS.Player>();
+            state.RequireForUpdate<PlayerComponent>();
             state.RequireForUpdate<TerrainArea>();
             state.RequireForUpdate<TerrainSpawner>();
             _terrainBlockLookup = state.GetBufferLookup<TerrainBlocks>(true);

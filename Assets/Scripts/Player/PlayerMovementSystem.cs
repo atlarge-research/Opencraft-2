@@ -10,7 +10,6 @@ using Unity.Profiling;
 using Unity.Collections;
 using Unity.NetCode;
 using Unity.Transforms;
-using UnityEngine;
 
 namespace Opencraft.Player
 {
@@ -46,9 +45,15 @@ namespace Opencraft.Player
                 state.Enabled = false;
                 return;
             }*/
+            if (state.WorldUnmanaged.IsClient() && ApplicationConfig.DisablePrediction.Value)
+            {
+                state.Enabled = false;
+                return;
+            }
+
             state.RequireForUpdate<TerrainSpawner>();
             state.RequireForUpdate<NetworkTime>();
-            state.RequireForUpdate<PolkaDOTS.Player>();
+            state.RequireForUpdate<PlayerComponent>();
 
             m_MarkerGroundCheck = new ProfilerMarker("GroundCheck");
             m_MarkerStep = new ProfilerMarker("CollisionStep");
@@ -133,13 +138,13 @@ namespace Opencraft.Player
                 if (supportState == PlayerSupportState.Supported && player.Input.Jump.IsSet)
                 {
                     // Allow jump and stop falling when grounded
-                    player.Player.JumpVelocity = 20;
+                    player.PlayerComponent.JumpVelocity = 20;
                 }
                 
                 var verticalMovement = 0f;
-                if (player.Player.JumpVelocity > 0)
+                if (player.PlayerComponent.JumpVelocity > 0)
                 {
-                    player.Player.JumpVelocity -= velocityDecrementStep;
+                    player.PlayerComponent.JumpVelocity -= velocityDecrementStep;
                     verticalMovement = 1f;
                 }
                 else
@@ -157,8 +162,8 @@ namespace Opencraft.Player
                 // Wanted movement is relative to camera
                 wantedMove = math.rotate(quaternion.RotateY(player.Input.Yaw), wantedMove);
                 // Keep track of rotations
-                player.Player.Pitch = player.Input.Pitch;
-                player.Player.Yaw = player.Input.Yaw;
+                player.PlayerComponent.Pitch = player.Input.Pitch;
+                player.PlayerComponent.Yaw = player.Input.Yaw;
                 
 
                 m_MarkerStep.Begin();

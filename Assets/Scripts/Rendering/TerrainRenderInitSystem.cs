@@ -1,10 +1,8 @@
-﻿using Opencraft.Terrain;
-using Opencraft.Terrain.Authoring;
+﻿using Opencraft.Terrain.Authoring;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Entities.Graphics;
 using Unity.Mathematics;
-using Unity.NetCode;
 using Unity.Rendering;
 using UnityEngine;
 
@@ -20,12 +18,6 @@ namespace Opencraft.Rendering
 
         protected override void OnCreate()
         {
-            /*if (World.IsSimulatedClient())
-            {
-                Enabled = false;
-                return;
-            }*/
-
             RequireForUpdate<TerrainArea>();
             RequireForUpdate<MaterialBank>();
             _materialQuery = GetEntityQuery(ComponentType.ReadOnly<MaterialBank>());

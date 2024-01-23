@@ -1,14 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Opencraft.Terrain.Authoring;
 using Opencraft.Terrain.Blocks;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Jobs;
 using Unity.Mathematics;
-using Unity.Transforms;
 using UnityEngine;
 
 namespace Opencraft.Terrain.Utilities
@@ -362,7 +359,7 @@ namespace Opencraft.Terrain.Utilities
         public static bool VisibleFaceXN(int j, int access, bool min, int kBPS2, ref DynamicBuffer<TerrainBlocks> blocks,
             ref DynamicBuffer<TerrainBlocks> neighborXN)
         {
-            int bps = Env.AREA_SIZE;
+            const int bps = Env.AREA_SIZE;
             if (min)
             {
                 //if (chunkPosX == 0)
@@ -382,7 +379,7 @@ namespace Opencraft.Terrain.Utilities
         public static bool VisibleFaceXP(int j, int access, bool max, int kBPS2, ref DynamicBuffer<TerrainBlocks> blocks,
             ref DynamicBuffer<TerrainBlocks> neighborXP)
         {
-            int bps = Env.AREA_SIZE;
+            const int bps = Env.AREA_SIZE;
             if (max)
             {
                 //if (chunkPosX == Constants.ChunkXAmount - 1)
@@ -402,7 +399,7 @@ namespace Opencraft.Terrain.Utilities
         public static bool VisibleFaceYN(int access, bool min, int iBPS, int kBPS2, ref DynamicBuffer<TerrainBlocks> blocks,
             ref DynamicBuffer<TerrainBlocks> neighborYN)
         {
-            int bps = Env.AREA_SIZE;
+            const int bps = Env.AREA_SIZE;
             if (min)
             {
 
@@ -435,8 +432,8 @@ namespace Opencraft.Terrain.Utilities
         public static bool VisibleFaceZN(int j, int access, bool min, int iBPS, ref DynamicBuffer<TerrainBlocks> blocks,
             ref DynamicBuffer<TerrainBlocks> neighborZN)
         {
-            int bps = Env.AREA_SIZE;
-            int bpl = Env.AREA_SIZE_POW_2;
+            const int bps = Env.AREA_SIZE;
+            const int bpl = Env.AREA_SIZE_POW_2;
             if (min)
             {
 
@@ -453,7 +450,7 @@ namespace Opencraft.Terrain.Utilities
         public static bool VisibleFaceZP(int j, int access, bool max, int iBPS, ref DynamicBuffer<TerrainBlocks> blocks,
             ref DynamicBuffer<TerrainBlocks> neighborZP)
         {
-            int bpl = Env.AREA_SIZE_POW_2;
+            const int bpl = Env.AREA_SIZE_POW_2;
             if (max)
             {
 

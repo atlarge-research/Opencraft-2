@@ -1,10 +1,9 @@
-﻿using Opencraft.Terrain.Authoring;
+﻿using Opencraft.Player.Authoring;
+using Opencraft.Terrain.Authoring;
 using PolkaDOTS;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Entities.Content;
 using Unity.NetCode;
-using Unity.NetCode.LowLevel.Unsafe;
 using Unity.Profiling;
 using UnityEngine;
 #if UNITY_EDITOR
@@ -32,7 +31,7 @@ namespace Opencraft.Statistics
                 .WithAll<TerrainArea>()
                 .Build(state.EntityManager);
             _playerQuery = new EntityQueryBuilder(Allocator.Temp)
-                .WithAll<PolkaDOTS.Player, PlayerInGame>()
+                .WithAll<PlayerComponent, PlayerInGame>()
                 .Build(state.EntityManager);
             first = true;
         }

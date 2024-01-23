@@ -1,11 +1,11 @@
-using PolkaDOTS;
+using Opencraft.Player.Authoring;
 using PolkaDOTS.Networking;
 using Unity.Entities;
 using Unity.NetCode;
 using Unity.Burst;
 
 
-namespace Opencraft.Player
+namespace Opencraft.Networking
 {
     /// <summary>
     /// System that detects terminated connections, and marks any players being controlled by that connection as no
@@ -30,7 +30,7 @@ namespace Opencraft.Player
             var ecb = m_CommandBufferSystem.CreateCommandBuffer();
             foreach (var state in SystemAPI.Query<RefRO<ConnectionState>>().WithNone<NetworkStreamConnection>())
             {
-                foreach (var (owner, entity) in SystemAPI.Query<RefRW<GhostOwner>>().WithAll<PlayerInGame, PolkaDOTS.Player>().WithEntityAccess())
+                foreach (var (owner, entity) in SystemAPI.Query<RefRW<GhostOwner>>().WithAll<PlayerInGame, PlayerComponent>().WithEntityAccess())
                 {
                     if (state.ValueRO.NetworkId == owner.ValueRO.NetworkId)
                     {

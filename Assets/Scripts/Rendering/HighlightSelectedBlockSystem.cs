@@ -31,10 +31,10 @@ namespace Opencraft.Rendering
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
-            state.RequireForUpdate<PolkaDOTS.Player>();
+            state.RequireForUpdate<PlayerComponent>();
             state.RequireForUpdate<BlockOutline>();
             playerQuery= new EntityQueryBuilder(Allocator.Temp)
-                .WithAll<PolkaDOTS.Player, SelectedBlock, GhostOwnerIsLocal>()
+                .WithAll<PlayerComponent, SelectedBlock, GhostOwnerIsLocal>()
                 .Build(ref state);
             blockOutlineQuery = new EntityQueryBuilder(Allocator.Temp)
                 .WithAll<BlockOutline>()

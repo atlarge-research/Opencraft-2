@@ -171,7 +171,7 @@ namespace Opencraft.Player.Emulation
             _markerPlayerSimulation = new ProfilerMarker("PlayerSimulationMarker");
 
             var builder = new EntityQueryBuilder(Allocator.Temp)
-                .WithAny<PolkaDOTS.Player, TerrainArea>();
+                .WithAny<PlayerComponent, TerrainArea>();
             state.RequireForUpdate(state.GetEntityQuery(builder));
 
             _waitingTicks = 0;

@@ -1,13 +1,10 @@
 using Opencraft.Terrain.Blocks;
 using Opencraft.Terrain.Layers;
 using Opencraft.Terrain.Structures;
-using PolkaDOTS;
 using Unity.Entities;
 using Unity.Mathematics;
-using Unity.NetCode;
 using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace Opencraft.Terrain.Authoring
 {
@@ -81,46 +78,6 @@ namespace Opencraft.Terrain.Authoring
 
                 AddComponent(entity, terrainSpawner);
                 AddComponentObject(entity, materialBank);
-                
-                // Create entities for terrain configuration 
-               /* foreach (var config in authoring.terrainConfigBank.Configs)
-                {
-                    Entity terrainConfigEntity =
-                        CreateAdditionalEntity(TransformUsageFlags.None, entityName: config.Name);
-                    AddComponent(terrainConfigEntity, new WorldParameters
-                    {
-                        WorldHeight =  config.WorldHeight,
-                        ColumnHeight = config.AreaColumnHeight
-                    });
-                    if (config.Name == "Flat")
-                        AddComponent<FlatTerrainConfig>(terrainConfigEntity);
-                    else
-                        AddComponent<RollingTerrainConfig>(terrainConfigEntity);
-                    
-                    
-                    foreach(var layer in config.Layers)
-                    {
-                        Entity layerEntity = CreateAdditionalEntity(TransformUsageFlags.None, entityName:layer.LayerName);
-                        AddComponent(layerEntity, new TerrainGenerationLayer
-                        {
-                            layerType=layer.LayerType,
-                            index=layer.Index,
-                            blockType=layer.BlockType,
-                            structureType = layer.StructureType,
-                            frequency = layer.Frequency,
-                            exponent =layer.Exponent,
-                            //baseHeight = layer.BaseHeight,
-                            minHeight = layer.MinHeight,
-                            maxHeight= layer.MaxHeight,
-                            amplitude = layer.MaxHeight - layer.MinHeight,
-                            chance = layer.Chance,
-                        });
-                        if (config.Name == "Flat")
-                            AddComponent<FlatTerrainConfig>(layerEntity);
-                        else
-                            AddComponent<RollingTerrainConfig>(layerEntity);
-                    }
-                }*/
                 
             }
         }

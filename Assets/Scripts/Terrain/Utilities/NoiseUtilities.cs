@@ -3,7 +3,6 @@ using Opencraft.ThirdParty;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Mathematics;
-using UnityEngine;
 
 namespace Opencraft.Terrain.Utilities
 {

@@ -2,7 +2,6 @@
 using Opencraft.Terrain.Authoring;
 using PolkaDOTS;
 using Unity.Entities;
-using Unity.Mathematics;
 using Unity.NetCode;
 using Unity.Transforms;
 using Unity.Burst;
@@ -36,7 +35,7 @@ namespace Opencraft.Player
             RequireForUpdate(GetEntityQuery(builder));
             
             playerQuery = new EntityQueryBuilder(Allocator.Temp)
-                .WithAll<PolkaDOTS.Player>()
+                .WithAll<PlayerComponent>()
                 .WithAll<LocalTransform>()
                 .WithAll<PlayerInput>()
                 .Build(this);
@@ -55,7 +54,7 @@ namespace Opencraft.Player
             ComponentLookup<NetworkId> networkIdFromEntity = GetComponentLookup<NetworkId>(true);
             
             // Existing player data
-            NativeArray<PolkaDOTS.Player> playerData = playerQuery.ToComponentDataArray<PolkaDOTS.Player>(Allocator.Temp);
+            NativeArray<PlayerComponent> playerData = playerQuery.ToComponentDataArray<PlayerComponent>(Allocator.Temp);
             //NativeArray<LocalTransform> playerLocs = playerQuery.ToComponentDataArray<LocalTransform>(Allocator.Temp);
             //NativeArray<PlayerInput> playerInputs = playerQuery.ToComponentDataArray<PlayerInput>(Allocator.Temp);
             NativeArray<Entity> playerEntities = playerQuery.ToEntityArray(Allocator.Temp);
@@ -72,8 +71,8 @@ namespace Opencraft.Player
                 // Check if player for this username already exists
                 for (int i = 0; i < playerData.Length; i++)
                 {
-                    PolkaDOTS.Player player = playerData[i];
-                    if (player.Username == reqSpawn.Username)
+                    PlayerComponent playerComponent = playerData[i];
+                    if (playerComponent.Username == reqSpawn.Username)
                     {
                         var playerEntity = playerEntities[i];
                         //playerLoc  = playerLocs[i];
@@ -97,7 +96,7 @@ namespace Opencraft.Player
                     commandBuffer.AddComponent<ConnectionState>(entity);
                     var player = commandBuffer.Instantiate(prefab);
                     commandBuffer.SetComponent(player, new GhostOwner { NetworkId = networkId.Value });
-                    commandBuffer.SetComponent(player, new PolkaDOTS.Player{ Username = reqSpawn.Username });
+                    commandBuffer.SetComponent(player, new PlayerComponent{ Username = reqSpawn.Username });
                     commandBuffer.SetComponentEnabled<PlayerInGame>(player, true);
                     // Move spawned player object to set position
                     

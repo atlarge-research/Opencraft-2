@@ -23,8 +23,8 @@ namespace Opencraft.Player.Multiplay
         protected override void OnCreate()
         {
             playerQuery= new EntityQueryBuilder(Allocator.Temp)
-                .WithAllRW<PolkaDOTS.Player>()
-                .WithAll<PolkaDOTS.NewPlayer>()
+                .WithAllRW<PlayerComponent>()
+                .WithAll<NewPlayer>()
                 .WithAll<GhostOwnerIsLocal>()
                 .Build(this);
             if (!World.Unmanaged.IsSimulatedClient())
@@ -68,7 +68,7 @@ namespace Opencraft.Player.Multiplay
             
             foreach (var (connID, playerObj) in multiplay.connectionPlayerObjects)
             {
-                var playerController = playerObj.GetComponent<MultiplayPlayerController>();
+                var playerController = playerObj.GetComponent<PolkaDOTS.Multiplay.MultiplayPlayerController>();
                 
                 // Check if a player has a spawned player with the same name, link to it if it exists
                 if (playerController.playerEntityRequestSent && !playerController.playerEntityExists)
@@ -107,7 +107,7 @@ namespace Opencraft.Player.Multiplay
             foreach (var connectionId in multiplay.disconnectedIds)
             {
                 var playerController = multiplay.connectionPlayerObjects[connectionId]
-                    .GetComponent<MultiplayPlayerController>();
+                    .GetComponent<PolkaDOTS.Multiplay.MultiplayPlayerController>();
 
                 if (playerController.playerEntityExists)
                 {
@@ -131,9 +131,9 @@ namespace Opencraft.Player.Multiplay
 
         }
 
-        bool linkPlayerIfExists(ref MultiplayPlayerController playerController, ref EntityCommandBuffer commandBuffer, in PlayerSpawner playerSpawner, in string connID)
+        bool linkPlayerIfExists(ref PolkaDOTS.Multiplay.MultiplayPlayerController playerController, ref EntityCommandBuffer commandBuffer, in PlayerSpawner playerSpawner, in string connID)
         {
-            NativeArray<PolkaDOTS.Player> playerData = playerQuery.ToComponentDataArray<PolkaDOTS.Player>(Allocator.Temp);
+            NativeArray<PlayerComponent> playerData = playerQuery.ToComponentDataArray<PlayerComponent>(Allocator.Temp);
             NativeArray<Entity> playerEntities = playerQuery.ToEntityArray(Allocator.Temp);
             for (int i = 0; i < playerEntities.Length; i++)
             {
@@ -150,7 +150,7 @@ namespace Opencraft.Player.Multiplay
                     ref BlobString blobString = ref builder.ConstructRoot<BlobString>();
                     builder.AllocateString(ref blobString, connID);
                     // Copy new player component
-                    commandBuffer.SetComponent(playerEntity, new PolkaDOTS.Player
+                    commandBuffer.SetComponent(playerEntity, new PlayerComponent
                     {
                         JumpVelocity = player.JumpVelocity,
                         Username = player.Username,
@@ -159,10 +159,10 @@ namespace Opencraft.Player.Multiplay
                     builder.Dispose();
                     // Create a new block outline entity. Used by the HighlightSelectedBlockSystem on clients
                     commandBuffer.Instantiate(playerSpawner.BlockOutline);
-                    commandBuffer.SetComponentEnabled<PolkaDOTS.NewPlayer>(playerEntity, false);
+                    commandBuffer.SetComponentEnabled<NewPlayer>(playerEntity, false);
                     
                     if (playerController.username != "LOCALPLAYER")
-                        commandBuffer.AddComponent<PolkaDOTS.GuestPlayer>(playerEntity);
+                        commandBuffer.AddComponent<GuestPlayer>(playerEntity);
                     
                     // Color the player red since it is locally controlled
                     commandBuffer.SetComponent(playerEntity,

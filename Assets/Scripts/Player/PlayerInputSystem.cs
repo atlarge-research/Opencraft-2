@@ -1,7 +1,4 @@
 ﻿using Opencraft.Player.Authoring;
-using Opencraft.Player.Multiplay;
-using PolkaDOTS;
-using PolkaDOTS.Deployment;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
@@ -32,7 +29,7 @@ namespace Opencraft.Player
                 return;
             // Apply movement input to owned player ghosts
             foreach (var (player, localToWorld, input)
-                     in SystemAPI.Query<RefRO<PolkaDOTS.Player>, RefRO<LocalToWorld>, RefRW<PlayerInput>>()
+                     in SystemAPI.Query<RefRO<PlayerComponent>, RefRO<LocalToWorld>, RefRW<PlayerInput>>()
                          .WithAll<GhostOwnerIsLocal>())
             {
                 // Check if the connection has been created
@@ -52,7 +49,7 @@ namespace Opencraft.Player
                 }
 
                 var playerObj = multiplay.connectionPlayerObjects[connID.ToString()];
-                var playerController = playerObj.GetComponent<MultiplayPlayerController>();
+                var playerController = playerObj.GetComponent<PolkaDOTS.Multiplay.MultiplayPlayerController>();
                 
                 
                 input.ValueRW.Movement = default;

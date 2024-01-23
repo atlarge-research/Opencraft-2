@@ -1,4 +1,4 @@
-using PolkaDOTS;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
@@ -7,6 +7,33 @@ using UnityEngine;
 
 namespace Opencraft.Player.Authoring
 {
+    
+    public struct PlayerComponent : IComponentData
+    {
+        // Movement related fields
+        [GhostField] public int JumpVelocity;
+        [GhostField] public float Pitch;
+        [GhostField] public float Yaw;
+            
+        // Connection related fields
+        [GhostField] public FixedString32Bytes Username;
+        public BlobAssetReference<BlobString> multiplayConnectionID;
+    }
+
+    // Marks this player as actively controlled by a connected player
+    public struct PlayerInGame : IComponentData, IEnableableComponent
+    {
+    }
+    
+    // Marks this player entity as freshly instantiated
+    public struct NewPlayer : IComponentData, IEnableableComponent
+    {
+    }
+    
+    // Marks this player entity as a guest player
+    public struct GuestPlayer : IComponentData, IEnableableComponent
+    {
+    }
     
     public struct PlayerContainingArea : IComponentData
     {
@@ -46,7 +73,7 @@ namespace Opencraft.Player.Authoring
         public readonly RefRW<LocalTransform> Transform;
 
         readonly RefRO<AutoCommandTarget> m_AutoCommandTarget;
-        readonly RefRW<PolkaDOTS.Player> m_Character;
+        readonly RefRW<PlayerComponent> m_Character;
         //readonly RefRW<PhysicsVelocity> m_Velocity;
         readonly RefRO<PlayerInput> m_Input;
         readonly RefRO<GhostOwner> m_Owner;
@@ -56,7 +83,7 @@ namespace Opencraft.Player.Authoring
         public AutoCommandTarget AutoCommandTarget => m_AutoCommandTarget.ValueRO;
         public PlayerInput Input => m_Input.ValueRO;
         public int OwnerNetworkId => m_Owner.ValueRO.NetworkId;
-        public ref PolkaDOTS.Player Player => ref m_Character.ValueRW;
+        public ref PlayerComponent PlayerComponent => ref m_Character.ValueRW;
 
         public ref PlayerContainingArea ContainingArea => ref m_Area.ValueRW;
         
@@ -73,8 +100,8 @@ namespace Opencraft.Player.Authoring
             {
                 var entity = GetEntity(TransformUsageFlags.Dynamic);
                 AddComponent(entity, new PlayerInput());
-                AddComponent(entity, new PolkaDOTS.Player());
-                AddComponent(entity, new PolkaDOTS.NewPlayer());
+                AddComponent(entity, new PlayerComponent());
+                AddComponent(entity, new NewPlayer());
                 AddComponent(entity, new PlayerContainingArea());
                 AddComponent(entity, new SelectedBlock());
                 AddComponent(entity, new PlayerInGame());
