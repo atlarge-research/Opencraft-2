@@ -6,7 +6,6 @@ using PolkaDOTS;
 using Unity.Entities;
 using Unity.Burst;
 using Unity.Mathematics;
-using Unity.Profiling;
 using Unity.Collections;
 using Unity.NetCode;
 using Unity.Transforms;
@@ -18,10 +17,6 @@ namespace Opencraft.Player
     [BurstCompile]
     partial struct PlayerMovementSystem : ISystem
     {
-
-        private ProfilerMarker m_MarkerGroundCheck;
-        private ProfilerMarker m_MarkerStep;
-
         // Terrain structure references
         private BufferLookup<TerrainBlocks> _terrainBlockLookup;
         private ComponentLookup<TerrainNeighbors> _terrainNeighborLookup;
@@ -32,19 +27,12 @@ namespace Opencraft.Player
         private NativeHashSet<float3> _playerSupportOffsets;
         private NativeHashSet<float3> _playerCollisionOffsets;
         
-        // Reusable block search input/output structs
-        private TerrainUtilities.BlockSearchInput BSI;
-        private TerrainUtilities.BlockSearchOutput BSO;
+        // World generation information
+        private int _columnHeight;
+        
 
         public void OnCreate(ref SystemState state)
         {
-            // Predicting movement on simulated clients seems unavoidable. If they do not predict, simulated movement
-            // becomes fragile due to 2x RTT delays in player positioning
-            /*if (state.WorldUnmanaged.IsSimulatedClient())
-            {
-                state.Enabled = false;
-                return;
-            }*/
             if (state.WorldUnmanaged.IsClient() && ApplicationConfig.DisablePrediction.Value)
             {
                 state.Enabled = false;
@@ -54,9 +42,8 @@ namespace Opencraft.Player
             state.RequireForUpdate<TerrainSpawner>();
             state.RequireForUpdate<NetworkTime>();
             state.RequireForUpdate<PlayerComponent>();
-
-            m_MarkerGroundCheck = new ProfilerMarker("GroundCheck");
-            m_MarkerStep = new ProfilerMarker("CollisionStep");
+            state.RequireForUpdate<WorldParameters>();
+            
             _terrainBlockLookup = state.GetBufferLookup<TerrainBlocks>(true);
             _terrainNeighborLookup = state.GetComponentLookup<TerrainNeighbors>(true);
             float d = 0.25f;
@@ -75,9 +62,8 @@ namespace Opencraft.Player
             _playerCollisionOffsets.Add(new float3(d,-1f,-d));
             _playerCollisionOffsets.Add(new float3(-d,-1f,-d));
             _playerCollisionOffsets.Add(new float3(-d,-1f,d));
-            
-            TerrainUtilities.BlockSearchInput.DefaultBlockSearchInput(ref BSI);
-            TerrainUtilities.BlockSearchOutput.DefaultBlockSearchOutput(ref BSO);
+
+            _columnHeight = -1;
         }
 
         public void OnDestroy(ref SystemState state)
@@ -91,6 +77,13 @@ namespace Opencraft.Player
         {
             state.CompleteDependency();
             
+            // Fetch world generation information from the WorldParameters singleton
+            if (_columnHeight == -1)
+            {
+                var worldParameters = SystemAPI.GetSingleton<WorldParameters>();
+                _columnHeight = worldParameters.ColumnHeight;
+            }
+            
             var movementSpeed = SystemAPI.Time.DeltaTime * 6;
             SystemAPI.TryGetSingleton<ClientServerTickRate>(out var tickRate);
             tickRate.ResolveDefaults();
@@ -103,7 +96,20 @@ namespace Opencraft.Player
             terrainAreasEntities = terrainAreasQuery.ToEntityArray(state.WorldUpdateAllocator);
             terrainAreas = terrainAreasQuery.ToComponentDataArray<TerrainArea>(state.WorldUpdateAllocator);
 
-            foreach (var player in SystemAPI.Query<PlayerAspect>().WithAll<Simulate, PlayerInGame>())
+            new MovePlayerJob()
+            { 
+                terrainBlockLookup = _terrainBlockLookup,
+                terrainNeighborLookup = _terrainNeighborLookup,
+                terrainAreasEntities = terrainAreasEntities,
+                terrainAreas = terrainAreas,
+                playerSupportOffsets = _playerSupportOffsets,
+                playerCollisionOffsets = _playerCollisionOffsets,
+                columnHeight = _columnHeight,
+                velocityDecrementStep = velocityDecrementStep,
+                movementSpeed = movementSpeed
+            }.ScheduleParallel();
+            
+            /*foreach (var player in SystemAPI.Query<PlayerAspect>().WithAll<Simulate, PlayerInGame>())
             {
                 if (!player.AutoCommandTarget.Enabled)
                 {
@@ -113,7 +119,7 @@ namespace Opencraft.Player
 
                 float3 pos = player.Transform.ValueRO.Position;
                 
-                m_MarkerGroundCheck.Begin();
+                
                 // Check the terrain areas underneath the player
                 int containingAreaIndex = GetPlayerContainingArea(pos, out int3 containingAreaLoc);
                 PlayerSupportState supportState = PlayerSupportState.Unsupported;
@@ -130,7 +136,7 @@ namespace Opencraft.Player
                     player.ContainingArea.Area = Entity.Null;
                     player.ContainingArea.AreaLocation = new int3(-1);
                 }
-                m_MarkerGroundCheck.End();
+                
 
                 // Simple jump mechanism, when jump event is set the jump velocity is set
                 // then on each tick it is decremented. It results in an input value being set either
@@ -165,25 +171,124 @@ namespace Opencraft.Player
                 player.PlayerComponent.Pitch = player.Input.Pitch;
                 player.PlayerComponent.Yaw = player.Input.Yaw;
                 
-
-                m_MarkerStep.Begin();
-
                 MovePlayerCheckCollisions(SystemAPI.Time.DeltaTime, ref pos, ref wantedMove, player.ContainingArea.Area, containingAreaLoc, supportState, supportedY);
                 
-                m_MarkerStep.End();
-
-
                 player.Transform.ValueRW.Position = pos;
+            }*/
+        }
+
+
+        [BurstCompile]
+        [WithAll(typeof(Simulate), typeof(PlayerInGame))]
+        public partial struct MovePlayerJob : IJobEntity
+        {
+            // Terrain structure references
+            [ReadOnly]public BufferLookup<TerrainBlocks> terrainBlockLookup;
+            [ReadOnly]public ComponentLookup<TerrainNeighbors> terrainNeighborLookup;
+            [ReadOnly]public NativeArray<Entity> terrainAreasEntities;
+            [ReadOnly]public NativeArray<TerrainArea> terrainAreas;
+        
+            // Static offsets defining player size when used for collision and checking ground support
+            [ReadOnly]public NativeHashSet<float3> playerSupportOffsets;
+            [ReadOnly]public NativeHashSet<float3> playerCollisionOffsets;
+        
+            // World generation information
+            [ReadOnly]public int columnHeight;
+            
+            // Movement variables
+            [ReadOnly]public int velocityDecrementStep;
+            [ReadOnly]public float movementSpeed;
+            
+            public void Execute(Entity entity,
+                in AutoCommandTarget autoCommandTarget,
+                ref PlayerComponent playerComponent,
+                ref PlayerContainingArea playerContainingArea,
+                in PlayerInput playerInput,
+                ref LocalTransform playerTransform)
+            {
+                if (!autoCommandTarget.Enabled)
+                {
+                    return;
+                }
+                
+                // Reusable block search input/output structs
+                TerrainUtilities.BlockSearchInput BSI = default;
+                TerrainUtilities.BlockSearchInput.DefaultBlockSearchInput(ref BSI);
+                TerrainUtilities.BlockSearchOutput BSO = default;
+                TerrainUtilities.BlockSearchOutput.DefaultBlockSearchOutput(ref BSO);
+                float3 pos = playerTransform.Position;
+                
+                
+                // Check the terrain areas underneath the player
+                int containingAreaIndex = GetPlayerContainingArea(in pos, in terrainAreas, out int3 containingAreaLoc);
+                PlayerSupportState supportState = PlayerSupportState.Unsupported;
+                int supportedY = -1;
+                if (containingAreaIndex != -1)
+                {
+                    playerContainingArea.Area = terrainAreasEntities[containingAreaIndex];
+                    playerContainingArea.AreaLocation = containingAreaLoc;
+                    supportState = CheckPlayerSupported(ref BSI, ref BSO, in playerContainingArea.Area, in containingAreaLoc,
+                        columnHeight, in playerSupportOffsets, in playerTransform.Position, in terrainBlockLookup,
+                        in terrainNeighborLookup, ref supportedY);
+                }
+                else
+                {
+                    playerContainingArea.Area = Entity.Null;
+                    playerContainingArea.AreaLocation = new int3(-1);
+                }
+                
+
+                // Simple jump mechanism, when jump event is set the jump velocity is set
+                // then on each tick it is decremented. It results in an input value being set either
+                // in the upward or downward direction (just like left/right movement).
+                if (supportState == PlayerSupportState.Supported && playerInput.Jump.IsSet)
+                {
+                    // Allow jump and stop falling when grounded
+                    playerComponent.JumpVelocity = 20;
+                }
+                
+                var verticalMovement = 0f;
+                if (playerComponent.JumpVelocity > 0)
+                {
+                    playerComponent.JumpVelocity -= velocityDecrementStep;
+                    verticalMovement = 1f;
+                }
+                else
+                {
+                    // If jumpvelocity is low enough start moving down again when unsupported
+                    if (supportState == PlayerSupportState.Unsupported)
+                        verticalMovement = -1f;
+                } 
+                
+                float2 input = playerInput.Movement;
+                float3 wantedMove = new float3(input.x, verticalMovement, input.y);
+                
+                wantedMove = math.normalizesafe(wantedMove) * movementSpeed;
+                
+                // Wanted movement is relative to camera
+                wantedMove = math.rotate(quaternion.RotateY(playerInput.Yaw), wantedMove);
+                // Keep track of rotations
+                playerComponent.Pitch = playerInput.Pitch;
+                playerComponent.Yaw = playerInput.Yaw;
+                
+                
+                
+                MovePlayerCheckCollisions(ref BSI, ref BSO, ref pos, ref wantedMove,
+                    in playerContainingArea.Area, in containingAreaLoc, columnHeight, supportState, supportedY,
+                    in playerCollisionOffsets, in terrainBlockLookup, in terrainNeighborLookup);
+
+                playerTransform.Position = pos;
             }
         }
-        
+
+
         [BurstCompile]
         // Checks if the blocks under a player exist in the terrain
-        private int GetPlayerContainingArea(float3 pos, out int3 containingAreaLoc)
+        private static int GetPlayerContainingArea(in float3 pos,in NativeArray<TerrainArea> terrainAreas, out int3 containingAreaLoc)
         {
             var playerAreaLoc = TerrainUtilities.GetContainingAreaLocation(in pos);
             
-            if (!TerrainUtilities.GetTerrainAreaByPosition(in playerAreaLoc, in terrainAreas, out int containingAreaIndex))
+            if (!TerrainUtilities.GetTerrainAreaByPosition(in playerAreaLoc, terrainAreas, out int containingAreaIndex))
             {
                 containingAreaLoc = new int3(-1);
                 return -1;
@@ -196,21 +301,25 @@ namespace Opencraft.Player
 
         [BurstCompile]
         // Checks if the blocks under a player exist in the terrain
-        private PlayerSupportState CheckPlayerSupported(Entity containingArea, int3 containingAreaLoc, float3 pos, ref int supportedY)
+        private static PlayerSupportState CheckPlayerSupported(ref TerrainUtilities.BlockSearchInput BSI, ref TerrainUtilities.BlockSearchOutput BSO, in Entity containingArea,
+            in int3 containingAreaLoc, int columnHeight, in NativeHashSet<float3> playerSupportOffsets, in float3 pos, in BufferLookup<TerrainBlocks> terrainBlockLookup,
+            in ComponentLookup<TerrainNeighbors> terrainNeighborLookup, ref int supportedY)
         {
             // Setup search inputs
             TerrainUtilities.BlockSearchInput.DefaultBlockSearchInput(ref BSI);
             BSI.offset = int3.zero;
             BSI.areaEntity = containingArea;
             BSI.terrainAreaPos = containingAreaLoc;
+            BSI.columnHeight = columnHeight;
+            
             // Check corners under player
-            foreach (var offset in _playerSupportOffsets)
+            foreach (var offset in playerSupportOffsets)
             {
                 TerrainUtilities.BlockSearchOutput.DefaultBlockSearchOutput(ref BSO);
                 BSI.basePos = NoiseUtilities.FastFloor(pos + offset);
                 
                 if (TerrainUtilities.GetBlockAtPositionByOffset(in BSI, ref BSO,
-                        ref _terrainNeighborLookup, ref _terrainBlockLookup))
+                        in terrainNeighborLookup, in terrainBlockLookup))
                 {
                     if (BSO.blockType != BlockType.Air)
                     {
@@ -227,8 +336,9 @@ namespace Opencraft.Player
 
         [BurstCompile]
         // Checks if there are blocks in the way of the player's movement
-        private void MovePlayerCheckCollisions(float deltaTime, ref float3 pos, ref float3 wantedMove,
-            Entity containingArea, int3 containingAreaLoc, PlayerSupportState supportState, int supportY)
+        private static void MovePlayerCheckCollisions(ref TerrainUtilities.BlockSearchInput BSI, ref TerrainUtilities.BlockSearchOutput BSO, ref float3 pos, ref float3 wantedMove,
+            in Entity containingArea, in int3 containingAreaLoc, int columnHeight, PlayerSupportState supportState, int supportY, in NativeHashSet<float3> playerCollisionOffsets,
+            in BufferLookup<TerrainBlocks> terrainBlockLookup, in ComponentLookup<TerrainNeighbors> terrainNeighborLookup)
         {
             float3 newPosition = pos + wantedMove;
             // Prevent falling out of bounds
@@ -248,6 +358,7 @@ namespace Opencraft.Player
             BSI.offset = int3.zero;
             BSI.areaEntity = containingArea;
             BSI.terrainAreaPos = containingAreaLoc;
+            BSI.columnHeight = columnHeight;
 
             if (containingArea == Entity.Null)
             {
@@ -255,13 +366,13 @@ namespace Opencraft.Player
                 return;
             }
             
-            foreach (var offset in _playerCollisionOffsets)
+            foreach (var offset in playerCollisionOffsets)
             {
                 TerrainUtilities.BlockSearchOutput.DefaultBlockSearchOutput(ref BSO);
                 BSI.basePos = NoiseUtilities.FastFloor(newPosition + offset);
 
                 if (TerrainUtilities.GetBlockAtPositionByOffset(in BSI, ref BSO,
-                        ref _terrainNeighborLookup, ref _terrainBlockLookup))
+                        in terrainNeighborLookup, in terrainBlockLookup))
                 {
                     if (BSO.blockType != BlockType.Air)
                     {

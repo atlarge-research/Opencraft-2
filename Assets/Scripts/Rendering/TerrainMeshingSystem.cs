@@ -132,10 +132,13 @@ namespace Opencraft.Rendering
             TerrainNeighbors terrainNeighbor = terrainNeighbors[index];
             TerrainArea terrainArea = terrainAreas[index];
             // When area is remeshed, outline it in red
-            float3 terrainAreaLocation = terrainArea.location * Env.AREA_SIZE;
             if (UseDebug)
+            {
+                float3 terrainAreaLocation = terrainArea.location * Env.AREA_SIZE;
                 TerrainUtilities.DebugDrawTerrainArea(in terrainAreaLocation, Color.red, 0.5f);
+            }
             
+
             // Mesh object vertex data
             Mesh.MeshData meshData = meshDataArray[index];
             // The blocks in this chunk

@@ -133,7 +133,6 @@ GameObject:
   m_Component:
   - component: {fileID: 176225509}
   - component: {fileID: 176225510}
-  - component: {fileID: 176225512}
   m_Layer: 0
   m_Name: TerrainSpawner
   m_TagString: Untagged
@@ -173,18 +172,6 @@ MonoBehaviour:
   TerrainConfiguration: {fileID: 3194879136077857405, guid: b5e6d2c9e04e20ca7afceb12dff6319c,
     type: 3}
   TerrainMaterial: {fileID: 2100000, guid: b53eef138330bed4a8a6bd3b9a48b63e, type: 2}
---- !u!114 &176225512
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 176225508}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c16549610bfe4458aa9389201d072bb6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &1514283054
 GameObject:
   m_ObjectHideFlags: 0

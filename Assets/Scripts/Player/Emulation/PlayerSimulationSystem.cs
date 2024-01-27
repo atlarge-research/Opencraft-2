@@ -895,7 +895,7 @@ namespace Opencraft.Player.Emulation
                 BSI.offset = offset;
 
                 if (TerrainUtilities.GetBlockAtPositionByOffset(in BSI, ref BSO,
-                        ref _terrainNeighborLookup, ref _terrainBlockLookup, debug))
+                        in _terrainNeighborLookup, in _terrainBlockLookup, debug))
                 {
                     if (BSO.blockType != BlockType.Air)
                     {

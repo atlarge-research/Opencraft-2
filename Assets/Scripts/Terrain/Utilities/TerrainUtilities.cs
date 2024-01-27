@@ -188,8 +188,8 @@ namespace Opencraft.Terrain.Utilities
         // Uses neighbor entity links to check block types via offset from an existing position with a given terrain area
         // Returns true if the block exists and is not air
         public static bool GetBlockAtPositionByOffset(in BlockSearchInput input, ref BlockSearchOutput output,
-            ref ComponentLookup<TerrainNeighbors> terrainNeighborsLookup,
-            ref BufferLookup<TerrainBlocks> terrainBlockLookup, bool debug = false)
+            in ComponentLookup<TerrainNeighbors> terrainNeighborsLookup,
+            in BufferLookup<TerrainBlocks> terrainBlockLookup, bool debug = false)
         {
             if (input.areaEntity == Entity.Null)
             {

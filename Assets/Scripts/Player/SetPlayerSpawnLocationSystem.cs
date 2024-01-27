@@ -77,7 +77,7 @@ namespace Opencraft.Player
                 
                 BSI.offset = new int3(0, -i, 0);
                 
-                if (TerrainUtilities.GetBlockAtPositionByOffset(in BSI, ref BSO, ref _terrainNeighborLookup, ref _terrainBlockLookup)) {
+                if (TerrainUtilities.GetBlockAtPositionByOffset(in BSI, ref BSO, in _terrainNeighborLookup, in _terrainBlockLookup)) {
                     if (BSO.blockType != BlockType.Air) {
                         yVal = worldHeight - i + 1; // offset by +2 so player isn't stuck in a floor
                         break;
