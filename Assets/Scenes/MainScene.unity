@@ -543,6 +543,25 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 3243556258562715456, guid: 6752cefe6bfd8d09cb07eba71d738d13,
+        type: 3}
+      propertyPath: editorArgs
+      value: -deploymentID 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3243556258562715456, guid: 6752cefe6bfd8d09cb07eba71d738d13,
+        type: 3}
+      propertyPath: deploymentConfig
+      value: "{\n\"nodes\":[\n\t{\n\t\t\"nodeID\":0,\n\t\t\"worldConfigs\":[\n\t\t\t{\n\t\t\t\"worldName\":
+        \"GameServer\",\n\t\t\t\"worldType\":\"Server\",\n\t\t\t\"initializationMode\":\"Connect\",\n\t\t\t\"serverNodeID\":0,\n\t\t\t},\n\t\t\t{\n\t\t\t\"worldName\":
+        \"GameClient\",\n\t\t\t\"worldType\":\"Client\",\n\t\t\t\"initializationMode\":\"Connect\",\n\t\t\t\"serverNodeID\":0,\n\t\t\t}\n\t\t]\n\t},\n\t{\n\t\t\"nodeID\":1,\n\t\t\"worldConfigs\":[\n\t\t\t{\n\t\t\t\"worldName\":
+        \"SimulatorClientTest\",\n\t\t\t\"worldType\":\"SimulatedClient\",\n\t\t\t\"initializationMode\":\"Connect\",\n\t\t\t\"serverNodeID\":0,\n\t\t\t\"numSimulatedClients\":
+        4\n\t\t\t}\n\t\t]\n\t}\n], \n\"experimentActions\":[]\n}"
+      objectReference: {fileID: 0}
+    - target: {fileID: 3243556258562715456, guid: 6752cefe6bfd8d09cb07eba71d738d13,
+        type: 3}
+      propertyPath: useDeploymentConfig
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 4500616911380405583, guid: 6752cefe6bfd8d09cb07eba71d738d13,
         type: 3}
       propertyPath: m_LocalPosition.x

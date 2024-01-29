@@ -94,7 +94,8 @@ namespace Opencraft.Player.Emulation
         
         public void OnCreate(ref SystemState state)
         {
-            if (ApplicationConfig.EmulationType != EmulationType.Simulation)
+            // Player simulation run either on simulated clients or on a regular client with the EmulationType set to simulation
+            if (ApplicationConfig.EmulationType != EmulationType.Simulation && !state.WorldUnmanaged.IsSimulatedClient())
                 state.Enabled = false;
             
             state.RequireForUpdate<WorldParameters>();
