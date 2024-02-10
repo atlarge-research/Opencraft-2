@@ -29,6 +29,11 @@ public class FirstPersonController : NetworkBehaviour
     public InputAction jump;
     public InputAction mouseX;
     public InputAction mouseY;
+    
+    //Block
+    public GameObject blockPrefab;
+    public float maxPlaceDistance = 10f;
+    public float maxRemoveDistance = 10f;
 
     void OnEnable()
     {
@@ -68,6 +73,14 @@ public class FirstPersonController : NetworkBehaviour
         {
             playerCam.GetComponent<Camera>().enabled = false;
             return;
+        }
+
+        if (Mouse.current.leftButton.wasPressedThisFrame)
+        {
+            PlaceBlock();
+        }else if (Mouse.current.rightButton.wasPressedThisFrame)
+        {
+            RemoveBlock();
         }
         
         controller.Move(velocity * Time.deltaTime);
@@ -109,4 +122,61 @@ public class FirstPersonController : NetworkBehaviour
             velocity.y = Mathf.Sqrt(2f * jumpHeight * gravity);    
         }
     }
+    
+    // Placing and removing blocks
+    void PlaceBlock()
+    {
+        RaycastHit hit;
+        if (Physics.Raycast(playerCam.position, playerCam.forward, out hit, maxPlaceDistance))
+        {
+            // Round hit point to the nearest grid position
+            Vector3 gridPosition = RoundToNearestGrid(hit.point + hit.normal * 0.5f); // Offset by half a block size
+
+            // Check if there's already a block at the target position
+            if (!IsBlockAtPosition(gridPosition))
+            {
+                GameObject newBlock = Instantiate(blockPrefab, gridPosition, Quaternion.identity);
+                NetworkServer.Spawn(newBlock);
+            }
+        }
+    }
+
+    Vector3 RoundToNearestGrid(Vector3 position)
+    {
+        float gridSize = 0.75f; // Adjust this to match your block size
+        float x = Mathf.Round(position.x / gridSize) * gridSize;
+        float y = Mathf.Round(position.y / gridSize) * gridSize;
+        float z = Mathf.Round(position.z / gridSize) * gridSize;
+        return new Vector3(x, y, z);
+    }
+
+    bool IsBlockAtPosition(Vector3 position)
+    {
+        Collider[] colliders = Physics.OverlapSphere(position, 0.35f); // Adjust the radius as needed
+        foreach (Collider collider in colliders)
+        {
+            if (collider.CompareTag("Block"))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    
+    
+    void RemoveBlock()
+    {
+        RaycastHit hit;
+        if (Physics.Raycast(playerCam.position, playerCam.forward, out hit, maxRemoveDistance))
+        {
+            if (hit.collider.CompareTag("Block"))
+            {
+                Destroy(hit.collider.gameObject);
+                NetworkServer.Destroy(hit.collider.gameObject);
+            }
+        }
+    }
+
+
 }
