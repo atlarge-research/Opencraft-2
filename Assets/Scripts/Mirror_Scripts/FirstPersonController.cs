@@ -69,7 +69,7 @@ public class FirstPersonController : NetworkBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (!isOwned)
+        if (!isLocalPlayer)
         {
             playerCam.GetComponent<Camera>().enabled = false;
             return;
@@ -77,10 +77,10 @@ public class FirstPersonController : NetworkBehaviour
 
         if (Mouse.current.leftButton.wasPressedThisFrame)
         {
-            PlaceBlock();
+            CmdPlaceBlock(playerCam.position, playerCam.forward);
         }else if (Mouse.current.rightButton.wasPressedThisFrame)
         {
-            RemoveBlock();
+            CmdRemoveBlock(playerCam.position, playerCam.forward);
         }
         
         controller.Move(velocity * Time.deltaTime);
@@ -124,15 +124,14 @@ public class FirstPersonController : NetworkBehaviour
     }
     
     // Placing and removing blocks
-    void PlaceBlock()
+    [Command]
+    void CmdPlaceBlock(Vector3 cameraPosition, Vector3 cameraForward)
     {
         RaycastHit hit;
-        if (Physics.Raycast(playerCam.position, playerCam.forward, out hit, maxPlaceDistance))
+        if (Physics.Raycast(cameraPosition, cameraForward, out hit, maxPlaceDistance))
         {
-            // Round hit point to the nearest grid position
             Vector3 gridPosition = RoundToNearestGrid(hit.point + hit.normal * 0.5f); // Offset by half a block size
 
-            // Check if there's already a block at the target position
             if (!IsBlockAtPosition(gridPosition))
             {
                 GameObject newBlock = Instantiate(blockPrefab, gridPosition, Quaternion.identity);
@@ -164,11 +163,11 @@ public class FirstPersonController : NetworkBehaviour
     }
 
     
-    
-    void RemoveBlock()
+    [Command]
+    void CmdRemoveBlock(Vector3 cameraPosition, Vector3 cameraForward)
     {
         RaycastHit hit;
-        if (Physics.Raycast(playerCam.position, playerCam.forward, out hit, maxRemoveDistance))
+        if (Physics.Raycast(cameraPosition, cameraForward, out hit, maxRemoveDistance))
         {
             if (hit.collider.CompareTag("Block"))
             {
