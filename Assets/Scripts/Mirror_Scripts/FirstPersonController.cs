@@ -1,10 +1,6 @@
-using System;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Mirror;
-using Unity.Logging;
-using Unity.VisualScripting;
 
 [RequireComponent(typeof(CharacterController))]
 public class FirstPersonController : NetworkBehaviour
@@ -34,6 +30,7 @@ public class FirstPersonController : NetworkBehaviour
     public GameObject blockPrefab;
     public float maxPlaceDistance = 10f;
     public float maxRemoveDistance = 10f;
+    public float gridSize = 0.75f;
 
     //Highlighting
     public Material highlightMaterial;
@@ -45,6 +42,8 @@ public class FirstPersonController : NetworkBehaviour
         jump.Enable();
         mouseX.Enable();
         mouseY.Enable();
+        
+        jump.performed += ctx => Jump();
     }
 
     void OnDisable()
@@ -53,10 +52,11 @@ public class FirstPersonController : NetworkBehaviour
         jump.Disable();
         mouseX.Dispose();
         mouseY.Disable();
+        
+        jump.performed -= ctx => Jump();
     }
 
 
-    // Start is called before the first frame update
     void Start()
     {
         if (!isOwned)
@@ -69,7 +69,6 @@ public class FirstPersonController : NetworkBehaviour
         controller = GetComponent<CharacterController>();
     }
 
-    // Update is called once per frame
     void Update()
     {
         if (!isLocalPlayer)
@@ -77,11 +76,10 @@ public class FirstPersonController : NetworkBehaviour
             playerCam.GetComponent<Camera>().enabled = false;
             return;
         }
-
+        
         HighlightBlock();
 
-        // PLACING BLOCKS
-
+        // Placing blocks
         if (Mouse.current.leftButton.wasPressedThisFrame)
         {
             CmdPlaceBlock(playerCam.position, playerCam.forward);
@@ -105,28 +103,30 @@ public class FirstPersonController : NetworkBehaviour
 
         // Player movement
         Vector2 moveInput = move.ReadValue<Vector2>();
-
         Vector3 moveVelocity = playerRoot.forward * moveInput.y + playerRoot.right * moveInput.x;
 
         controller.Move(moveVelocity * (speed * Time.deltaTime));
 
         isGrounded = Physics.Raycast(feet.position, feet.TransformDirection(Vector3.down), 0.15f);
-
-        if (isGrounded == true)
+        
+        // Gravity
+        if (!isGrounded)
         {
-            velocity = new Vector3(0f, -3f, 0f);
+            velocity.y -= gravity * Time.deltaTime;
         }
         else
         {
-            velocity -= Vector3.up * (gravity * Time.deltaTime);
+            velocity.y = -0.1f;
         }
 
-        jump.performed += ctx => Jump();
+        controller.Move(velocity * Time.deltaTime);
+        
+        // jump.performed += ctx => Jump();
     }
 
     void Jump()
     {
-        if (isGrounded == true)
+        if (isGrounded)
         {
             velocity.y = Mathf.Sqrt(2f * jumpHeight * gravity);
         }
@@ -139,19 +139,40 @@ public class FirstPersonController : NetworkBehaviour
         RaycastHit hit;
         if (Physics.Raycast(cameraPosition, cameraForward, out hit, maxPlaceDistance))
         {
-            Vector3 gridPosition = RoundToNearestGrid(hit.point + hit.normal * 0.5f); // Offset by half a block size
+            Vector3 gridPosition = RoundToNearestGrid(hit.point + hit.normal * 0.5f);
 
-            if (!IsBlockAtPosition(gridPosition))
+            if (!IsBlockAtPosition(gridPosition) && !IsPlayerInSpace(gridPosition))
             {
                 GameObject newBlock = Instantiate(blockPrefab, gridPosition, Quaternion.identity);
                 NetworkServer.Spawn(newBlock);
             }
         }
     }
+    
+    bool IsPlayerInSpace(Vector3 position)
+    {
+        Collider[] playerColliders = playerRoot.GetComponentsInChildren<Collider>();
+
+        // Adjust the height based on the player's size
+        float playerHeight = 1.8f;
+
+        foreach (Collider playerCollider in playerColliders)
+        {
+            Collider[] colliders = Physics.OverlapBox(position + new Vector3(0f, playerHeight / 2f, 0f), new Vector3(0.375f, playerHeight / 2f, 0.375f));
+
+            foreach (Collider collider in colliders)
+            {
+                if (collider.CompareTag("Block"))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
     Vector3 RoundToNearestGrid(Vector3 position)
     {
-        float gridSize = 0.75f; // Adjust this to match your block size
         float x = Mathf.Round(position.x / gridSize) * gridSize;
         float y = Mathf.Round(position.y / gridSize) * gridSize;
         float z = Mathf.Round(position.z / gridSize) * gridSize;
@@ -160,7 +181,7 @@ public class FirstPersonController : NetworkBehaviour
 
     bool IsBlockAtPosition(Vector3 position)
     {
-        Collider[] colliders = Physics.OverlapSphere(position, 0.35f); // Adjust the radius as needed
+        Collider[] colliders = Physics.OverlapSphere(position, 0.35f);
         foreach (Collider collider in colliders)
         {
             if (collider.CompareTag("Block"))
@@ -186,7 +207,6 @@ public class FirstPersonController : NetworkBehaviour
         }
     }
 
-    // Highlighting scripts visible only for the local player
     void HighlightBlock()
     {
         RaycastHit hit;

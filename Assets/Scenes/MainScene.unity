@@ -612,13 +612,19 @@ PrefabInstance:
     - target: {fileID: 436662587208253935, guid: a9d5474c7a652204386097cc641f9914,
         type: 3}
       propertyPath: mapHeight
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 436662587208253935, guid: a9d5474c7a652204386097cc641f9914,
         type: 3}
       propertyPath: mapLength
       value: 50
       objectReference: {fileID: 0}
+    - target: {fileID: 436662587208253935, guid: a9d5474c7a652204386097cc641f9914,
+        type: 3}
+      propertyPath: playerTransform
+      value: 
+      objectReference: {fileID: 8758503093042895729, guid: 5125de8df8878564580a72461202495a,
+        type: 3}
     - target: {fileID: 596296520556926139, guid: a9d5474c7a652204386097cc641f9914,
         type: 3}
       propertyPath: m_Name
