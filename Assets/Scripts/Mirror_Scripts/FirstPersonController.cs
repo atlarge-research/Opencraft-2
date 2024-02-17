@@ -1,3 +1,6 @@
+using System;
+using System.Collections;
+using System.IO;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Mirror;
@@ -55,11 +58,11 @@ public class FirstPersonController : NetworkBehaviour
         
         jump.performed -= ctx => Jump();
     }
-
+    
 
     void Start()
     {
-        if (!isOwned)
+        if (!isLocalPlayer)
         {
             return;
         }
@@ -67,10 +70,13 @@ public class FirstPersonController : NetworkBehaviour
         Cursor.lockState = CursorLockMode.Locked;
 
         controller = GetComponent<CharacterController>();
+
     }
 
     void Update()
     {
+        // Log player activity
+        
         if (!isLocalPlayer)
         {
             playerCam.GetComponent<Camera>().enabled = false;
@@ -120,8 +126,6 @@ public class FirstPersonController : NetworkBehaviour
         }
 
         controller.Move(velocity * Time.deltaTime);
-        
-        // jump.performed += ctx => Jump();
     }
 
     void Jump()
