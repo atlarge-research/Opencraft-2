@@ -92,13 +92,3 @@ InitCodeMarker
 .idea/**/usage.statistics.xml
 .idea/**/dictionaries
 .idea/**/shelf
-
-# More Unity generated files
-Library/
-Temp/
-*.tmp
-*.bak
-*.unityproj
-*.pdb
-*.mdb
-*.meta
