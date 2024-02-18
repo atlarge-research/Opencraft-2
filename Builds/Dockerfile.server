@@ -1,0 +1,20 @@
+FROM ubuntu:20.04
+
+# Select which build application folder to include
+ARG BUILD_TO_COPY=./HeadlessLinuxDebug
+
+# Copy game files
+COPY $BUILD_TO_COPY /opencraft2
+
+# Set working directory
+WORKDIR /opencraft2
+
+# Game port
+EXPOSE 7979/udp
+# Deployment port
+EXPOSE 7980/udp
+# Signaling ports
+EXPOSE 7981-7984/udp
+
+# We run the game from the kubernetes job description
+CMD /bin/bash
