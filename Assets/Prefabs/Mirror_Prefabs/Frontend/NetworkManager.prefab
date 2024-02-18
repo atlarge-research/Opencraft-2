@@ -18,7 +18,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &4470570378245562328
 Transform:
   m_ObjectHideFlags: 0
@@ -67,6 +67,7 @@ MonoBehaviour:
   playerSpawnMethod: 0
   spawnPrefabs:
   - {fileID: 2593175915567221382, guid: 0058d393ed0d0144cb82e2bb1f5ae84a, type: 3}
+  - {fileID: 2593175915567221382, guid: 5bcfaabd8a8c7874e8ce5e4f17bc5744, type: 3}
   exceptionsDisconnect: 1
   snapshotSettings:
     bufferTimeMultiplier: 2
