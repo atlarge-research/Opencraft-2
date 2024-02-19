@@ -33,19 +33,22 @@ public class PlayerLogging : NetworkBehaviour
 
     void LogPlayerData()
     {
-        InvokeRepeating(nameof(LogPosition), 0f, 1f);
+        InvokeRepeating(nameof(LogPlayerState), 0f, 1f);
     }
 
-    void LogPosition()
+    void LogPlayerState()
     {
         if (transform == null)
             return;
 
         Vector3 playerPosition = transform.position;
+        double player_rtt = NetworkTime.rtt * 1000;
+        string formattedLatency = player_rtt.ToString("F2");
         string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
-        writer.WriteLine($"[{timestamp}] Player Position: {playerPosition}");
-        writer.Flush(); 
+        writer.WriteLine($"[{timestamp}] Player Position: {playerPosition} Round-trip delay: {formattedLatency} ms");
+
+        writer.Flush();
     }
 
     void OnDestroy()
