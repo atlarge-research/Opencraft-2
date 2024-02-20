@@ -1,6 +1,7 @@
 ﻿using Opencraft.Player.Authoring;
+using Opencraft.Terrain.Authoring;
+using PolkaDOTS;
 using Unity.Entities;
-using Unity.Mathematics;
 using Unity.NetCode;
 using Unity.Transforms;
 using Unity.Burst;
@@ -20,9 +21,13 @@ namespace Opencraft.Player
     {
         private BeginSimulationEntityCommandBufferSystem m_CommandBufferSystem;
         private EntityQuery playerQuery;
+        private WorldParameters _worldParameters;
         protected override void OnCreate()
         {
             RequireForUpdate<PlayerSpawner>();
+            RequireForUpdate<TerrainSpawner>();
+            //RequireForUpdate<WorldParameters>();
+            RequireForUpdate<PlayerSpawn>();
             // Only update if there are requests to handle
             var builder = new EntityQueryBuilder(Allocator.Temp)
                 .WithAll<ReceiveRpcCommandRequest>()
@@ -30,7 +35,7 @@ namespace Opencraft.Player
             RequireForUpdate(GetEntityQuery(builder));
             
             playerQuery = new EntityQueryBuilder(Allocator.Temp)
-                .WithAll<PolkaDOTS.Player>()
+                .WithAll<PlayerComponent>()
                 .WithAll<LocalTransform>()
                 .WithAll<PlayerInput>()
                 .Build(this);
@@ -42,12 +47,14 @@ namespace Opencraft.Player
         {
             var prefab = SystemAPI.GetSingleton<PlayerSpawner>().Player;
             EntityManager.GetName(prefab, out var prefabName);
+            
+            var playerSpawn = SystemAPI.GetSingleton<PlayerSpawn>();
 
             var commandBuffer = m_CommandBufferSystem.CreateCommandBuffer();
             ComponentLookup<NetworkId> networkIdFromEntity = GetComponentLookup<NetworkId>(true);
             
             // Existing player data
-            NativeArray<PolkaDOTS.Player> playerData = playerQuery.ToComponentDataArray<PolkaDOTS.Player>(Allocator.Temp);
+            NativeArray<PlayerComponent> playerData = playerQuery.ToComponentDataArray<PlayerComponent>(Allocator.Temp);
             //NativeArray<LocalTransform> playerLocs = playerQuery.ToComponentDataArray<LocalTransform>(Allocator.Temp);
             //NativeArray<PlayerInput> playerInputs = playerQuery.ToComponentDataArray<PlayerInput>(Allocator.Temp);
             NativeArray<Entity> playerEntities = playerQuery.ToEntityArray(Allocator.Temp);
@@ -64,8 +71,8 @@ namespace Opencraft.Player
                 // Check if player for this username already exists
                 for (int i = 0; i < playerData.Length; i++)
                 {
-                    PolkaDOTS.Player player = playerData[i];
-                    if (player.Username == reqSpawn.Username)
+                    PlayerComponent playerComponent = playerData[i];
+                    if (playerComponent.Username == reqSpawn.Username)
                     {
                         var playerEntity = playerEntities[i];
                         //playerLoc  = playerLocs[i];
@@ -75,12 +82,13 @@ namespace Opencraft.Player
                         Debug.Log(
                             $"Linking user '{reqSpawn.Username}@conn{networkId.Value}' to existing player!");
                         commandBuffer.SetComponent(playerEntity, new GhostOwner { NetworkId = networkId.Value });
+                        commandBuffer.SetComponentEnabled<PlayerInGame>(playerEntity, true);
                         //commandBuffer.SetComponent(playerEntity, player);
                         found = true;
                         break;
                     }
                 }
-
+                
                 if (!found)
                 {
                     Debug.Log(
@@ -88,35 +96,20 @@ namespace Opencraft.Player
                     commandBuffer.AddComponent<ConnectionState>(entity);
                     var player = commandBuffer.Instantiate(prefab);
                     commandBuffer.SetComponent(player, new GhostOwner { NetworkId = networkId.Value });
-                    commandBuffer.SetComponent(player, new PolkaDOTS.Player{ Username = reqSpawn.Username });
-
-                    /*if (found)
-                    {
-                        commandBuffer.SetComponent(player, playerLoc);
-                        commandBuffer.SetComponent(player, playerInput);
-                    }*/
-                    // Give each NetworkId their own spawn pos:
-                    {
-                        var isEven = (networkId.Value & 1) == 0;
-                        const float halfCharacterWidthPlusHalfPadding = .55f;
-                        const float spawnStaggeredOffset = 0.25f;
-                        var staggeredXPos =
-                            networkId.Value * math.@select(halfCharacterWidthPlusHalfPadding,
-                                -halfCharacterWidthPlusHalfPadding, isEven) +
-                            math.@select(-spawnStaggeredOffset, spawnStaggeredOffset, isEven);
-                        var preventZFighting = 30f + -0.01f * networkId.Value;
-
-                        commandBuffer.SetComponent(player,
-                            LocalTransform.FromPosition(new float3(staggeredXPos, preventZFighting, -1)));
-                    }
+                    commandBuffer.SetComponent(player, new PlayerComponent{ Username = reqSpawn.Username });
+                    commandBuffer.SetComponentEnabled<PlayerInGame>(player, true);
+                    // Move spawned player object to set position
+                    
+                    commandBuffer.SetComponent(player,
+                        LocalTransform.FromPosition(playerSpawn.location));
+                    
                 }
 
 
                 commandBuffer.DestroyEntity(entity);
             }).Run(); // On main thread, unlikely enough players will connect on same frame to require parallel execution
             
-            // DestroyPlayerRPC only used during Multiplay, otherwise a client DC will automatically destroy the associated
-            // players through Netcode for Entities
+            // DestroyPlayerRPC only used during Multiplay
             Entities.WithName("HandleDestroyPlayerRPCs").ForEach((Entity entity,
                 in ReceiveRpcCommandRequest _, in DestroyPlayerRequest reqDestroy) =>
             {

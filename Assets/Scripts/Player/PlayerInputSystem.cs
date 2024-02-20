@@ -1,5 +1,4 @@
 ﻿using Opencraft.Player.Authoring;
-using Opencraft.Player.Multiplay;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
@@ -16,6 +15,13 @@ namespace Opencraft.Player
     public partial struct SamplePlayerInput : ISystem
     {
         private static float3 _cameraOffset = new float3(0.0f,Env.CAMERA_Y_OFFSET,0.0f);
+
+        public void OnCreate(ref SystemState state)
+        {
+            if (state.WorldUnmanaged.IsSimulatedClient())
+                state.Enabled = false;
+        }
+        
         public void OnUpdate(ref SystemState state)
         {
             PolkaDOTS.Multiplay.Multiplay multiplay = PolkaDOTS.Multiplay.MultiplaySingleton.Instance;
@@ -23,7 +29,7 @@ namespace Opencraft.Player
                 return;
             // Apply movement input to owned player ghosts
             foreach (var (player, localToWorld, input)
-                     in SystemAPI.Query<RefRO<PolkaDOTS.Player>, RefRO<LocalToWorld>, RefRW<PlayerInput>>()
+                     in SystemAPI.Query<RefRO<PlayerComponent>, RefRO<LocalToWorld>, RefRW<PlayerInput>>()
                          .WithAll<GhostOwnerIsLocal>())
             {
                 // Check if the connection has been created
@@ -43,34 +49,23 @@ namespace Opencraft.Player
                 }
 
                 var playerObj = multiplay.connectionPlayerObjects[connID.ToString()];
-                var playerController = playerObj.GetComponent<MultiplayPlayerController>();
-
+                var playerController = playerObj.GetComponent<PolkaDOTS.Multiplay.MultiplayPlayerController>();
+                
+                
                 input.ValueRW.Movement = default;
                 input.ValueRW.Jump = default;
                 input.ValueRW.PrimaryAction= default;
                 input.ValueRW.SecondaryAction= default;
-
-                // Movement
+                
                 input.ValueRW.Movement.x = playerController.inputMovement.x;
                 input.ValueRW.Movement.y = playerController.inputMovement.y;
+                
+                // Actions 
                 if (playerController.inputJump)
                 {
                     input.ValueRW.Jump.Set();
                     playerController.inputJump = false;
                 }
-                
-                // Look
-                input.ValueRW.Pitch = math.clamp(input.ValueRW.Pitch + playerController.inputLook.y, -math.PI / 2,
-                    math.PI / 2);
-                input.ValueRW.Yaw = math.fmod(input.ValueRW.Yaw + playerController.inputLook.x, 2 * math.PI);
-
-                // Sync camera to look
-                playerObj.transform.rotation = math.mul(quaternion.RotateY(input.ValueRO.Yaw),
-                    quaternion.RotateX(-input.ValueRO.Pitch));
-                //var offset = math.rotate(playerObj.transform.rotation, new float3(0)/*_cameraOffset*/);
-                playerObj.transform.position = localToWorld.ValueRO.Position + _cameraOffset;
-                
-                // Action buttons
                 if (playerController.inputPrimaryAction)
                 {
                     input.ValueRW.PrimaryAction.Set();
@@ -81,6 +76,19 @@ namespace Opencraft.Player
                     input.ValueRW.SecondaryAction.Set();
                     playerController.inputSecondaryAction= false;
                 }
+                
+                // Look
+                input.ValueRW.Pitch = math.clamp(input.ValueRW.Pitch + playerController.inputLook.y, -math.PI / 2,
+                    math.PI / 2);
+                input.ValueRW.Yaw = math.fmod(input.ValueRW.Yaw + playerController.inputLook.x, 2 * math.PI);
+            
+
+                // Sync camera to look
+                playerObj.transform.rotation = math.mul(quaternion.RotateY(input.ValueRO.Yaw),
+                    quaternion.RotateX(-input.ValueRO.Pitch));
+                //var offset = math.rotate(playerObj.transform.rotation, new float3(0)/*_cameraOffset*/);
+                playerObj.transform.position = localToWorld.ValueRO.Position + _cameraOffset;
+                
             }
         }
     }
