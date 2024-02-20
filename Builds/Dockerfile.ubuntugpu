@@ -26,7 +26,7 @@ RUN cd /tmp && \
     dpkg -i *.deb && \
     rm -f /tmp/*.deb 
 
-COPY xorg.conf /etc/X11/xorg.conf
+COPY requirements/xorg.conf /etc/X11/xorg.conf
 
 ENV DISPLAY :0
 
@@ -34,10 +34,10 @@ ENV DISPLAY :0
 # Install desktop files for this user
 #---------------------------------------------------------------------
 RUN mkdir -p /root/Desktop
-COPY ./requirements/terminator.desktop /root/Desktop
+COPY requirements/terminator.desktop /root/Desktop
 RUN mkdir -p /root/.config/terminator
-COPY ./requirements/terminator_config /root/.config/terminator/config
-COPY ./requirements/self.pem /root/self.pem
+COPY requirements/terminator_config /root/.config/terminator/config
+COPY requirements/self.pem /root/self.pem
 
 # Precede bash on all new terminator shells with vglrun so that 3d graphics apps will use the GPU
 RUN perl -pi -e 's/^Exec=terminator$/Exec=terminator -e "vglrun bash"/g' /usr/share/applications/terminator.desktop
