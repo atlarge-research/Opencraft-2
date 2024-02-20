@@ -16,6 +16,9 @@ Opencraft 2 is built by the Unity editor, using `File -> Build Settings` with `P
 `Target Platform` set to `Linux` or `Windows` (Mac is untested). For debugging, analysis, and metric collection the `Development Build`
 flag must be set. The builds folder is location under `./Builds/`. This folder also contains the Docker files for containerizing Opencraft 2.
 
+## Contributing
+See [WORKFLOW.md](WORKFLOW.md) for contribution guidelines and workflow.
+
 ### Docker
 Opencraft 2 can be run as a container. The main game container can be built from the `./Builds/` folder using 
 `docker build -t jerriteic/opencraft2:base .`. This base image depends on `jerriteic/gpu_ubuntu20.04` which allows
