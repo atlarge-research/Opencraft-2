@@ -20,12 +20,19 @@ public class PlayerLogging : NetworkBehaviour
             isLoggingInitialized = true;
         }
     }
-
     void InitializeLogging()
     {
-        string connectionId = Guid.NewGuid().ToString(); // Generate a unique identifier for each client
+        string connectionId = Guid.NewGuid().ToString();
         logFileName = "player_log_" + connectionId + ".txt";
-        string path = Path.Combine(Application.persistentDataPath, logFileName);
+        
+        string logDirectory = Path.Combine(Application.dataPath, "mirror_logs");
+
+        if (!Directory.Exists(logDirectory))
+        {
+            Directory.CreateDirectory(logDirectory);
+        }
+
+        string path = Path.Combine(logDirectory, logFileName);
         writer = new StreamWriter(path, true);
 
         LogPlayerData();

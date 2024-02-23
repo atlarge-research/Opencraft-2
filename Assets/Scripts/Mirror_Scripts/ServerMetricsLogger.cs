@@ -30,8 +30,13 @@ public class ServerMetricsLogger : NetworkBehaviour
 
     void InitializeLogging()
     {
-        logFileName = "server_metrics_log.txt"; // Separate file for server metrics
-        string path = Path.Combine(Application.persistentDataPath, logFileName);
+        logFileName = "server_log.txt";
+        string logDirectory = Path.Combine(Application.dataPath, "mirror_logs");
+        if (!Directory.Exists(logDirectory))
+        {
+            Directory.CreateDirectory(logDirectory);
+        }
+        string path = Path.Combine(logDirectory, logFileName);
         writer = new StreamWriter(path, true);
 
         LogServerMetrics();
