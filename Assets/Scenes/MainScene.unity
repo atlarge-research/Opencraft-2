@@ -275,6 +275,16 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4318634564997860021, guid: ee0e0ca2cc142794cb4f77e4acc7d00f,
+        type: 3}
+      propertyPath: networkManager
+      value: 
+      objectReference: {fileID: 1756036285}
+    - target: {fileID: 4318634564997860021, guid: ee0e0ca2cc142794cb4f77e4acc7d00f,
+        type: 3}
+      propertyPath: startServerInEditor
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 4760557209821025233, guid: ee0e0ca2cc142794cb4f77e4acc7d00f,
         type: 3}
       propertyPath: debugLog
@@ -338,12 +348,12 @@ PrefabInstance:
     - target: {fileID: 6375225697336743240, guid: ee0e0ca2cc142794cb4f77e4acc7d00f,
         type: 3}
       propertyPath: onlineScene
-      value: Assets/Scenes/MainScene.unity
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 6375225697336743240, guid: ee0e0ca2cc142794cb4f77e4acc7d00f,
         type: 3}
       propertyPath: offlineScene
-      value: Assets/Scenes/MainScene.unity
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 6375225697336743240, guid: ee0e0ca2cc142794cb4f77e4acc7d00f,
         type: 3}
@@ -370,6 +380,16 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 7744043924090586951, guid: ee0e0ca2cc142794cb4f77e4acc7d00f,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8661613004469007443, guid: ee0e0ca2cc142794cb4f77e4acc7d00f,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8816542144760325806, guid: ee0e0ca2cc142794cb4f77e4acc7d00f,
         type: 3}
       propertyPath: sceneId
@@ -384,6 +404,18 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 257887742}
   m_SourcePrefab: {fileID: 100100000, guid: ee0e0ca2cc142794cb4f77e4acc7d00f, type: 3}
+--- !u!114 &1756036285 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6375225697336743240, guid: ee0e0ca2cc142794cb4f77e4acc7d00f,
+    type: 3}
+  m_PrefabInstance: {fileID: 1756036284}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8aab4c8111b7c411b9b92cf3dbc5bd4e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &5123285644163685237
 PrefabInstance:
   m_ObjectHideFlags: 0

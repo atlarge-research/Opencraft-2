@@ -4,7 +4,7 @@ using Mirror;
 public class NetworkHelper : MonoBehaviour
 {
     public NetworkManager networkManager;
-    public bool startServer = false;
+    public bool startServerInEditor = false;
 
     // Start is called before the first frame update
     void Start()
@@ -15,7 +15,8 @@ public class NetworkHelper : MonoBehaviour
             return;
         }
 
-        if (startServer)
+#if UNITY_EDITOR
+        if (startServerInEditor)
         {
             networkManager.StartServer();
         }
@@ -23,5 +24,24 @@ public class NetworkHelper : MonoBehaviour
         {
             networkManager.StartClient();
         }
+#else
+        string[] args = System.Environment.GetCommandLineArgs();
+
+        foreach (string arg in args)
+        {
+            if (arg == "-server")
+            {
+                networkManager.StartServer();
+                return;
+            }
+            else if (arg == "-client")
+            {
+                networkManager.StartClient();
+                return;
+            }
+        }
+
+        Debug.LogError("No valid command-line arguments provided.");
+#endif
     }
 }
