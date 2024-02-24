@@ -293,7 +293,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ECS_frontend: {fileID: 5123285644163685238}
   Mirror_frontend: {fileID: 1756036286}
-  debugComponentSelection: 1
+  debugComponentSelection: 0
 --- !u!4 &794583264
 Transform:
   m_ObjectHideFlags: 0
@@ -481,6 +481,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_SizeDelta.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2847247454729735010, guid: b4989aa4f763fe6f0bb2875140713032,
+        type: 3}
+      propertyPath: useDeploymentConfig
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3112927233792556906, guid: b4989aa4f763fe6f0bb2875140713032,
         type: 3}

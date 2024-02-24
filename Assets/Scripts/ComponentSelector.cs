@@ -11,27 +11,30 @@ public class ComponentSelector : MonoBehaviour
         Mirror
     }
 
-    public DebugComponent debugComponentSelection;
+    public DebugComponent debugComponentSelection = DebugComponent.ECS; // Set default value here
 
     void Start()
     {
-        // Check for command line arguments or custom toggle keys here
-        string[] args = System.Environment.GetCommandLineArgs();
-        foreach (string arg in args)
+        if (!Application.isEditor)
         {
-            if (arg == "-ecs")
+            // Check for command line arguments
+            string[] args = System.Environment.GetCommandLineArgs();
+            foreach (string arg in args)
             {
-                SetComponentSelection(DebugComponent.ECS);
-                return; // Exit the loop if a valid argument is found
-            }
-            else if (arg == "-mirror")
-            {
-                SetComponentSelection(DebugComponent.Mirror);
-                return; // Exit the loop if a valid argument is found
+                if (arg == "-ecs")
+                {
+                    SetComponentSelection(DebugComponent.ECS);
+                    return; // Exit the loop if a valid argument is found
+                }
+                else if (arg == "-mirror")
+                {
+                    SetComponentSelection(DebugComponent.Mirror);
+                    return; // Exit the loop if a valid argument is found
+                }
             }
         }
 
-        // Default behavior if no command line argument is provided
+        // Default behavior if no command line argument is provided or if it's in the Unity Editor
         SetComponentSelection(debugComponentSelection);
     }
 
