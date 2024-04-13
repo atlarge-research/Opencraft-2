@@ -1,12 +1,12 @@
 [submodule "UnityRenderStreaming"]
 	path = UnityRenderStreaming
-	url = git@github.com:JerritEic/UnityRenderStreaming.git
+	url = https://github.com/JerritEic/UnityRenderStreaming.git
 [submodule "Packages/com.unity.performance.profile-analyzer"]
 	path = Packages/com.unity.performance.profile-analyzer
-	url = git@github.com:JerritEic/com.unity.performance.profile-analyzer.git
+	url = https://github.com/JerritEic/com.unity.performance.profile-analyzer.git
 [submodule "Packages/com.utj.profilerreader"]
 	path = Packages/com.utj.profilerreader
-	url = git@github.com:JerritEic/ProfilerReader.git
+	url = https://github.com/JerritEic/ProfilerReader.git
 [submodule "Packages/PolkaDOTS"]
 	path = Packages/PolkaDOTS
-	url = git@github.com:JerritEic/PolkaDOTS.git
+	url = https://github.com/JerritEic/PolkaDOTS.git
