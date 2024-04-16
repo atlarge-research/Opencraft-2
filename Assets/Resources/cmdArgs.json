@@ -1,0 +1,10 @@
+{
+  "args": [
+    "-deploymentID",
+    "0",
+    "-deploymentJson",
+    "deployment",
+    "-debug",
+    "true"
+  ]
+}
