@@ -318,7 +318,7 @@ PrefabInstance:
         type: 3}
       propertyPath: playerPrefab
       value: 
-      objectReference: {fileID: 3194879136077857405, guid: 6f17c2e54ca4ab14d9b2e9866400a506,
+      objectReference: {fileID: 3194879136077857405, guid: edb2e7197597d3b4e8cecb2881c5bd24,
         type: 3}
     - target: {fileID: 3277994445462553918, guid: cb41686a2c8a154faa94f2e018e016bb,
         type: 3}
@@ -424,6 +424,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_SizeDelta.x
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8977719323361880928, guid: cb41686a2c8a154faa94f2e018e016bb,
+        type: 3}
+      propertyPath: m_Enabled
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
