@@ -21,7 +21,7 @@ namespace Opencraft.Player
         private BufferLookup<TerrainColMaxY> _terrainColumnMaxBufferLookup;
         private NativeArray<Entity> terrainAreasEntities;
         private ComponentLookup<TerrainArea> _terrainAreaLookup;
-        
+
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
@@ -31,8 +31,8 @@ namespace Opencraft.Player
             state.RequireForUpdate<TerrainArea>();
             state.RequireForUpdate<TerrainSpawner>();
             _terrainBlocksBufferLookup = state.GetBufferLookup<TerrainBlocks>(false);
-            _terrainColumnMinBufferLookup= state.GetBufferLookup<TerrainColMinY>(false);
-            _terrainColumnMaxBufferLookup= state.GetBufferLookup<TerrainColMaxY>(false);
+            _terrainColumnMinBufferLookup = state.GetBufferLookup<TerrainColMinY>(false);
+            _terrainColumnMaxBufferLookup = state.GetBufferLookup<TerrainColMaxY>(false);
             _terrainAreaLookup = state.GetComponentLookup<TerrainArea>(isReadOnly: true);
 
         }
@@ -53,9 +53,9 @@ namespace Opencraft.Player
                 // Destroy block action
                 if (player.Input.PrimaryAction.IsSet && player.SelectedBlock.terrainArea != Entity.Null)
                 {
-                    
+
                     Entity terrainAreaEntity = player.SelectedBlock.terrainArea;
-                    if(_terrainBlocksBufferLookup.TryGetBuffer(terrainAreaEntity, out DynamicBuffer<TerrainBlocks> terrainBlocks))
+                    if (_terrainBlocksBufferLookup.TryGetBuffer(terrainAreaEntity, out DynamicBuffer<TerrainBlocks> terrainBlocks))
                     {
                         int3 blockLoc = player.SelectedBlock.blockLoc;
                         int blockIndex = TerrainUtilities.BlockLocationToIndex(ref blockLoc);
@@ -90,16 +90,16 @@ namespace Opencraft.Player
                             if (blockLoc.y + 1 == maxY)
                             {
                                 // Search downwards for new max
-                                for (int y = 1; y < blockLoc.y ; y++)
+                                for (int y = 1; y < blockLoc.y; y++)
                                 {
                                     if (blocks[blockIndex - y] != BlockType.Air)
                                     {
                                         // found a non-empty block
-                                        colMaxes[colIndex] = (byte)(blockLoc.y-y+1);
+                                        colMaxes[colIndex] = (byte)(blockLoc.y - y + 1);
                                         break;
                                     }
 
-                                    if (y == blockLoc.y-1)
+                                    if (y == blockLoc.y - 1)
                                     {
                                         // no non-empty blocks found, set max to a min value
                                         colMaxes[colIndex] = 0;
@@ -109,13 +109,13 @@ namespace Opencraft.Player
                             blocks[blockIndex] = BlockType.Air;
                         }
                     }
-                    
+
                 }
                 // Place block action, using the neighbor of selected block
                 if (player.Input.SecondaryAction.IsSet && player.SelectedBlock.neighborTerrainArea != Entity.Null)
                 {
                     Entity terrainAreaEntity = player.SelectedBlock.neighborTerrainArea;
-                    if(_terrainBlocksBufferLookup.TryGetBuffer(terrainAreaEntity, out DynamicBuffer<TerrainBlocks> terrainBlocks))
+                    if (_terrainBlocksBufferLookup.TryGetBuffer(terrainAreaEntity, out DynamicBuffer<TerrainBlocks> terrainBlocks))
                     {
                         int3 blockLoc = player.SelectedBlock.neighborBlockLoc;
                         int blockIndex = TerrainUtilities.BlockLocationToIndex(ref blockLoc);
@@ -129,11 +129,11 @@ namespace Opencraft.Player
                             int maxY = colMaxes[colIndex];
                             // If new block is the top or bottom of a column, update the column heightmaps
                             if (blockLoc.y < minY)
-                                colMins[colIndex] = (byte) blockLoc.y;
+                                colMins[colIndex] = (byte)blockLoc.y;
                             if (blockLoc.y + 1 > maxY)
-                                colMaxes[colIndex] = (byte) (blockLoc.y + 1);
+                                colMaxes[colIndex] = (byte)(blockLoc.y + 1);
                             // todo ability to place something other than stone
-                            blocks[blockIndex] = BlockType.Stone;
+                            blocks[blockIndex] = (BlockType)player.Input.SelectedItem;
                         }
                     }
                 }
