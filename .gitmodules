@@ -9,4 +9,4 @@
 	url = https://github.com/JerritEic/ProfilerReader.git
 [submodule "Packages/PolkaDOTS"]
 	path = Packages/PolkaDOTS
-	url = https://github.com/atlarge-research/PolkaDOTS.git
+	url = https://github.com/ZainMunir/PolkaDOTS.git
