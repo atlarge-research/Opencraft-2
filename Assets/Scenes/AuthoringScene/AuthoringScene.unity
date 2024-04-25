@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.12731749, g: 0.13414757, b: 0.12107873, a: 1}
+  m_IndirectSpecularColor: {r: 0.12731715, g: 0.13414735, b: 0.121078536, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -171,7 +171,7 @@ MonoBehaviour:
     type: 3}
   TerrainConfiguration: {fileID: 3194879136077857405, guid: b5e6d2c9e04e20ca7afceb12dff6319c,
     type: 3}
-  TerrainMaterial: {fileID: 2100000, guid: b53eef138330bed4a8a6bd3b9a48b63e, type: 2}
+  TerrainMaterial: {fileID: 2100000, guid: 9130e97656d65a04dab1fe18be80dbfc, type: 2}
 --- !u!1 &1514283054
 GameObject:
   m_ObjectHideFlags: 0

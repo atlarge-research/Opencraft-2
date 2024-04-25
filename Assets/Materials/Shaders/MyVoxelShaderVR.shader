@@ -1,4 +1,4 @@
-Shader "Custom/VoxelShader"
+Shader "Custom/MyVoxelShaderVR"
 {
     Properties
     {
@@ -86,18 +86,24 @@ Shader "Custom/VoxelShader"
 
             //#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Input.hlsl"
             
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
-            #include <HLSLSupport.cginc>
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderVariablesFunctions.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Input.hlsl"
+            
+            #include "Assets/Materials/Shaders/texarrays.hlsl"
+            
+            //#include <HLSLSupport.cginc>
             
             //#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             
             #define BUMP_SCALE_NOT_SUPPORTED 1
-            
+
             UNITY_DECLARE_TEX2DARRAY(_ColourTextures);
             uniform float _uvSizes[2 * 6]; // Needs to be set from C#
             
-            #include "Assets/Materials/Shaders/VoxelShaderInput.hlsl"
-            #include "Assets/Materials/Shaders/VoxelForwardPass.hlsl"
+            #include "Assets/Materials/Shaders/MyVoxelShaderInputVR.hlsl"
+            #include "Assets/Materials/Shaders/MyVoxelForwardPassVR.hlsl"
             ENDHLSL
         }
         
@@ -128,11 +134,12 @@ Shader "Custom/VoxelShader"
 			#pragma multi_compile _ DOTS_INSTANCING_ON
             
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
-            
-            #include <HLSLSupport.cginc>
+            #include "Assets/Materials/Shaders/texarrays.hlsl"
+            //#include <HLSLSupport.cginc>
+
             UNITY_DECLARE_TEX2DARRAY(_ColourTextures);
             uniform float _uvSizes[2 * 6]; // Needs to be set from C#
-            #include "Assets/Materials/Shaders/VoxelShaderInput.hlsl"
+            #include "Assets/Materials/Shaders/MyVoxelShaderInputVR.hlsl"
             
             // vertex shader inputs
             struct Attributes
@@ -198,11 +205,11 @@ Shader "Custom/VoxelShader"
 			#pragma multi_compile _ DOTS_INSTANCING_ON
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
-            
-            #include <HLSLSupport.cginc>
+            #include "Assets/Materials/Shaders/texarrays.hlsl"
+            //#include <HLSLSupport.cginc>
             UNITY_DECLARE_TEX2DARRAY(_ColourTextures);
             uniform float _uvSizes[2 * 6]; // Needs to be set from C#
-            #include "Assets/Materials/Shaders/VoxelShaderInput.hlsl"
+            #include "Assets/Materials/Shaders/MyVoxelShaderInputVR.hlsl"
             
             // vertex shader inputs
             struct Attributes
