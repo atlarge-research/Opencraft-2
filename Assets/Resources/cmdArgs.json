@@ -5,6 +5,12 @@
     "-deploymentJson",
     "deployment",
     "-debug",
-    "true"
+    "true",
+    "-profiler-enable",
+    "true",
+    "-profiler-log-file",
+    "C:\\Users\\joach\\Desktop\\file.csv", 
+    "-logStats",
+    "true",
   ]
 }

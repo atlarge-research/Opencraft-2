@@ -557,7 +557,8 @@ PrefabInstance:
     - target: {fileID: 3243556258562715456, guid: 6752cefe6bfd8d09cb07eba71d738d13,
         type: 3}
       propertyPath: editorArgs
-      value: -deploymentID 0
+      value: '-deploymentID 0 -deploymentJson deployment -debug true -profiler-enable
+        true -profiler-logfile C:\\Users\\joach\Desktop\\file.csv -logStats true '
       objectReference: {fileID: 0}
     - target: {fileID: 3243556258562715456, guid: 6752cefe6bfd8d09cb07eba71d738d13,
         type: 3}
@@ -574,7 +575,7 @@ PrefabInstance:
     - target: {fileID: 3243556258562715456, guid: 6752cefe6bfd8d09cb07eba71d738d13,
         type: 3}
       propertyPath: useDeploymentConfig
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4500616911380405583, guid: 6752cefe6bfd8d09cb07eba71d738d13,
         type: 3}

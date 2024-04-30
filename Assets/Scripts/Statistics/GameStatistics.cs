@@ -42,12 +42,20 @@ namespace Opencraft.Statistics
             {
                 if (ApplicationConfig.LogStats)
                 {
-                    Debug.Log("Adding terrain areas statistics recorders");
-                    PolkaDOTS.Statistics.StatisticsWriter writer = PolkaDOTS.Statistics.StatisticsWriterInstance.instance;
-                    writer.AddStatisticRecorder("Number of Terrain Areas (Client)", ProfilerCategory.Scripts);
-                    writer.AddStatisticRecorder("Number of Terrain Areas (Server)", ProfilerCategory.Scripts); 
-                    writer.AddStatisticRecorder("Number of Players (Client)", ProfilerCategory.Scripts);
-                    writer.AddStatisticRecorder("Number of Players (Server)", ProfilerCategory.Scripts); 
+                    try
+                    {
+                        PolkaDOTS.Statistics.StatisticsWriter writer = PolkaDOTS.Statistics.StatisticsWriterInstance.instance;
+                        Debug.Log($"Adding terrain areas statistics recorders profCat: {ProfilerCategory.Scripts} writer:{writer}");
+                        writer.AddStatisticRecorder("Number of Terrain Areas (Server)", ProfilerCategory.Scripts);
+                        writer.AddStatisticRecorder("Number of Players (Client)", ProfilerCategory.Scripts);
+                        writer.AddStatisticRecorder("Number of Players (Server)", ProfilerCategory.Scripts);
+                        writer.AddStatisticRecorder("Number of Terrain Areas (Client)", ProfilerCategory.Scripts);
+                    }
+                    catch (System.Exception e)
+                    {
+                        Debug.LogWarning(e);
+                        Debug.LogWarning(e.StackTrace);
+                    }
                 }
                 first = false;
             }

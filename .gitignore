@@ -10,6 +10,7 @@
 /[Ll]ogs/
 /[Uu]ser[Ss]ettings/
 /[Pp]rofile[Aa]nalyzer/
+/measurements
 
 # Include docker related files in build directories
 !/[Bb]uild/Dockerfile

@@ -8,7 +8,7 @@
         public const int INITIAL_COLUMNS_X = 3;
         public const int INITIAL_COLUMNS_Z = 3;
         public const int PLAYER_VIEW_RANGE = 2;
-        public const int TERRAIN_SPAWN_RANGE = 3;
+        public const int TERRAIN_SPAWN_RANGE = 4;
         public const int MAX_COL_PER_TICK = 10;
         
         #region DO NOT CHANGE THESE!
