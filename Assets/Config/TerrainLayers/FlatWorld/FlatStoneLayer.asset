@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   configName: Flat
   layers:
-  - {fileID: 11400000, guid: d25afcbb99ce5894eb4d6b546ae83e0b, type: 2}
+  - {fileID: 11400000, guid: f3fd30ecc3310c14eb7eb6c90d0c58f8, type: 2}
   - {fileID: 11400000, guid: d25afcbb99ce5894eb4d6b546ae83e0b, type: 2}
   areaColumnHeight: 1

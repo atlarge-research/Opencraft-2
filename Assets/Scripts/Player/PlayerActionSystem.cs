@@ -61,7 +61,7 @@ namespace Opencraft.Player
                         int blockIndex = TerrainUtilities.BlockLocationToIndex(ref blockLoc);
                         int colIndex = TerrainUtilities.BlockLocationToColIndex(ref blockLoc);
                         DynamicBuffer<BlockType> blocks = terrainBlocks.Reinterpret<BlockType>();
-                        if (blocks[blockIndex] != BlockType.Air)
+                        if (blocks[blockIndex] != BlockType.Air && blocks[blockIndex] != BlockType.Unbreakable)
                         {
                             var colMins = _terrainColumnMinBufferLookup[terrainAreaEntity].Reinterpret<byte>();
                             var colMaxes = _terrainColumnMaxBufferLookup[terrainAreaEntity].Reinterpret<byte>();

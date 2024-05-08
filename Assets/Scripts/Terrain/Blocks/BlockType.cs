@@ -10,7 +10,8 @@
         Gem,
         Grass,
         Leaf,
-        Wood
+        Wood,
+        Unbreakable
     }
     public static class BlockData
     {
@@ -25,14 +26,15 @@
             (5 & 31) << 24,
             (6 & 31) << 24,
             (7 & 31) << 24,
+            (8 & 31) << 24,
         };
-        
+
         // UV sizing > 1 tiles a texture across multiple blocks, currently not done for any block types
-        public static float[] BlockUVSizing= new float[]
+        public static float[] BlockUVSizing = new float[]
         {
             1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
         };
     }
-    
-    
+
+
 }
