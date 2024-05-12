@@ -441,7 +441,7 @@ GameObject:
   - component: {fileID: 1288104461}
   - component: {fileID: 1288104460}
   m_Layer: 0
-  m_Name: FlatWorld
+  m_Name: Terrain
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

@@ -10,10 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ac255652e50945d8a4e0ec00804a4230, type: 3}
-  m_Name: FlatStoneLayer
+  m_Name: CombinedLayers
   m_EditorClassIdentifier: 
   configName: Flat
   layers:
   - {fileID: 11400000, guid: f3fd30ecc3310c14eb7eb6c90d0c58f8, type: 2}
   - {fileID: 11400000, guid: d25afcbb99ce5894eb4d6b546ae83e0b, type: 2}
+  - {fileID: 11400000, guid: 1fd9c9d7c5f643f4792289216c937182, type: 2}
+  - {fileID: 11400000, guid: ea81988a2a21c0f488f1320553c0c4c9, type: 2}
+  - {fileID: 11400000, guid: 8e62e13bc2748b843ae85c4865907b55, type: 2}
+  - {fileID: 11400000, guid: 29674d2c5426a854ca6acd47798e6796, type: 2}
+  - {fileID: 11400000, guid: 8e62e13bc2748b843ae85c4865907b55, type: 2}
+  - {fileID: 11400000, guid: ea81988a2a21c0f488f1320553c0c4c9, type: 2}
+  - {fileID: 11400000, guid: 1fd9c9d7c5f643f4792289216c937182, type: 2}
   areaColumnHeight: 1

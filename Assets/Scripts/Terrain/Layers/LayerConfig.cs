@@ -19,41 +19,41 @@ namespace Opencraft.Terrain.Layers
         private int index = 0;
         [SerializeField]
         [Tooltip("The block this layer will create.")]
-        [DrawIf("layerType", new[]{LayerType.Absolute, LayerType.Additive, LayerType.Random, LayerType.Surface})]
+        [DrawIf("layerType", new[] { LayerType.Absolute, LayerType.Additive, LayerType.Random, LayerType.Surface, LayerType.Power, LayerType.Wire, LayerType.Lamp })]
         private BlockType blockType;
-        
+
         [SerializeField]
         [Tooltip("Noise parameter.")]
-        [DrawIf("layerType", new[]{LayerType.Absolute, LayerType.Additive})]
+        [DrawIf("layerType", new[] { LayerType.Absolute, LayerType.Additive })]
         private float frequency = 0f;
         [SerializeField]
         [Tooltip("Noise parameter.")]
-        [DrawIf("layerType", new[]{LayerType.Absolute, LayerType.Additive})]
+        [DrawIf("layerType", new[] { LayerType.Absolute, LayerType.Additive })]
         private float exponent = 0f;
-        
+
         /*[SerializeField]
         [Tooltip("Level to start randomly sampling at. (MinHeight to MinHeight+BaseHeight gets filled)")]
         [DrawIf("layerType", new[]{LayerType.Absolute, LayerType.Additive})]
         private int baseHeight = 0;*/
         [SerializeField]
         [Tooltip("Lowest possible column floor.")]
-        [DrawIf("layerType", new[]{LayerType.Absolute, LayerType.Additive})]
+        [DrawIf("layerType", new[] { LayerType.Absolute, LayerType.Additive })]
         private int minHeight = 0;
         [SerializeField]
         [Tooltip("Highest possible column ceiling.")]
-        [DrawIf("layerType", new[]{LayerType.Absolute, LayerType.Additive})]
+        [DrawIf("layerType", new[] { LayerType.Absolute, LayerType.Additive })]
         private int maxHeight = 0;
-        
+
         [SerializeField]
         [Tooltip("Likelihood of spawning.")]
-        [DrawIf("layerType", new[]{LayerType.Structure, LayerType.Random})]
+        [DrawIf("layerType", new[] { LayerType.Structure, LayerType.Random })]
         private float chance = 0;
         [SerializeField]
         [Tooltip("Structure to spawn.")]
         [DrawIf("layerType", LayerType.Structure)]
         private StructureType structureType = StructureType.None;
-        
-        
+
+
         public LayerType LayerType => layerType;
         public string LayerName => layerName;
         public int Index => index;
@@ -73,6 +73,9 @@ namespace Opencraft.Terrain.Layers
         Random,
         Structure,
         Surface,
-        Additive
+        Additive,
+        Power,
+        Wire,
+        Lamp
     }
 }
