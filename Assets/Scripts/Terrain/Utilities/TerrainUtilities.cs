@@ -13,11 +13,11 @@ namespace Opencraft.Terrain.Utilities
     [BurstCompile]
     public static class TerrainUtilities
     {
-        
+
         [Serializable]
         public class TerrainChunkNotLoadedException : Exception
         {
-            public TerrainChunkNotLoadedException() {  }
+            public TerrainChunkNotLoadedException() { }
 
             public TerrainChunkNotLoadedException(string message)
                 : base(String.Format("Terrain chunk not loaded: {0}", message))
@@ -25,45 +25,45 @@ namespace Opencraft.Terrain.Utilities
 
             }
         }
-        
+
         // Draws outline of an area
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void DebugDrawTerrainArea(in float3 terrainAreaPos, Color color, float duration = 0.0f)
         {
             DebugDrawTerrainBlock(in terrainAreaPos, color, duration, Env.AREA_SIZE);
         }
-        
+
         // Draws outline of a block
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void DebugDrawTerrainBlock(in float3 terrainBlockPos, Color color, float duration = 0.0f, float size = 1.0f)
         {
             var d = size;
             // Draw a bounding box
-            Debug.DrawLine(terrainBlockPos, terrainBlockPos + new float3(d, 0, 0),color,duration );
-            Debug.DrawLine(terrainBlockPos, terrainBlockPos + new float3(0, d, 0),color,duration );
-            Debug.DrawLine(terrainBlockPos, terrainBlockPos + new float3(0, 0, d),color,duration);
-            Debug.DrawLine(terrainBlockPos + new float3(d, d, 0), terrainBlockPos + new float3(d, 0, 0),color,duration);
-            Debug.DrawLine(terrainBlockPos + new float3(d, d, 0), terrainBlockPos + new float3(0, d, 0),color,duration);
-            Debug.DrawLine(terrainBlockPos + new float3(d, d, 0), terrainBlockPos + new float3(d, d, d),color,duration);
-            Debug.DrawLine(terrainBlockPos + new float3(0, d, d), terrainBlockPos + new float3(0, d, 0),color,duration);
-            Debug.DrawLine(terrainBlockPos + new float3(0, d, d), terrainBlockPos + new float3(0, 0, d),color,duration);
-            Debug.DrawLine(terrainBlockPos + new float3(0, d, d), terrainBlockPos + new float3(d, d, d),color,duration);
-            Debug.DrawLine(terrainBlockPos + new float3(d, 0, d), terrainBlockPos + new float3(d, 0, 0),color,duration);
-            Debug.DrawLine(terrainBlockPos + new float3(d, 0, d), terrainBlockPos + new float3(d, d, d),color,duration);
-            Debug.DrawLine(terrainBlockPos + new float3(d, 0, d), terrainBlockPos + new float3(0, 0, d),color,duration);
+            Debug.DrawLine(terrainBlockPos, terrainBlockPos + new float3(d, 0, 0), color, duration);
+            Debug.DrawLine(terrainBlockPos, terrainBlockPos + new float3(0, d, 0), color, duration);
+            Debug.DrawLine(terrainBlockPos, terrainBlockPos + new float3(0, 0, d), color, duration);
+            Debug.DrawLine(terrainBlockPos + new float3(d, d, 0), terrainBlockPos + new float3(d, 0, 0), color, duration);
+            Debug.DrawLine(terrainBlockPos + new float3(d, d, 0), terrainBlockPos + new float3(0, d, 0), color, duration);
+            Debug.DrawLine(terrainBlockPos + new float3(d, d, 0), terrainBlockPos + new float3(d, d, d), color, duration);
+            Debug.DrawLine(terrainBlockPos + new float3(0, d, d), terrainBlockPos + new float3(0, d, 0), color, duration);
+            Debug.DrawLine(terrainBlockPos + new float3(0, d, d), terrainBlockPos + new float3(0, 0, d), color, duration);
+            Debug.DrawLine(terrainBlockPos + new float3(0, d, d), terrainBlockPos + new float3(d, d, d), color, duration);
+            Debug.DrawLine(terrainBlockPos + new float3(d, 0, d), terrainBlockPos + new float3(d, 0, 0), color, duration);
+            Debug.DrawLine(terrainBlockPos + new float3(d, 0, d), terrainBlockPos + new float3(d, d, d), color, duration);
+            Debug.DrawLine(terrainBlockPos + new float3(d, 0, d), terrainBlockPos + new float3(0, 0, d), color, duration);
         }
-        
+
         // Converts a continuous world location to a discrete area location
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int3 GetContainingAreaLocation(in float3 pos)
         {
             // Terrain Areas are placed in cube grid at intervals of Env.AREA_SIZE
             return new int3(
-                (Env.AREA_SIZE* NoiseUtilities.FastFloor(pos.x / Env.AREA_SIZE )),
+                (Env.AREA_SIZE * NoiseUtilities.FastFloor(pos.x / Env.AREA_SIZE)),
                 (Env.AREA_SIZE * NoiseUtilities.FastFloor(pos.y / Env.AREA_SIZE)),
-                (Env.AREA_SIZE* NoiseUtilities.FastFloor(pos.z / Env.AREA_SIZE )));
+                (Env.AREA_SIZE * NoiseUtilities.FastFloor(pos.z / Env.AREA_SIZE)));
         }
-        
+
         // Converts world location to block location within an area
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int3 GetBlockLocationInArea(in int3 blockPos, in int3 terrainAreaPos)
@@ -73,21 +73,21 @@ namespace Opencraft.Terrain.Utilities
                 blockPos.y - terrainAreaPos.y,
                 blockPos.z - terrainAreaPos.z);
         }
-        
+
         // Converts a block position in an area to that block's index
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int BlockLocationToIndex(ref int3 blockPos)
         {
-            return blockPos.y + blockPos.x * Env.AREA_SIZE  + blockPos.z * Env.AREA_SIZE_POW_2;
+            return blockPos.y + blockPos.x * Env.AREA_SIZE + blockPos.z * Env.AREA_SIZE_POW_2;
         }
-        
+
         // Converts a block position in an area to that block's index
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int BlockLocationToIndex(int x, int y, int z)
-        { 
+        {
             return y + x * Env.AREA_SIZE + z * Env.AREA_SIZE_POW_2;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int BlockLocationHash(int x, int y, int z)
         {
@@ -99,20 +99,20 @@ namespace Opencraft.Terrain.Utilities
                 return hashCode;
             }
         }
-        
+
         // Converts a block position in an area to it's column index
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int BlockLocationToColIndex(ref int3 blockPos)
         {
             int bps = Env.AREA_SIZE;
-            return blockPos.x  + blockPos.z * bps ;
+            return blockPos.x + blockPos.z * bps;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int BlockLocationToColIndex(int x, int z)
         {
             int bps = Env.AREA_SIZE;
-            return x  + z * bps ;
+            return x + z * bps;
         }
 
 
@@ -137,7 +137,7 @@ namespace Opencraft.Terrain.Utilities
             containingAreaIndex = -1;
             return false;
         }
-        
+
         public struct BlockSearchInput
         {
             public int3 basePos;
@@ -145,7 +145,7 @@ namespace Opencraft.Terrain.Utilities
             public Entity areaEntity;
             public int3 terrainAreaPos;
             public int columnHeight;
-            
+
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static void DefaultBlockSearchInput(ref BlockSearchInput bsi)
             {
@@ -160,9 +160,9 @@ namespace Opencraft.Terrain.Utilities
         public enum BlockSearchResult
         {
             SearchNotCompleted = 0,
-            NotLoaded=1,
-            OutOfBounds=2,
-            Found=3
+            NotLoaded = 1,
+            OutOfBounds = 2,
+            Found = 3
         }
 
         public struct BlockSearchOutput
@@ -172,7 +172,7 @@ namespace Opencraft.Terrain.Utilities
             public int3 localPos;
             public BlockType blockType;
             public BlockSearchResult result;
-            
+
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static void DefaultBlockSearchOutput(ref BlockSearchOutput bso)
             {
@@ -183,7 +183,7 @@ namespace Opencraft.Terrain.Utilities
                 bso.result = BlockSearchResult.SearchNotCompleted;
             }
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         // Uses neighbor entity links to check block types via offset from an existing position with a given terrain area
         // Returns true if the block exists and is not air
@@ -209,7 +209,7 @@ namespace Opencraft.Terrain.Utilities
             {
                 if (debug)
                     Debug.Log($"   BlockSearchByOffset [{step}]: global {offsetPos} = local {localPos} in area {terrainAreaPosAdj}");
-                
+
 
                 step++;
 
@@ -271,7 +271,7 @@ namespace Opencraft.Terrain.Utilities
                     {
                         currentEntity = currentNeighbors.neighborYP;
                         continue;
-                    } 
+                    }
                     if (debug)
                         Debug.LogWarning($"NeighborYP not found!");
                     if (terrainAreaPosAdj.y >= input.columnHeight * Env.AREA_SIZE)
@@ -292,7 +292,7 @@ namespace Opencraft.Terrain.Utilities
                     {
                         currentEntity = currentNeighbors.neighborZN;
                         continue;
-                    } 
+                    }
                     if (debug)
                         Debug.LogWarning($"NeighborZN not found!");
                     notFound = true;
@@ -306,7 +306,7 @@ namespace Opencraft.Terrain.Utilities
                     {
                         currentEntity = currentNeighbors.neighborZP;
                         continue;
-                    } 
+                    }
                     if (debug)
                         Debug.LogWarning($"NeighborZP not found!");
                     notFound = true;
@@ -334,10 +334,10 @@ namespace Opencraft.Terrain.Utilities
             output.blockType = block;
             output.result = BlockSearchResult.Found;
 #if UNITY_EDITOR
-            if(debug)
+            if (debug)
             {
                 float3 p = new float3(offsetPos);
-                DebugDrawTerrainBlock(in p, Color.green,  3.0f);
+                DebugDrawTerrainBlock(in p, Color.green, 3.0f);
                 Debug.Log($"Global pos {offsetPos} is localPos {localPos} in chunk {terrainAreaPosAdj}, block is {block}");
             }
             /*Debug.Log($"Offset pos is {localPos} in {terrainAreaPos}");
@@ -347,7 +347,7 @@ namespace Opencraft.Terrain.Utilities
                 terrainAreaPosAdj.z + localPos.z);
             DebugDrawTerrainBlock(ref blockPos, Color.green);*/
 #endif
-            
+
             return true;
 
         }
@@ -369,12 +369,12 @@ namespace Opencraft.Terrain.Utilities
                     return true;
 
                 // If it is outside this chunk, get the block from the neighbouring chunk
-                return neighborXN[(bps - 1) * bps  + j + kBPS2].type == BlockType.Air;
+                return neighborXN[(bps - 1) * bps + j + kBPS2].type == BlockType.Air;
             }
 
             return blocks[access - bps].type == BlockType.Air;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool VisibleFaceXP(int j, int access, bool max, int kBPS2, ref DynamicBuffer<TerrainBlocks> blocks,
             ref DynamicBuffer<TerrainBlocks> neighborXP)
@@ -392,9 +392,9 @@ namespace Opencraft.Terrain.Utilities
                 return neighborXP[j + kBPS2].type == BlockType.Air;
             }
 
-            return blocks[access +  bps].type == BlockType.Air;
+            return blocks[access + bps].type == BlockType.Air;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool VisibleFaceYN(int access, bool min, int iBPS, int kBPS2, ref DynamicBuffer<TerrainBlocks> blocks,
             ref DynamicBuffer<TerrainBlocks> neighborYN)
@@ -412,7 +412,7 @@ namespace Opencraft.Terrain.Utilities
 
             return blocks[access - 1].type == BlockType.Air;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool VisibleFaceYP(int access, bool max, int iBPS, int kBPS2, ref DynamicBuffer<TerrainBlocks> blocks,
             ref DynamicBuffer<TerrainBlocks> neighborYP)
@@ -427,7 +427,7 @@ namespace Opencraft.Terrain.Utilities
 
             return blocks[access + 1].type == BlockType.Air;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool VisibleFaceZN(int j, int access, bool min, int iBPS, ref DynamicBuffer<TerrainBlocks> blocks,
             ref DynamicBuffer<TerrainBlocks> neighborZN)
@@ -440,12 +440,12 @@ namespace Opencraft.Terrain.Utilities
                 if (neighborZN.IsEmpty)
                     return true;
 
-                return neighborZN[iBPS + j + (bps-1) * bpl].type == BlockType.Air;
+                return neighborZN[iBPS + j + (bps - 1) * bpl].type == BlockType.Air;
             }
 
             return blocks[access - bpl].type == BlockType.Air;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool VisibleFaceZP(int j, int access, bool max, int iBPS, ref DynamicBuffer<TerrainBlocks> blocks,
             ref DynamicBuffer<TerrainBlocks> neighborZP)

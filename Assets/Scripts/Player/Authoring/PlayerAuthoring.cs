@@ -62,6 +62,7 @@ namespace Opencraft.Player.Authoring
         [GhostField] public InputEvent Jump;
         [GhostField] public InputEvent PrimaryAction;
         [GhostField] public InputEvent SecondaryAction;
+        [GhostField] public InputEvent ThirdAction;
         [GhostField] public int SelectedItem;
         [GhostField] public float Pitch;
         [GhostField] public float Yaw;

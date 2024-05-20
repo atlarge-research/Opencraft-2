@@ -18,11 +18,15 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Profiling;
 using System.Security.Cryptography;
 using System.Text;
+using UnityEngine;
+using System.Collections;
 
 // Annoyingly this assembly directive must be outside the namespace.
 [assembly: RegisterGenericJobType(typeof(SortJob<int2, Int2DistanceComparer>))]
 namespace Opencraft.Terrain
 {
+
+
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [BurstCompile]
@@ -38,10 +42,14 @@ namespace Opencraft.Terrain
         private BufferLookup<TerrainColMinY> _terrainColMinLookup;
         private BufferLookup<TerrainColMaxY> _terrainColMaxLookup;
         private BufferLookup<TerrainStructuresToSpawn> _structuresToSpawnLookup;
-
+        public static NativeList<PowerBlockData> powerBlocks;
         private int _hashedSeed;
         //private double lastUpdate;
-
+        public struct PowerBlockData
+        {
+            public int3 BlockLocation;
+            public Entity TerrainArea;
+        }
         public void OnCreate(ref SystemState state)
         {
             // Wait for scene load/baking to occur before updates. 
@@ -58,6 +66,7 @@ namespace Opencraft.Terrain
             _terrainColMinLookup = state.GetBufferLookup<TerrainColMinY>(isReadOnly: false);
             _terrainColMaxLookup = state.GetBufferLookup<TerrainColMaxY>(isReadOnly: false);
             _structuresToSpawnLookup = state.GetBufferLookup<TerrainStructuresToSpawn>(isReadOnly: false);
+            powerBlocks = new NativeList<PowerBlockData>(Allocator.Persistent);
 
             // Seed
             MD5 md5Hasher = MD5.Create();
@@ -69,6 +78,7 @@ namespace Opencraft.Terrain
         public void OnDestroy(ref SystemState state)
         {
             _terrainGenLayers.Dispose();
+            powerBlocks.Dispose();
         }
 
         //[BurstCompile]
@@ -461,8 +471,8 @@ namespace Opencraft.Terrain
             terrainGenLayer.blockType, blockIndex, columnAccess);
 
             return end;
-
         }
+
         private int GenerateWireLayer(ref NativeArray<DynamicBuffer<BlockType>> terrainBlockBuffers,
             ref NativeArray<DynamicBuffer<byte>> colMinBuffers,
             ref NativeArray<DynamicBuffer<byte>> colMaxBuffers, int x, int z,
@@ -477,12 +487,12 @@ namespace Opencraft.Terrain
             terrainGenLayer.blockType, blockIndex, columnAccess);
 
             return end;
-
         }
+
         private int GenerateLampLayer(ref NativeArray<DynamicBuffer<BlockType>> terrainBlockBuffers,
-    ref NativeArray<DynamicBuffer<byte>> colMinBuffers,
-    ref NativeArray<DynamicBuffer<byte>> colMaxBuffers, int x, int z,
-    int blockIndex, int heightSoFar, ref TerrainGenerationLayer terrainGenLayer, int columnAccess)
+            ref NativeArray<DynamicBuffer<byte>> colMinBuffers,
+            ref NativeArray<DynamicBuffer<byte>> colMaxBuffers, int x, int z,
+            int blockIndex, int heightSoFar, ref TerrainGenerationLayer terrainGenLayer, int columnAccess)
         {
             int modulo_x = 5;
             int modulo_z = 5;
@@ -493,8 +503,8 @@ namespace Opencraft.Terrain
             terrainGenLayer.blockType, blockIndex, columnAccess);
 
             return end;
-
         }
+
         // Places blocks in a vertical column. Requires the column of terrain areas.
         private void SetColumnBlocks(ref NativeArray<DynamicBuffer<BlockType>> columnAreaBlockBuffers,
             ref NativeArray<DynamicBuffer<byte>> colMinBuffers,
@@ -527,7 +537,10 @@ namespace Opencraft.Terrain
                         colMaxBuffer[columnAccess] = (byte)(end - chunkYMin);
                 }
                 areaBlockBuffer[blockIndex + localY] = blockType;
-
+                if (blockType == BlockType.Power)
+                {
+                    //                    Debug.Log("Power: " + ++TerrainGenerationSystem.num_power + $"\n{globalY}, {blockIndex}, {columnAccess}");
+                }
                 prevColY = colY;
 
             }

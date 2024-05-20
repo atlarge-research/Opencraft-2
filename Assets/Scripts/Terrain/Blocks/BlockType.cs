@@ -11,7 +11,12 @@
         Grass,
         Leaf,
         Wood,
-        Unbreakable
+        Unbreakable,
+        Power,
+        Off_Wire,
+        On_Wire,
+        Off_Lamp,
+        On_Lamp,
     }
     public static class BlockData
     {
@@ -27,12 +32,17 @@
             (6 & 31) << 24,
             (7 & 31) << 24,
             (8 & 31) << 24,
+            (9 & 31) << 24,
+            (10 & 31) << 24,
+            (11 & 31) << 24,
+            (12 & 31) << 24,
+            (13 & 31) << 24,
         };
 
         // UV sizing > 1 tiles a texture across multiple blocks, currently not done for any block types
         public static float[] BlockUVSizing = new float[]
         {
-            1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
+            1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
         };
     }
 

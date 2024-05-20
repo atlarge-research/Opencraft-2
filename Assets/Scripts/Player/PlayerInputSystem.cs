@@ -56,6 +56,7 @@ namespace Opencraft.Player
                 input.ValueRW.Jump = default;
                 input.ValueRW.PrimaryAction = default;
                 input.ValueRW.SecondaryAction = default;
+                input.ValueRW.ThirdAction = default;
 
                 input.ValueRW.Movement.x = playerController.inputMovement.x;
                 input.ValueRW.Movement.y = playerController.inputMovement.y;
@@ -76,6 +77,11 @@ namespace Opencraft.Player
                 {
                     input.ValueRW.SecondaryAction.Set();
                     playerController.inputSecondaryAction = false;
+                }
+                if (playerController.inputThirdAction)
+                {
+                    input.ValueRW.ThirdAction.Set();
+                    playerController.inputThirdAction = false;
                 }
 
                 // Look

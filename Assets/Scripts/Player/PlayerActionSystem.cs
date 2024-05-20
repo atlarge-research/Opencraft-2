@@ -1,4 +1,6 @@
-﻿using Opencraft.Player.Authoring;
+﻿using System.Diagnostics;
+using Opencraft.Player.Authoring;
+using Opencraft.Terrain;
 using Opencraft.Terrain.Authoring;
 using Opencraft.Terrain.Blocks;
 using Opencraft.Terrain.Utilities;
@@ -7,6 +9,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
+using UnityEngine;
 
 namespace Opencraft.Player
 {
@@ -134,8 +137,51 @@ namespace Opencraft.Player
                                 colMaxes[colIndex] = (byte)(blockLoc.y + 1);
                             // todo ability to place something other than stone
                             blocks[blockIndex] = (BlockType)player.Input.SelectedItem;
+
+                            //Entity terrainAreaEntity2 = player.SelectedBlock.terrainArea;
+                            //EntityManager entityManager = state.World.EntityManager;
+                            //int3 terrainAreaPosition = (int3)entityManager.GetComponentData<LocalTransform>(terrainAreaEntity2).Position;
+                            //int3 blockPosition = terrainAreaPosition + blockLoc;
+                            //UnityEngine.Debug.Log($"localPos: {blockLoc}, TerrainPos: {terrainAreaPosition}");
+
+
+                            // Adding the local block pos and terrain area to the power block list
+
+                            TerrainGenerationSystem.powerBlocks.Add(new TerrainGenerationSystem.PowerBlockData
+                            {
+                                BlockLocation = blockLoc,
+                                TerrainArea = player.SelectedBlock.terrainArea,
+                            });
+
+                            // blockLoc -> relative location without terrain
+                            // terrainAreaPosition -> chunk offset
+                            // blockPosition -> absolute location of the 
                         }
                     }
+                }
+
+                if (player.Input.ThirdAction.IsSet)
+                {
+                    UnityEngine.Debug.Log("Third action triggered");
+                    var powerBlocks = TerrainGenerationSystem.powerBlocks;
+                    for (int i = 0; i < powerBlocks.Length; i++)
+                    {
+                        TerrainGenerationSystem.PowerBlockData powerBlock = powerBlocks[i];
+                        // Do something with the powerBlock item
+
+                        EntityManager entityManager = state.World.EntityManager;
+                        // int3 terrainAreaPosition = (int3)entityManager.GetComponentData<LocalTransform>(terrainArea).Position;
+                        if (_terrainBlocksBufferLookup.TryGetBuffer(powerBlock.TerrainArea, out DynamicBuffer<TerrainBlocks> terrainBlocks))
+                        {
+                            int3 blockLoc = powerBlock.BlockLocation;
+                            int blockIndex = TerrainUtilities.BlockLocationToIndex(ref blockLoc);
+                            //int colIndex = TerrainUtilities.BlockLocationToColIndex(ref blockLoc);
+                            DynamicBuffer<BlockType> blocks = terrainBlocks.Reinterpret<BlockType>();
+                            blocks[blockIndex] = (BlockType)player.Input.SelectedItem;
+
+                        }
+                    }
+
                 }
             }
 
