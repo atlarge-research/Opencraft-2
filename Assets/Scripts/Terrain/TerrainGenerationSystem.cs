@@ -44,6 +44,9 @@ namespace Opencraft.Terrain
         private BufferLookup<TerrainStructuresToSpawn> _structuresToSpawnLookup;
         public static NativeList<PowerBlockData> powerBlocks;
         private int _hashedSeed;
+        private NativeArray<Entity> terrainAreasEntities;
+        private NativeArray<TerrainArea> terrainAreas;
+
         //private double lastUpdate;
         public struct PowerBlockData
         {
@@ -88,6 +91,11 @@ namespace Opencraft.Terrain
             {
                 _terrainGenLayers = SystemAPI.QueryBuilder().WithAll<TerrainGenerationLayer>().Build().ToComponentDataArray<TerrainGenerationLayer>(Allocator.Persistent);
             }
+
+            var terrainAreasQuery = SystemAPI.QueryBuilder().WithAll<TerrainArea, LocalTransform>().Build();
+            terrainAreasEntities = terrainAreasQuery.ToEntityArray(state.WorldUpdateAllocator);
+            terrainAreas = terrainAreasQuery.ToComponentDataArray<TerrainArea>(state.WorldUpdateAllocator);
+
             /*if (state.World.Time.ElapsedTime - lastUpdate < 1.0)
             {
                 return;
@@ -146,6 +154,7 @@ namespace Opencraft.Terrain
                 worldHeight = worldHeight,
                 columnHeight = columnHeight,
                 terrainGenLayers = _terrainGenLayers
+
             }.Schedule(numColumnsToSpawn, 1, sortHandle); // Each thread gets 1 column
             populateHandle.Complete();
             terrainAreaEntities.Dispose();
@@ -342,7 +351,7 @@ namespace Opencraft.Terrain
                             case LayerType.Power:
                                 heightSoFar = GeneratePowerLayer(ref terrainBlockBuffers,
                                     ref colMinBuffers, ref colMaxBuffers, x, z, startIndex,
-                                    heightSoFar, ref terrainGenerationLayer, columnAccess);
+                                    heightSoFar, ref terrainGenerationLayer, columnAccess, globalX, globalZ, index);
                                 break;
                             case LayerType.Wire:
                                 heightSoFar = GenerateWireLayer(ref terrainBlockBuffers,
@@ -460,7 +469,7 @@ namespace Opencraft.Terrain
         private int GeneratePowerLayer(ref NativeArray<DynamicBuffer<BlockType>> terrainBlockBuffers,
             ref NativeArray<DynamicBuffer<byte>> colMinBuffers,
             ref NativeArray<DynamicBuffer<byte>> colMaxBuffers, int x, int z,
-            int blockIndex, int heightSoFar, ref TerrainGenerationLayer terrainGenLayer, int columnAccess)
+            int blockIndex, int heightSoFar, ref TerrainGenerationLayer terrainGenLayer, int columnAccess, int globalX, int globalZ, int index)
         {
             int modulo_x = 5;
             int modulo_z = 5;
@@ -468,7 +477,7 @@ namespace Opencraft.Terrain
 
             int end = heightSoFar + heightToAdd < worldHeight ? heightSoFar + heightToAdd : worldHeight;
             SetColumnBlocks(ref terrainBlockBuffers, ref colMinBuffers, ref colMaxBuffers, heightSoFar, end,
-            terrainGenLayer.blockType, blockIndex, columnAccess);
+            terrainGenLayer.blockType, blockIndex, columnAccess, globalX, globalZ, index);
 
             return end;
         }
@@ -509,7 +518,7 @@ namespace Opencraft.Terrain
         private void SetColumnBlocks(ref NativeArray<DynamicBuffer<BlockType>> columnAreaBlockBuffers,
             ref NativeArray<DynamicBuffer<byte>> colMinBuffers,
             ref NativeArray<DynamicBuffer<byte>> colMaxBuffers,
-            int start, int end, BlockType blockType, int blockIndex, int columnAccess)
+            int start, int end, BlockType blockType, int blockIndex, int columnAccess, int globalX = -1, int globalZ = -1, int index = -1)
         {
             DynamicBuffer<BlockType> areaBlockBuffer = columnAreaBlockBuffers[0];
             DynamicBuffer<byte> colMinBuffer;
@@ -541,7 +550,16 @@ namespace Opencraft.Terrain
                 {
                     int3 blockLoc = TerrainUtilities.BlockIndexToLocation(blockIndex + localY);
                     Debug.Log("BlockGen: " + blockLoc);
+                    int3 containingArea = new int3(globalX, localY, globalZ);
+                    Entity terrainEntity = terrainAreaEntities[index + colY];
 
+                    TerrainGenerationSystem.PowerBlockData powerBlock = new TerrainGenerationSystem.PowerBlockData
+                    {
+                        BlockLocation = blockLoc,
+                        TerrainArea = terrainEntity
+                    };
+                    TerrainGenerationSystem.powerBlocks.Add(powerBlock);
+                    // TerrainUtilities.GetBlockContainingAreaIndex(containingArea, .terrainAreas)
                     //                    Debug.Log("Power: " + ++TerrainGenerationSystem.num_power + $"\n{globalY}, {blockIndex}, {columnAccess}");
                 }
                 prevColY = colY;

@@ -64,6 +64,18 @@ namespace Opencraft.Terrain.Utilities
                 (Env.AREA_SIZE * NoiseUtilities.FastFloor(pos.z / Env.AREA_SIZE)));
         }
 
+        private static int GetTerrainAreaIndex(in int3 blockPos, in NativeArray<TerrainArea> terrainAreas)
+        {
+
+            if (!TerrainUtilities.GetTerrainAreaByPosition(in blockPos, terrainAreas, out int containingAreaIndex))
+            {
+                return -1;
+            }
+
+            return containingAreaIndex;
+
+        }
+
         // Converts world location to block location within an area
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int3 GetBlockLocationInArea(in int3 blockPos, in int3 terrainAreaPos)
