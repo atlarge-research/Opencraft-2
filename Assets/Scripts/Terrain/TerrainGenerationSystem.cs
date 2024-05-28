@@ -20,6 +20,8 @@ using System.Security.Cryptography;
 using System.Text;
 using UnityEngine;
 using System.Collections;
+using UnityEditor.PackageManager;
+using System.Collections.Concurrent;
 
 // Annoyingly this assembly directive must be outside the namespace.
 [assembly: RegisterGenericJobType(typeof(SortJob<int2, Int2DistanceComparer>))]
@@ -42,7 +44,7 @@ namespace Opencraft.Terrain
         private BufferLookup<TerrainColMinY> _terrainColMinLookup;
         private BufferLookup<TerrainColMaxY> _terrainColMaxLookup;
         private BufferLookup<TerrainStructuresToSpawn> _structuresToSpawnLookup;
-        public static NativeList<PowerBlockData> powerBlocks;
+        public static ConcurrentBag<PowerBlockData> powerBlocks;
         private int _hashedSeed;
         private NativeArray<Entity> terrainAreasEntities;
         private NativeArray<TerrainArea> terrainAreas;
@@ -69,7 +71,7 @@ namespace Opencraft.Terrain
             _terrainColMinLookup = state.GetBufferLookup<TerrainColMinY>(isReadOnly: false);
             _terrainColMaxLookup = state.GetBufferLookup<TerrainColMaxY>(isReadOnly: false);
             _structuresToSpawnLookup = state.GetBufferLookup<TerrainStructuresToSpawn>(isReadOnly: false);
-            powerBlocks = new NativeList<PowerBlockData>(Allocator.Persistent);
+            powerBlocks = new ConcurrentBag<PowerBlockData>();
 
             // Seed
             MD5 md5Hasher = MD5.Create();
@@ -81,7 +83,7 @@ namespace Opencraft.Terrain
         public void OnDestroy(ref SystemState state)
         {
             _terrainGenLayers.Dispose();
-            powerBlocks.Dispose();
+            //powerBlocks.Clear();
         }
 
         //[BurstCompile]
@@ -524,14 +526,16 @@ namespace Opencraft.Terrain
             DynamicBuffer<byte> colMinBuffer;
             DynamicBuffer<byte> colMaxBuffer;
             int prevColY = -1;
+
+            // Start = 0, End = 2, prevColY = -1
             for (int globalY = start; globalY < end; globalY++)
             {
-                int colY = globalY / Env.AREA_SIZE;
-                int chunkYMin = colY * Env.AREA_SIZE;
-                int chunkYMax = chunkYMin + Env.AREA_SIZE - 1;
-                int localY = globalY - chunkYMin;
+                int colY = globalY / Env.AREA_SIZE; // 0
+                int chunkYMin = colY * Env.AREA_SIZE; // 0
+                int chunkYMax = chunkYMin + Env.AREA_SIZE - 1; // 15
+                int localY = globalY - chunkYMin; // 0
                 // Check if we have entered a new terrain area
-                if (colY != prevColY)
+                if (colY != prevColY) // 0 != -1
                 {
                     // Get buffers for new terrain area
                     areaBlockBuffer = columnAreaBlockBuffers[colY];
@@ -548,19 +552,27 @@ namespace Opencraft.Terrain
                 areaBlockBuffer[blockIndex + localY] = blockType;
                 if (blockType == BlockType.Power)
                 {
-                    int3 blockLoc = TerrainUtilities.BlockIndexToLocation(blockIndex + localY);
-                    Debug.Log("BlockGen: " + blockLoc);
-                    int3 containingArea = new int3(globalX, localY, globalZ);
-                    Entity terrainEntity = terrainAreaEntities[index + colY];
-
-                    TerrainGenerationSystem.PowerBlockData powerBlock = new TerrainGenerationSystem.PowerBlockData
+                    try
                     {
-                        BlockLocation = blockLoc,
-                        TerrainArea = terrainEntity
-                    };
-                    TerrainGenerationSystem.powerBlocks.Add(powerBlock);
-                    // TerrainUtilities.GetBlockContainingAreaIndex(containingArea, .terrainAreas)
-                    //                    Debug.Log("Power: " + ++TerrainGenerationSystem.num_power + $"\n{globalY}, {blockIndex}, {columnAccess}");
+
+                        int3 blockLoc = TerrainUtilities.BlockIndexToLocation(blockIndex + localY);
+                        Debug.Log("BlockGen: " + blockLoc);
+                        //int3 containingArea = new int3(globalX, localY, globalZ);
+                        Entity terrainEntity = terrainAreaEntities[index + colY];
+
+                        TerrainGenerationSystem.PowerBlockData powerBlock = new TerrainGenerationSystem.PowerBlockData
+                        {
+                            BlockLocation = blockLoc,
+                            TerrainArea = terrainEntity
+                        };
+                        TerrainGenerationSystem.powerBlocks.Add(powerBlock);
+                        // TerrainUtilities.GetBlockContainingAreaIndex(containingArea, .terrainAreas)
+                        //                    Debug.Log("Power: " + ++TerrainGenerationSystem.num_power + $"\n{globalY}, {blockIndex}, {columnAccess}");
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.Log(e);
+                    }
                 }
                 prevColY = colY;
 

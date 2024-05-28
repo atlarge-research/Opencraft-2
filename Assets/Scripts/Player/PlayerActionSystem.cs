@@ -164,11 +164,8 @@ namespace Opencraft.Player
                 {
                     UnityEngine.Debug.Log("Third action triggered");
                     var powerBlocks = TerrainGenerationSystem.powerBlocks;
-                    for (int i = 0; i < powerBlocks.Length; i++)
+                    foreach (var powerBlock in powerBlocks)
                     {
-                        TerrainGenerationSystem.PowerBlockData powerBlock = powerBlocks[i];
-                        // Do something with the powerBlock item
-
                         EntityManager entityManager = state.World.EntityManager;
                         // int3 terrainAreaPosition = (int3)entityManager.GetComponentData<LocalTransform>(terrainArea).Position;
                         if (_terrainBlocksBufferLookup.TryGetBuffer(powerBlock.TerrainArea, out DynamicBuffer<TerrainBlocks> terrainBlocks))
