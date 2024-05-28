@@ -539,6 +539,9 @@ namespace Opencraft.Terrain
                 areaBlockBuffer[blockIndex + localY] = blockType;
                 if (blockType == BlockType.Power)
                 {
+                    int3 blockLoc = TerrainUtilities.BlockIndexToLocation(blockIndex + localY);
+                    Debug.Log("BlockGen: " + blockLoc);
+
                     //                    Debug.Log("Power: " + ++TerrainGenerationSystem.num_power + $"\n{globalY}, {blockIndex}, {columnAccess}");
                 }
                 prevColY = colY;

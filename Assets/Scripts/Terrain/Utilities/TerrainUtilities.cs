@@ -88,6 +88,15 @@ namespace Opencraft.Terrain.Utilities
             return y + x * Env.AREA_SIZE + z * Env.AREA_SIZE_POW_2;
         }
 
+        public static int3 BlockIndexToLocation(int index)
+        {
+            int z = index / Env.AREA_SIZE_POW_2;
+            int rem_z = index % Env.AREA_SIZE_POW_2;
+            int x = rem_z / Env.AREA_SIZE;
+            int y = rem_z % Env.AREA_SIZE;
+            return new int3(x, y, z);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int BlockLocationHash(int x, int y, int z)
         {
