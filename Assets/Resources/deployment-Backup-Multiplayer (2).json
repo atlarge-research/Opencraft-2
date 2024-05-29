@@ -24,7 +24,15 @@
      }
  ], 
  "experimentActions":[
-     
-    
+     {
+         "delay": 30,
+         "actions": [ 
+             {
+                 "nodeID": 1,
+                 "worldNames": ["GameClient"],
+                 "actions": ["Stop"]
+             }
+         ]
+     }
  ]
  }

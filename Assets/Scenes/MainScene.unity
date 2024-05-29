@@ -557,20 +557,20 @@ PrefabInstance:
     - target: {fileID: 3243556258562715456, guid: 6752cefe6bfd8d09cb07eba71d738d13,
         type: 3}
       propertyPath: editorArgs
-      value: '-deploymentID 0 -deploymentJson deployment -debug true -profiler-enable
-        true -profiler-logfile C:\\Users\\joach\Desktop\\file.csv -logStats true '
+      value: -deploymentID 1 -remoteConfig -deploymentURL 192.168.1.141
       objectReference: {fileID: 0}
     - target: {fileID: 3243556258562715456, guid: 6752cefe6bfd8d09cb07eba71d738d13,
         type: 3}
       propertyPath: deploymentConfig
-      value: "{\r\n    \"nodes\":[\r\n        {\r\n            \"nodeID\":0,\r\n           
-        \"worldConfigs\":[\r\n              {\r\n                \"worldName\": \"GameServer\",\r\n               
-        \"worldType\": \"Server\",\r\n                \"initializationMode\": \"Connect\",\r\n               
-        \"serverNodeID\": 0,\r\n                \"numSimulatedClients\": 0\r\n             
-        },\r\n                {\r\n                \"worldName\": \"GameClient\",\r\n               
-        \"worldType\":\"Client\",\r\n                \"initializationMode\":\"Connect\",\r\n               
-        \"serverNodeID\":0\r\n                }\r\n            ]\r\n        }\r\n   
-        ], \r\n    \"experimentActions\":[]\r\n    }"
+      value: "{\r\n    \"nodes\": [\r\n        {\r\n            \"nodeID\": 0,\r\n           
+        \"worldConfigs\": [\r\n                {\r\n                    \"worldName\":
+        \"GameServer\",\r\n                    \"worldType\": \"Server\",\r\n                   
+        \"initializationMode\": \"Connect\"\r\n                }\r\n            ]\r\n       
+        },\r\n        {\r\n            \"nodeID\": 1,\r\n            \"worldConfigs\":
+        [\r\n                {\r\n                    \"worldName\": \"GameClient\",\r\n                   
+        \"worldType\": \"Client\",\r\n                    \"initializationMode\":
+        \"Connect\",\r\n                    \"serverNodeID\": 0\r\n               
+        }\r\n            ]\r\n        }\r\n    ],\r\n    \"experimentActions\": []\r\n}"
       objectReference: {fileID: 0}
     - target: {fileID: 3243556258562715456, guid: 6752cefe6bfd8d09cb07eba71d738d13,
         type: 3}
