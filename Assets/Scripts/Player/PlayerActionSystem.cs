@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
 using Opencraft.Player.Authoring;
 using Opencraft.Terrain;
 using Opencraft.Terrain.Authoring;
@@ -109,7 +110,17 @@ namespace Opencraft.Player
                                     }
                                 }
                             }
+                            if (blocks[blockIndex] == BlockType.Power)
+                            {
+                                TerrainArea terrainArea = _terrainAreaLookup[terrainAreaEntity];
+                                int3 globalPos = terrainArea.location * Env.AREA_SIZE + blockLoc;
+                                UnityEngine.Debug.Log($"globalPos: {globalPos}");
+                                TerrainGenerationSystem.powerBlocks.TryRemove(globalPos, out TerrainGenerationSystem.PowerBlockData value);
+                            }
+
                             blocks[blockIndex] = BlockType.Air;
+
+
                         }
                     }
 
@@ -143,15 +154,16 @@ namespace Opencraft.Player
                             //int3 terrainAreaPosition = (int3)entityManager.GetComponentData<LocalTransform>(terrainAreaEntity2).Position;
                             //int3 blockPosition = terrainAreaPosition + blockLoc;
                             //UnityEngine.Debug.Log($"localPos: {blockLoc}, TerrainPos: {terrainAreaPosition}");
+                            TerrainArea terrainArea = _terrainAreaLookup[terrainAreaEntity];
+                            int3 globalPos = terrainArea.location * Env.AREA_SIZE + blockLoc;
+                            UnityEngine.Debug.Log($"globalPos: {globalPos}");
 
 
-                            // Adding the local block pos and terrain area to the power block list
-
-                            TerrainGenerationSystem.powerBlocks.Add(new TerrainGenerationSystem.PowerBlockData
+                            TerrainGenerationSystem.powerBlocks[globalPos] = new TerrainGenerationSystem.PowerBlockData
                             {
                                 BlockLocation = blockLoc,
                                 TerrainArea = player.SelectedBlock.terrainArea,
-                            });
+                            };
 
                             // blockLoc -> relative location without terrain
                             // terrainAreaPosition -> chunk offset
@@ -163,14 +175,14 @@ namespace Opencraft.Player
                 if (player.Input.ThirdAction.IsSet)
                 {
                     UnityEngine.Debug.Log("Third action triggered");
-                    var powerBlocks = TerrainGenerationSystem.powerBlocks;
+                    var powerBlocks = TerrainGenerationSystem.powerBlocks.ToArray();
                     foreach (var powerBlock in powerBlocks)
                     {
-                        EntityManager entityManager = state.World.EntityManager;
+                        //EntityManager entityManager = state.World.EntityManager;
                         // int3 terrainAreaPosition = (int3)entityManager.GetComponentData<LocalTransform>(terrainArea).Position;
-                        if (_terrainBlocksBufferLookup.TryGetBuffer(powerBlock.TerrainArea, out DynamicBuffer<TerrainBlocks> terrainBlocks))
+                        if (_terrainBlocksBufferLookup.TryGetBuffer(powerBlock.Value.TerrainArea, out DynamicBuffer<TerrainBlocks> terrainBlocks))
                         {
-                            int3 blockLoc = powerBlock.BlockLocation;
+                            int3 blockLoc = powerBlock.Value.BlockLocation;
                             int blockIndex = TerrainUtilities.BlockLocationToIndex(ref blockLoc);
                             //int colIndex = TerrainUtilities.BlockLocationToColIndex(ref blockLoc);
                             DynamicBuffer<BlockType> blocks = terrainBlocks.Reinterpret<BlockType>();
