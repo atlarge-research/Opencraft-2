@@ -28,13 +28,14 @@ namespace Opencraft.Terrain.Authoring
                 AddComponent<TerrainArea>(entity);
                 AddComponent<NewSpawn>(entity);
                 SetComponentEnabled<NewSpawn>(entity, true);
-                
+
                 AddComponent<Remesh>(entity);
-                
+
                 AddComponent<GenStructures>(entity);
                 SetComponentEnabled<GenStructures>(entity, false);
-                
+
                 AddBuffer<TerrainBlocks>(entity);
+                AddBuffer<BlockPowered>(entity);
                 AddBuffer<TerrainColMinY>(entity);
                 AddBuffer<TerrainColMaxY>(entity);
                 AddBuffer<TerrainStructuresToSpawn>(entity);
@@ -70,7 +71,7 @@ namespace Opencraft.Terrain.Authoring
     public struct Remesh : IComponentData, IEnableableComponent
     {
     }
-    
+
     // Remesh component marks an entity as having structures to be generated
     public struct GenStructures : IComponentData, IEnableableComponent
     {
@@ -83,21 +84,26 @@ namespace Opencraft.Terrain.Authoring
     {
         [GhostField] public BlockType type;
     }
-    
+
+    public struct BlockPowered : IBufferElementData
+    {
+        [GhostField] public bool powered;
+    }
+
     [InternalBufferCapacity(256)]
     // The buffer component to store heightmap column min
     public struct TerrainColMinY : IBufferElementData
     {
         [GhostField] public byte minY;
     }
-    
+
     [InternalBufferCapacity(256)]
     // The buffer component to store heightmap column max
     public struct TerrainColMaxY : IBufferElementData
     {
         [GhostField] public byte maxY;
     }
-    
+
     [InternalBufferCapacity(32)]
     // Buffer of terrain area structures we need to spawn but haven't yet
     public struct TerrainStructuresToSpawn : IBufferElementData
@@ -109,8 +115,8 @@ namespace Opencraft.Terrain.Authoring
         public int noise;
         public int3 offset;
     }
-    
-    
+
+
 }
 
 

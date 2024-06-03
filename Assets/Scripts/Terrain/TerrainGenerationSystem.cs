@@ -44,16 +44,9 @@ namespace Opencraft.Terrain
         private BufferLookup<TerrainColMinY> _terrainColMinLookup;
         private BufferLookup<TerrainColMaxY> _terrainColMaxLookup;
         private BufferLookup<TerrainStructuresToSpawn> _structuresToSpawnLookup;
-        public static ConcurrentDictionary<int3, PowerBlockData> powerBlocks;
         private int _hashedSeed;
         private NativeArray<Entity> terrainAreasEntities;
         private NativeArray<TerrainArea> terrainAreas;
-
-        public struct PowerBlockData
-        {
-            public int3 BlockLocation;
-            public Entity TerrainArea;
-        }
 
         //private double lastUpdate;
 
@@ -73,7 +66,6 @@ namespace Opencraft.Terrain
             _terrainColMinLookup = state.GetBufferLookup<TerrainColMinY>(isReadOnly: false);
             _terrainColMaxLookup = state.GetBufferLookup<TerrainColMaxY>(isReadOnly: false);
             _structuresToSpawnLookup = state.GetBufferLookup<TerrainStructuresToSpawn>(isReadOnly: false);
-            powerBlocks = new ConcurrentDictionary<int3, PowerBlockData>();
 
             // Seed
             MD5 md5Hasher = MD5.Create();
@@ -556,24 +548,18 @@ namespace Opencraft.Terrain
                 {
                     try
                     {
-
+                        // Adds every power block to the powerBlocks dictionary
+                        // globalPos is the key as it should be unique for every block
+                        // blockLoc is the relative position of the block in the terrain area, could probably be back calculated
+                        // terrainEntity is the entity of the block
                         int3 blockLoc = TerrainUtilities.BlockIndexToLocation(blockIndex + localY);
-                        Debug.Log("BlockGen: " + blockLoc);
                         int3 globalPos = new int3(globalX, localY, globalZ);
                         Entity terrainEntity = terrainAreaEntities[index + colY];
-                        Debug.Log(globalPos);
-                        //TerrainGenerationSystem.PowerBlockData powerBlock = new TerrainGenerationSystem.PowerBlockData
-                        //{
-                        //    BlockLocation = blockLoc,
-                        //    TerrainArea = terrainEntity
-                        //};
-                        TerrainGenerationSystem.powerBlocks[globalPos] = new TerrainGenerationSystem.PowerBlockData
+                        TerrainPowerSystem.powerBlocks[globalPos] = new TerrainPowerSystem.PowerBlockData
                         {
                             BlockLocation = blockLoc,
                             TerrainArea = terrainEntity
                         };
-                        // TerrainUtilities.GetBlockContainingAreaIndex(containingArea, .terrainAreas)
-                        //                    Debug.Log("Power: " + ++TerrainGenerationSystem.num_power + $"\n{globalY}, {blockIndex}, {columnAccess}");
                     }
                     catch (Exception e)
                     {
