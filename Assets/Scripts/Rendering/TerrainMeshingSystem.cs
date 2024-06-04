@@ -226,18 +226,21 @@ namespace Opencraft.Rendering
                         if (access >= Env.AREA_SIZE_POW_3)
                             Debug.Log($"Access {access} OOB for {i} {j} {k} with col max height {topJ}");
                         BlockType b = blocks[access].type;
-                        bool bp = powerState[access].powered;
-                        bool powerable = BlockData.PowerableBlock[(int)b];
 
                         if (b == BlockType.Air)
                             continue;
+
+                        //bool bp = powerState[access].powered;
+                        //bool powerable = BlockData.PowerableBlock[(int)b];
+                        //if (powerable && bp)
+                        //    b = (BlockType)((int)b + 1);
                         // Calculate length of run and make quads accordingly
                         minY = j == 0;
                         maxY = j == Env.AREA_SIZE_1;
                         kS = (k & 255) << 16; // pre bit shift for packing in AppendQuad functions
                         kS1 = (k1 & 255) << 16;
                         y = j + chunkY;
-                        texture = BlockData.BlockToTexture[(int)b + (powerable ? (bp ? 1 : 0) : 0)];
+                        texture = BlockData.BlockToTexture[(int)b];
                         accessIncremented = access + 1;
                         j1 = j + 1;
                         jS = (j & 255) << 8;

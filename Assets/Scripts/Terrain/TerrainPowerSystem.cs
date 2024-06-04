@@ -138,6 +138,8 @@ namespace Opencraft.Terrain
                             if (terrainPowerState[blockIndex].powered == false)
                             {
                                 terrainPowerState[blockIndex] = new BlockPowered { powered = true };
+                                DynamicBuffer<BlockType> blockTypes = terrainBlocksLookup[neighborEntity].Reinterpret<BlockType>();
+                                blockTypes[blockIndex] = blockTypes[blockIndex] + 1;
                                 Debug.Log("Powering " + neighborBlockLoc.ToString() + " in area " + terrainArea.location.ToString());
                             }
                         }
