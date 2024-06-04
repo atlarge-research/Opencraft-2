@@ -44,6 +44,11 @@
         {
             1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
         };
+
+        public static readonly bool[] PowerableBlock = new bool[]
+        {
+            false, false, false, false, false, false, false, false, false, false, true, false, true, false
+        };
     }
 
 

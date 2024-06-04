@@ -85,6 +85,7 @@ namespace Opencraft.Terrain.Authoring
         [GhostField] public BlockType type;
     }
 
+    [InternalBufferCapacity(4096)]
     public struct BlockPowered : IBufferElementData
     {
         [GhostField] public bool powered;

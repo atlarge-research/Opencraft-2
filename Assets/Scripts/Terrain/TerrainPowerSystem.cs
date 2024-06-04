@@ -39,9 +39,9 @@ namespace Opencraft.Terrain
         private int tickRate;
         private float timer;
         //private Queue<int3> poweredQueue;
-        private BufferLookup<BlockPowered> blockPoweredLookup;
+        private BufferLookup<BlockPowered> terrainPowerStateLookup;
         private BufferLookup<TerrainBlocks> terrainBlocksLookup;
-        private ComponentLookup<TerrainNeighbors> terrainNeighboursLookup;
+        private ComponentLookup<TerrainNeighbors> terrainNeighborsLookup;
 
         public struct PowerBlockData
         {
@@ -54,9 +54,9 @@ namespace Opencraft.Terrain
             tickRate = 1;
             timer = 0;
             //poweredQueue = new Queue<int3>(); 
-            blockPoweredLookup = state.GetBufferLookup<BlockPowered>(isReadOnly: false);
+            terrainPowerStateLookup = state.GetBufferLookup<BlockPowered>(isReadOnly: false);
             terrainBlocksLookup = state.GetBufferLookup<TerrainBlocks>(isReadOnly: false);
-            terrainNeighboursLookup = state.GetComponentLookup<TerrainNeighbors>(isReadOnly: false);
+            terrainNeighborsLookup = state.GetComponentLookup<TerrainNeighbors>(isReadOnly: false);
         }
 
         public void OnDestroy(ref SystemState state)
@@ -72,14 +72,30 @@ namespace Opencraft.Terrain
                 return;
             }
             timer = 0;
-            terrainNeighboursLookup.Update(ref state);
+            terrainNeighborsLookup.Update(ref state);
             foreach (var powerBlock in powerBlocks)
             {
                 int3 globalPos = powerBlock.Key;
                 Entity blockEntity = powerBlock.Value.TerrainArea;
                 int3 blockLoc = powerBlock.Value.BlockLocation;
 
-                TerrainNeighbors neighbours = terrainNeighboursLookup[blockEntity];
+                TerrainNeighbors neighbors = terrainNeighborsLookup[blockEntity];
+                Entity neighborXN = neighbors.neighborXN;
+                Entity neighborXP = neighbors.neighborXP;
+                Entity neighborYN = neighbors.neighborYN;
+                Entity neighborYP = neighbors.neighborYP;
+                Entity neighborZN = neighbors.neighborZN;
+                Entity neighborZP = neighbors.neighborZP;
+                Entity[] neighborBlocks = new Entity[] { neighborXN, neighborXP, neighborYN, neighborYP, neighborZN, neighborZP };
+
+
+                for (int i = 0; i < neighborBlocks.Length; i++)
+                {
+                    if (neighborBlocks[i] != Entity.Null)
+                    {
+
+                    }
+                }
 
                 return;
 

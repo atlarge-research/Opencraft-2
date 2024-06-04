@@ -24,6 +24,7 @@ namespace Opencraft.Rendering
         private EntityQuery _terrainSpawnerQuery;
         private EntityQuery _terrainAreaQuery;
         private BufferLookup<TerrainBlocks> _terrainBlocksBufferLookup;
+        private BufferLookup<BlockPowered> _terrainPowerStateLookup;
         private BufferLookup<TerrainColMinY> _terrainColumnMinBufferLookup;
         private BufferLookup<TerrainColMaxY> _terrainColumnMaxBufferLookup;
         private NativeArray<VertexAttributeDescriptor> _vertexLayout;
@@ -35,7 +36,7 @@ namespace Opencraft.Rendering
             _terrainSpawnerQuery = GetEntityQuery(ComponentType.ReadOnly<TerrainSpawner>());
             // Fetch terrain that needs to be remeshed
             _terrainAreaQuery = new EntityQueryBuilder(Allocator.Temp)
-                .WithAll<TerrainBlocks, TerrainArea, TerrainNeighbors, LocalTransform, RenderMeshArray, Remesh>()
+                .WithAll<TerrainBlocks, BlockPowered, TerrainArea, TerrainNeighbors, LocalTransform, RenderMeshArray, Remesh>()
                 .Build(EntityManager);
             // Set layout object for creating VBO
             _vertexLayout = new NativeArray<VertexAttributeDescriptor>(1, Allocator.Persistent);
@@ -67,6 +68,7 @@ namespace Opencraft.Rendering
                 _terrainAreaQuery.ToComponentDataArray<TerrainNeighbors>(Allocator.TempJob);
             // Get block types and column heightmaps
             _terrainBlocksBufferLookup = GetBufferLookup<TerrainBlocks>(true);
+            _terrainPowerStateLookup = GetBufferLookup<BlockPowered>(true);
             _terrainColumnMinBufferLookup = GetBufferLookup<TerrainColMinY>(true);
             _terrainColumnMaxBufferLookup = GetBufferLookup<TerrainColMaxY>(true);
             // Construct our unmanaged mesh array that can be passed to the job 
@@ -77,17 +79,18 @@ namespace Opencraft.Rendering
                 meshDataArray = meshDataArray,
                 areasToUpdate = chunksToUpdate,
                 terrainAreas = terrainAreas,
-                terrainNeighbors= terrainNeighbors,
+                terrainNeighbors = terrainNeighbors,
                 terrainBufferLookup = _terrainBlocksBufferLookup,
+                terrainPowerStateLookup = _terrainPowerStateLookup,
                 terrainColumnMinBufferLookup = _terrainColumnMinBufferLookup,
                 terrainColumnMaxBufferLookup = _terrainColumnMaxBufferLookup,
-                UseDebug =  PolkaDOTS.ApplicationConfig.DebugEnabled.Value
+                UseDebug = PolkaDOTS.ApplicationConfig.DebugEnabled.Value
             };
             // todo we can potentially have the handling of meshJob output happen on later frames to reduce
             // todo stuttering caused by large remesh jobs
             JobHandle handle = meshJob.Schedule(chunksToUpdate.Length, 1, Dependency);
             handle.Complete();
-            
+
             // Get the existing terrain area mesh objects
             Mesh[] meshes = new Mesh[chunksToUpdate.Length];
             for (int i = 0; i < chunksToUpdate.Length; i++)
@@ -121,8 +124,8 @@ namespace Opencraft.Rendering
         [ReadOnly] public NativeArray<Entity> areasToUpdate;
         [ReadOnly] public NativeArray<TerrainArea> terrainAreas;
         [ReadOnly] public NativeArray<TerrainNeighbors> terrainNeighbors;
-
         [ReadOnly] public BufferLookup<TerrainBlocks> terrainBufferLookup;
+        [ReadOnly] public BufferLookup<BlockPowered> terrainPowerStateLookup;
         [ReadOnly] public BufferLookup<TerrainColMinY> terrainColumnMinBufferLookup;
         [ReadOnly] public BufferLookup<TerrainColMaxY> terrainColumnMaxBufferLookup;
         public bool UseDebug;
@@ -137,12 +140,13 @@ namespace Opencraft.Rendering
                 float3 terrainAreaLocation = terrainArea.location * Env.AREA_SIZE;
                 TerrainUtilities.DebugDrawTerrainArea(in terrainAreaLocation, Color.red, 0.5f);
             }
-            
+
 
             // Mesh object vertex data
             Mesh.MeshData meshData = meshDataArray[index];
             // The blocks in this chunk
             DynamicBuffer<TerrainBlocks> blocks = terrainBufferLookup[entity];
+            DynamicBuffer<BlockPowered> powerState = terrainPowerStateLookup[entity];
             // The min and max y of blocks in a given column in the chunk
             DynamicBuffer<byte> colMin = terrainColumnMinBufferLookup[entity].Reinterpret<byte>();
             DynamicBuffer<byte> colMax = terrainColumnMaxBufferLookup[entity].Reinterpret<byte>();
@@ -167,7 +171,7 @@ namespace Opencraft.Rendering
             DynamicBuffer<TerrainBlocks> neighborZN = default;
             if (terrainNeighbor.neighborZN != Entity.Null)
                 neighborZN = terrainBufferLookup[terrainNeighbor.neighborZN];
-            
+
             // Bitmasks that mark a terrain block as visited
             NativeArray<bool> visitedXN = new NativeArray<bool>(Env.AREA_SIZE_POW_3, Allocator.Temp);
             NativeArray<bool> visitedXP = new NativeArray<bool>(Env.AREA_SIZE_POW_3, Allocator.Temp);
@@ -175,7 +179,7 @@ namespace Opencraft.Rendering
             NativeArray<bool> visitedZP = new NativeArray<bool>(Env.AREA_SIZE_POW_3, Allocator.Temp);
             NativeArray<bool> visitedYN = new NativeArray<bool>(Env.AREA_SIZE_POW_3, Allocator.Temp);
             NativeArray<bool> visitedYP = new NativeArray<bool>(Env.AREA_SIZE_POW_3, Allocator.Temp);
-            
+
             // Setup mesh data arrays
             int currentVertexBufferSize = 6144;
             meshData.SetVertexBufferParams(currentVertexBufferSize, vertexLayout);
@@ -183,9 +187,9 @@ namespace Opencraft.Rendering
             meshData.SetIndexBufferParams(currentIndexBufferSize, IndexFormat.UInt16);
             NativeArray<int> vertexBuffer = meshData.GetVertexData<int>();
             NativeArray<ushort> indices = meshData.GetIndexData<ushort>();
-            
+
             // Precalculate the map-relative Y position of the chunk in the map
-            int chunkY =  terrainArea.location.y * Env.AREA_SIZE;
+            int chunkY = terrainArea.location.y * Env.AREA_SIZE;
             // Allocate variables on the stack
             // iBPS is i * bps, kBPS2 is k*bps*bps. S means shifted, x1 means x + 1
             int access, heightMapAccess, iBPS, kBPS2, i1, k1, j, j1, jS, jS1, topJ,
@@ -195,7 +199,7 @@ namespace Opencraft.Rendering
             int numFaces = 0;
 
             // Z axis
-            for (int k = 0; k < Env.AREA_SIZE;  k++, k1++)
+            for (int k = 0; k < Env.AREA_SIZE; k++, k1++)
             {
                 kBPS2 = k * Env.AREA_SIZE_POW_2;
                 i1 = 1;
@@ -203,7 +207,7 @@ namespace Opencraft.Rendering
                 // Is the current run on the Z- or Z+ edge of the chunk
                 minZ = k == 0;
                 maxZ = k == Env.AREA_SIZE_1;
-                
+
                 // X axis
                 for (int i = 0; i < Env.AREA_SIZE; i++, i1++)
                 {
@@ -219,29 +223,31 @@ namespace Opencraft.Rendering
                     // Y axis
                     for (; j < topJ; j++, access++)
                     {
-                        if(access >= Env.AREA_SIZE_POW_3)
+                        if (access >= Env.AREA_SIZE_POW_3)
                             Debug.Log($"Access {access} OOB for {i} {j} {k} with col max height {topJ}");
                         BlockType b = blocks[access].type;
+                        bool bp = powerState[access].powered;
+                        bool powerable = BlockData.PowerableBlock[(int)b];
 
                         if (b == BlockType.Air)
                             continue;
                         // Calculate length of run and make quads accordingly
                         minY = j == 0;
-                        maxY = j== Env.AREA_SIZE_1;
-                        kS = (k&255) << 16; // pre bit shift for packing in AppendQuad functions
-                        kS1 = (k1&255)  << 16;
+                        maxY = j == Env.AREA_SIZE_1;
+                        kS = (k & 255) << 16; // pre bit shift for packing in AppendQuad functions
+                        kS1 = (k1 & 255) << 16;
                         y = j + chunkY;
-                        texture = BlockData.BlockToTexture[(int)b];
+                        texture = BlockData.BlockToTexture[(int)b + (powerable ? (bp ? 1 : 0) : 0)];
                         accessIncremented = access + 1;
                         j1 = j + 1;
-                        jS = (j&255) << 8;
-                        jS1 = (j1&255) << 8;
+                        jS = (j & 255) << 8;
+                        jS1 = (j1 & 255) << 8;
                         // Left (X-)
                         if (!visitedXN[access] && TerrainUtilities.VisibleFaceXN(j, access, minX, kBPS2, ref blocks, ref neighborXN))
                         {
                             visitedXN[access] = true;
                             chunkAccess = accessIncremented;
-            
+
                             for (length = jS1; length < Env.AREA_SIZE_SHIFTED; length += (1 << 8))
                             {
                                 if (blocks[chunkAccess].type != b)
@@ -249,12 +255,12 @@ namespace Opencraft.Rendering
 
                                 visitedXN[chunkAccess++] = true;
                             }
-                            
+
                             AppendQuadX(ref vertexBuffer, ref indices, ref numFaces, i, jS, length, kS, kS1, (int)FaceDirectionShifted.xn, texture);
                         }
-            
+
                         // Right (X+)
-                        if (!visitedXP[access] && TerrainUtilities.VisibleFaceXP(j, access, maxX, kBPS2,ref blocks, ref neighborXP))
+                        if (!visitedXP[access] && TerrainUtilities.VisibleFaceXP(j, access, maxX, kBPS2, ref blocks, ref neighborXP))
                         {
                             visitedXP[access] = true;
 
@@ -271,7 +277,7 @@ namespace Opencraft.Rendering
                             AppendQuadX(ref vertexBuffer, ref indices, ref numFaces, i1, jS, length, kS1, kS, (int)FaceDirectionShifted.xp, texture);
                         }
                         // Back (Z-)
-                        if (!visitedZN[access] && TerrainUtilities.VisibleFaceZN(j, access, minZ, iBPS,ref blocks, ref neighborZN))
+                        if (!visitedZN[access] && TerrainUtilities.VisibleFaceZN(j, access, minZ, iBPS, ref blocks, ref neighborZN))
                         {
                             visitedZN[access] = true;
 
@@ -289,7 +295,7 @@ namespace Opencraft.Rendering
                         }
 
                         // Front (Z+)
-                        if (!visitedZP[access] && TerrainUtilities.VisibleFaceZP(j, access, maxZ, iBPS,ref blocks, ref neighborZP))
+                        if (!visitedZP[access] && TerrainUtilities.VisibleFaceZP(j, access, maxZ, iBPS, ref blocks, ref neighborZP))
                         {
                             visitedZP[access] = true;
 
@@ -306,7 +312,7 @@ namespace Opencraft.Rendering
                             AppendQuadZ(ref vertexBuffer, ref indices, ref numFaces, i1, i, jS, length, kS1, (int)FaceDirectionShifted.zp, texture);
                         }
                         // Bottom (Y-)
-                        if (!visitedYN[access] && TerrainUtilities.VisibleFaceYN(access, minY, iBPS, kBPS2,ref blocks, ref neighborYN))
+                        if (!visitedYN[access] && TerrainUtilities.VisibleFaceYN(access, minY, iBPS, kBPS2, ref blocks, ref neighborYN))
                         {
                             visitedYN[access] = true;
 
@@ -325,7 +331,7 @@ namespace Opencraft.Rendering
                         }
 
                         // Top (Y+)
-                        if (!visitedYP[access] && TerrainUtilities.VisibleFaceYP(access, maxY, iBPS, kBPS2,ref blocks, ref neighborYP))
+                        if (!visitedYP[access] && TerrainUtilities.VisibleFaceYP(access, maxY, iBPS, kBPS2, ref blocks, ref neighborYP))
                         {
                             visitedYP[access] = true;
 
@@ -342,7 +348,7 @@ namespace Opencraft.Rendering
                             }
                             AppendQuadY(ref vertexBuffer, ref indices, ref numFaces, i, length, jS1, kS, kS1, (int)FaceDirectionShifted.yp, texture);
                         }
-                        
+
                     }
                     // Extend if necessary
                     if (numFaces * 4 > currentVertexBufferSize - 2048)
@@ -355,7 +361,7 @@ namespace Opencraft.Rendering
                     }
                 }
             }
-            
+
             //Debug.Log($"Terrain area {terrainArea.location} now has {numFaces} faces");
             meshData.SetVertexBufferParams(numFaces * 4, vertexLayout);
             meshData.SetIndexBufferParams(numFaces * 6, IndexFormat.UInt16);
@@ -375,16 +381,16 @@ namespace Opencraft.Rendering
             zp = 4 << 29,
             zn = 5 << 29,
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AppendQuadX(ref NativeArray<int> vertexBuffer, ref NativeArray<ushort> indices, ref int numFaces, int x, int jBottom, int jTop, int kLeft, int kRight, int normal, int texture)
         {
-            var shared = x    |
+            var shared = x |
                          texture |
                          normal;
             int vb = numFaces * 4;
             vertexBuffer[vb] = jBottom | kLeft | shared; // bl
-            vertexBuffer[vb + 1] = jBottom | kRight| shared; // br
+            vertexBuffer[vb + 1] = jBottom | kRight | shared; // br
             vertexBuffer[vb + 2] = jTop | kRight | shared; // tr
             vertexBuffer[vb + 3] = jTop | kLeft | shared; // tl
 
@@ -396,11 +402,11 @@ namespace Opencraft.Rendering
 
             numFaces++;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AppendQuadY(ref NativeArray<int> vertexBuffer, ref NativeArray<ushort> indices, ref int numFaces, int xBottom, int xTop, int y, int zLeft, int zRight, int normal, int texture)
         {
-            var shared = y    | // x is not shifted, y is shifted by 8, z by 16
+            var shared = y | // x is not shifted, y is shifted by 8, z by 16
                          texture | // texture by 24
                          normal;   // normal by 29
 
@@ -409,7 +415,7 @@ namespace Opencraft.Rendering
             vertexBuffer[vb + 1] = xBottom | zRight | shared; // br
             vertexBuffer[vb + 2] = xTop | zRight | shared; // tr
             vertexBuffer[vb + 3] = xTop | zLeft | shared; // tl
-            
+
             int ib = numFaces * 6;
             indices[ib] = indices[ib + 5] = (ushort)vb;
             indices[ib + 1] = (ushort)(vb + 1);
@@ -419,11 +425,11 @@ namespace Opencraft.Rendering
 
             numFaces++;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AppendQuadZ(ref NativeArray<int> vertexBuffer, ref NativeArray<ushort> indices, ref int numFaces, int xBottom, int xTop, int yLeft, int yRight, int z, int normal, int texture)
         {
-            var shared = z    |
+            var shared = z |
                          texture |
                          normal;
 

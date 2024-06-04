@@ -21,6 +21,7 @@ namespace Opencraft.Player
     public partial struct PlayerActionSystem : ISystem
     {
         private BufferLookup<TerrainBlocks> _terrainBlocksBufferLookup;
+        private BufferLookup<BlockPowered> _terrainPowerStateLookup;
         private BufferLookup<TerrainColMinY> _terrainColumnMinBufferLookup;
         private BufferLookup<TerrainColMaxY> _terrainColumnMaxBufferLookup;
         private NativeArray<Entity> terrainAreasEntities;
@@ -35,6 +36,7 @@ namespace Opencraft.Player
             state.RequireForUpdate<TerrainArea>();
             state.RequireForUpdate<TerrainSpawner>();
             _terrainBlocksBufferLookup = state.GetBufferLookup<TerrainBlocks>(false);
+            _terrainPowerStateLookup = state.GetBufferLookup<BlockPowered>(false);
             _terrainColumnMinBufferLookup = state.GetBufferLookup<TerrainColMinY>(false);
             _terrainColumnMaxBufferLookup = state.GetBufferLookup<TerrainColMaxY>(false);
             _terrainAreaLookup = state.GetComponentLookup<TerrainArea>(isReadOnly: true);
@@ -46,6 +48,7 @@ namespace Opencraft.Player
         {
             state.CompleteDependency();
             _terrainBlocksBufferLookup.Update(ref state);
+            _terrainPowerStateLookup.Update(ref state);
             _terrainColumnMinBufferLookup.Update(ref state);
             _terrainColumnMaxBufferLookup.Update(ref state);
             _terrainAreaLookup.Update(ref state);
@@ -148,14 +151,17 @@ namespace Opencraft.Player
                                 colMaxes[colIndex] = (byte)(blockLoc.y + 1);
                             blocks[blockIndex] = (BlockType)player.Input.SelectedItem;
 
-                            TerrainArea terrainArea = _terrainAreaLookup[terrainAreaEntity];
-                            int3 globalPos = terrainArea.location * Env.AREA_SIZE + blockLoc;
-                            //UnityEngine.Debug.Log($"globalPos: {globalPos}");
-                            TerrainPowerSystem.powerBlocks[globalPos] = new TerrainPowerSystem.PowerBlockData
+                            if (blocks[blockIndex] == BlockType.Power)
                             {
-                                BlockLocation = blockLoc,
-                                TerrainArea = player.SelectedBlock.terrainArea,
-                            };
+                                TerrainArea terrainArea = _terrainAreaLookup[terrainAreaEntity];
+                                int3 globalPos = terrainArea.location * Env.AREA_SIZE + blockLoc;
+                                //UnityEngine.Debug.Log($"globalPos: {globalPos}");
+                                TerrainPowerSystem.powerBlocks[globalPos] = new TerrainPowerSystem.PowerBlockData
+                                {
+                                    BlockLocation = blockLoc,
+                                    TerrainArea = player.SelectedBlock.terrainArea,
+                                };
+                            }
                         }
                     }
                 }
@@ -166,12 +172,20 @@ namespace Opencraft.Player
                     var powerBlocks = TerrainPowerSystem.powerBlocks.ToArray();
                     foreach (var powerBlock in powerBlocks)
                     {
-                        if (_terrainBlocksBufferLookup.TryGetBuffer(powerBlock.Value.TerrainArea, out DynamicBuffer<TerrainBlocks> terrainBlocks))
+                        //if (_terrainBlocksBufferLookup.TryGetBuffer(powerBlock.Value.TerrainArea, out DynamicBuffer<TerrainBlocks> terrainBlocks))
+                        //{
+                        //    int3 blockLoc = powerBlock.Value.BlockLocation;
+                        //    int blockIndex = TerrainUtilities.BlockLocationToIndex(ref blockLoc);
+                        //    DynamicBuffer<BlockType> blocks = terrainBlocks.Reinterpret<BlockType>();
+                        //    blocks[blockIndex] = (BlockType)player.Input.SelectedItem;
+                        //}
+                        if (_terrainPowerStateLookup.TryGetBuffer(powerBlock.Value.TerrainArea, out DynamicBuffer<BlockPowered> powerStates))
                         {
                             int3 blockLoc = powerBlock.Value.BlockLocation;
                             int blockIndex = TerrainUtilities.BlockLocationToIndex(ref blockLoc);
-                            DynamicBuffer<BlockType> blocks = terrainBlocks.Reinterpret<BlockType>();
-                            blocks[blockIndex] = (BlockType)player.Input.SelectedItem;
+                            powerStates[blockIndex] = new BlockPowered { powered = !powerStates[blockIndex].powered };
+                            //DynamicBuffer<BlockType> blocks = terrainBlocks.Reinterpret<BlockType>();
+                            //blocks[blockIndex] = (BlockType)player.Input.SelectedItem;
                         }
                     }
 
