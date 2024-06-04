@@ -150,11 +150,13 @@ namespace Opencraft.Player
                             if (blockLoc.y + 1 > maxY)
                                 colMaxes[colIndex] = (byte)(blockLoc.y + 1);
                             blocks[blockIndex] = (BlockType)player.Input.SelectedItem;
-
+                            TerrainArea terrainArea = _terrainAreaLookup[terrainAreaEntity];
+                            int3 globalPos = terrainArea.location * Env.AREA_SIZE + blockLoc;
+                            UnityEngine.Debug.Log("Placed block at " + blockLoc.ToString() + " in area " + terrainArea.location.ToString());
                             if (blocks[blockIndex] == BlockType.Power)
                             {
-                                TerrainArea terrainArea = _terrainAreaLookup[terrainAreaEntity];
-                                int3 globalPos = terrainArea.location * Env.AREA_SIZE + blockLoc;
+                                //TerrainArea terrainArea = _terrainAreaLookup[terrainAreaEntity];
+                                //int3 globalPos = terrainArea.location * Env.AREA_SIZE + blockLoc;
                                 //UnityEngine.Debug.Log($"globalPos: {globalPos}");
                                 TerrainPowerSystem.powerBlocks[globalPos] = new TerrainPowerSystem.PowerBlockData
                                 {
