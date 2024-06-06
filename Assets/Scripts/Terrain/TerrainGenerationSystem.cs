@@ -19,9 +19,6 @@ using Unity.Profiling;
 using System.Security.Cryptography;
 using System.Text;
 using UnityEngine;
-using System.Collections;
-using UnityEditor.PackageManager;
-using System.Collections.Concurrent;
 
 // Annoyingly this assembly directive must be outside the namespace.
 [assembly: RegisterGenericJobType(typeof(SortJob<int2, Int2DistanceComparer>))]
@@ -554,25 +551,18 @@ namespace Opencraft.Terrain
                 areaBlockBuffer[blockIndex + localY] = blockType;
                 if (blockType == BlockType.Power)
                 {
-                    try
+                    // Adds every power block to the powerBlocks dictionary
+                    // globalPos is the key as it should be unique for every block
+                    // blockLoc is the relative position of the block in the terrain area, could probably be back calculated
+                    // terrainEntity is the entity of the block
+                    int3 blockLoc = TerrainUtilities.BlockIndexToLocation(blockIndex + localY);
+                    int3 globalPos = new int3(globalX, localY, globalZ);
+                    Entity terrainEntity = terrainAreaEntities[index + colY];
+                    TerrainPowerSystem.powerBlocks[globalPos] = new TerrainPowerSystem.PowerBlockData
                     {
-                        // Adds every power block to the powerBlocks dictionary
-                        // globalPos is the key as it should be unique for every block
-                        // blockLoc is the relative position of the block in the terrain area, could probably be back calculated
-                        // terrainEntity is the entity of the block
-                        int3 blockLoc = TerrainUtilities.BlockIndexToLocation(blockIndex + localY);
-                        int3 globalPos = new int3(globalX, localY, globalZ);
-                        Entity terrainEntity = terrainAreaEntities[index + colY];
-                        TerrainPowerSystem.powerBlocks[globalPos] = new TerrainPowerSystem.PowerBlockData
-                        {
-                            BlockLocation = blockLoc,
-                            TerrainArea = terrainEntity
-                        };
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.Log(e);
-                    }
+                        BlockLocation = blockLoc,
+                        TerrainArea = terrainEntity
+                    };
                 }
                 prevColY = colY;
 

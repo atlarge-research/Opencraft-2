@@ -113,12 +113,16 @@ namespace Opencraft.Player
                                     }
                                 }
                             }
+                            TerrainArea terrainArea = _terrainAreaLookup[terrainAreaEntity];
                             if (blocks[blockIndex] == BlockType.Power)
                             {
-                                TerrainArea terrainArea = _terrainAreaLookup[terrainAreaEntity];
                                 int3 globalPos = terrainArea.location * Env.AREA_SIZE + blockLoc;
                                 UnityEngine.Debug.Log($"globalPos: {globalPos}");
                                 TerrainPowerSystem.powerBlocks.TryRemove(globalPos, out TerrainPowerSystem.PowerBlockData value);
+                            }
+                            if (blocks[blockIndex] == BlockType.On_Wire || blocks[blockIndex] == BlockType.Power)
+                            {
+                                TerrainPowerSystem.toDepower.Add(new TerrainPowerSystem.PowerBlockData { BlockLocation = blockLoc, TerrainArea = terrainAreaEntity });
                             }
 
                             blocks[blockIndex] = BlockType.Air;
@@ -163,6 +167,10 @@ namespace Opencraft.Player
                                     BlockLocation = blockLoc,
                                     TerrainArea = player.SelectedBlock.terrainArea,
                                 };
+                            }
+                            if (blocks[blockIndex] == BlockType.Off_Wire || blocks[blockIndex] == BlockType.Off_Lamp)
+                            {
+                                TerrainPowerSystem.toDepower.Add(new TerrainPowerSystem.PowerBlockData { BlockLocation = blockLoc, TerrainArea = terrainAreaEntity });
                             }
                         }
                     }

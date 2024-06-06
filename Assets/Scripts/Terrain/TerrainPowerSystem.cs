@@ -9,6 +9,7 @@ using Unity.Burst;
 using Unity.Collections;
 using UnityEngine;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 [assembly: RegisterGenericJobType(typeof(SortJob<int2, Int2DistanceComparer>))]
 namespace Opencraft.Terrain
@@ -21,16 +22,17 @@ namespace Opencraft.Terrain
     public partial struct TerrainPowerSystem : ISystem
     {
         public static ConcurrentDictionary<int3, PowerBlockData> powerBlocks;
+        public static List<PowerBlockData> toDepower;
         private int tickRate;
         private float timer;
-        //private Queue<int3> poweredQueue;
         private BufferLookup<BlockPowered> terrainPowerStateLookup;
         private BufferLookup<TerrainBlocks> terrainBlocksLookup;
         private ComponentLookup<TerrainNeighbors> terrainNeighborsLookup;
         private ComponentLookup<TerrainArea> terrainAreaLookup;
-        private static ConcurrentQueue<PowerBlockData> powerQueue;
+        //private static ConcurrentQueue<PowerBlockData> powerQueue;
         static int3[] directions = new int3[] { new int3(-1, 0, 0), new int3(1, 0, 0), new int3(0, -1, 0), new int3(0, 1, 0), new int3(0, 0, -1), new int3(0, 0, 1) };
         static int3 sixteens = new int3(16, 0, 16);
+        static bool temp;
 
         public struct PowerBlockData
         {
@@ -46,7 +48,8 @@ namespace Opencraft.Terrain
             terrainBlocksLookup = state.GetBufferLookup<TerrainBlocks>(isReadOnly: false);
             terrainNeighborsLookup = state.GetComponentLookup<TerrainNeighbors>(isReadOnly: false);
             terrainAreaLookup = state.GetComponentLookup<TerrainArea>(isReadOnly: false);
-            powerQueue = new ConcurrentQueue<PowerBlockData>();
+            toDepower = new List<PowerBlockData>();
+            temp = true;
         }
 
         public void OnDestroy(ref SystemState state)
@@ -66,55 +69,73 @@ namespace Opencraft.Terrain
             terrainBlocksLookup.Update(ref state);
             terrainPowerStateLookup.Update(ref state);
             terrainAreaLookup.Update(ref state);
-            powerQueue = new ConcurrentQueue<PowerBlockData>(powerBlocks.Values);
+            Debug.Log("Ticking Power States");
+            PropogatePowerState(toDepower, false);
+            //if (temp)
+            //{
+            toDepower.Clear();
+            PropogatePowerState(powerBlocks.Values, true);
+            //temp = false;
+            //return;
+            //}
+        }
+
+        private void PropogatePowerState(ICollection<PowerBlockData> poweredBlocks, bool powerState)
+        {
+            ConcurrentQueue<PowerBlockData> powerQueue = new ConcurrentQueue<PowerBlockData>(poweredBlocks);
             while (powerQueue.Count > 0)
             {
                 powerQueue.TryDequeue(out PowerBlockData poweredBlock);
-                PropogatePower(poweredBlock);
-            }
-        }
 
-        private void PropogatePower(PowerBlockData poweredBlock)
-        {
-            Entity blockEntity = poweredBlock.TerrainArea;
-            int3 blockLoc = poweredBlock.BlockLocation;
+                Entity blockEntity = poweredBlock.TerrainArea;
+                int3 blockLoc = poweredBlock.BlockLocation;
 
-            TerrainNeighbors neighbors = terrainNeighborsLookup[blockEntity];
-            Entity neighborXN = neighbors.neighborXN;
-            Entity neighborXP = neighbors.neighborXP;
-            Entity neighborZN = neighbors.neighborZN;
-            Entity neighborZP = neighbors.neighborZP;
-            Entity[] terrainEntities = new Entity[] { blockEntity, neighborXN, neighborXP, neighborZN, neighborZP };
-
-            for (int i = 0; i < directions.Length; i++)
-            {
-                int3 notNormalisedBlockLoc = (blockLoc + directions[i]);
-                int offsetIndex = GetOffsetIndex(notNormalisedBlockLoc);
-                Entity neighborEntity = terrainEntities[offsetIndex];
-                if (neighborEntity == Entity.Null) continue;
-                int3 neighborBlockLoc = (notNormalisedBlockLoc + sixteens) % 16;
-                int blockIndex = TerrainUtilities.BlockLocationToIndex(ref neighborBlockLoc);
-                DynamicBuffer<BlockType> blocks = terrainBlocksLookup[neighborEntity].Reinterpret<BlockType>();
-                TerrainArea terrainArea = terrainAreaLookup[neighborEntity];
-                if (BlockData.PowerableBlock[(int)blocks[blockIndex]])
+                TerrainNeighbors neighbors = terrainNeighborsLookup[blockEntity];
+                Entity neighborXN = neighbors.neighborXN;
+                Entity neighborXP = neighbors.neighborXP;
+                Entity neighborZN = neighbors.neighborZN;
+                Entity neighborZP = neighbors.neighborZP;
+                Entity[] terrainEntities = new Entity[] { blockEntity, neighborXN, neighborXP, neighborZN, neighborZP };
+                Debug.Log("Checking " + blockLoc.ToString() + " in area " + terrainAreaLookup[blockEntity].location.ToString());
+                for (int i = 0; i < directions.Length; i++)
                 {
-                    if (terrainPowerStateLookup.TryGetBuffer(neighborEntity, out DynamicBuffer<BlockPowered> terrainPowerState))
+                    int3 notNormalisedBlockLoc = (blockLoc + directions[i]);
+                    int offsetIndex = GetOffsetIndex(notNormalisedBlockLoc);
+                    Entity neighborEntity = terrainEntities[offsetIndex];
+                    if (neighborEntity == Entity.Null) continue;
+                    int3 neighborBlockLoc = (notNormalisedBlockLoc + sixteens) % 16;
+                    int blockIndex = TerrainUtilities.BlockLocationToIndex(ref neighborBlockLoc);
+                    DynamicBuffer<BlockType> blocks = terrainBlocksLookup[neighborEntity].Reinterpret<BlockType>();
+                    TerrainArea terrainArea = terrainAreaLookup[neighborEntity];
+                    if (BlockData.PowerableBlock[(int)blocks[blockIndex]])
                     {
-                        if (terrainPowerState[blockIndex].powered == false)
+                        if (terrainPowerStateLookup.TryGetBuffer(neighborEntity, out DynamicBuffer<BlockPowered> terrainPowerState))
                         {
-                            terrainPowerState[blockIndex] = new BlockPowered { powered = true };
-                            DynamicBuffer<BlockType> blockTypes = terrainBlocksLookup[neighborEntity].Reinterpret<BlockType>();
-                            if (blockTypes[blockIndex] == BlockType.Off_Wire)
+                            if (terrainPowerState[blockIndex].powered == !powerState)
                             {
-                                powerQueue.Enqueue(new PowerBlockData { BlockLocation = neighborBlockLoc, TerrainArea = neighborEntity });
+                                terrainPowerState[blockIndex] = new BlockPowered { powered = powerState };
+                                DynamicBuffer<BlockType> blockTypes = terrainBlocksLookup[neighborEntity].Reinterpret<BlockType>();
+                                if (blockTypes[blockIndex] == BlockType.Off_Wire || blockTypes[blockIndex] == BlockType.On_Wire || blockTypes[blockIndex] == BlockType.On_Lamp)
+                                {
+                                    powerQueue.Enqueue(new PowerBlockData { BlockLocation = neighborBlockLoc, TerrainArea = neighborEntity });
+                                }
+                                blockTypes[blockIndex] = (BlockType)((int)blockTypes[blockIndex] + (powerState ? 1 : -1));
+                                Debug.Log(powerState + " " + neighborBlockLoc.ToString() + " in area " + terrainArea.location.ToString());
                             }
-                            blockTypes[blockIndex] = blockTypes[blockIndex] + 1;
-                            Debug.Log("Powering " + neighborBlockLoc.ToString() + " in area " + terrainArea.location.ToString());
+                            //else
+                            //{
+                            //    Debug.Log("Already " + powerState + " " + neighborBlockLoc.ToString() + " in area " + terrainArea.location.ToString());
+                            //}
                         }
                     }
+                    //else
+                    //{
+                    //    Debug.Log("Not a powerable block " + neighborBlockLoc.ToString() + " in area " + terrainArea.location.ToString());
+                    //}
                 }
             }
         }
+
         private int GetOffsetIndex(int3 blockLoc)
         {
             switch (blockLoc.x)

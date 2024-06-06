@@ -230,10 +230,6 @@ namespace Opencraft.Rendering
                         if (b == BlockType.Air)
                             continue;
 
-                        //bool bp = powerState[access].powered;
-                        //bool powerable = BlockData.PowerableBlock[(int)b];
-                        //if (powerable && bp)
-                        //    b = (BlockType)((int)b + 1);
                         // Calculate length of run and make quads accordingly
                         minY = j == 0;
                         maxY = j == Env.AREA_SIZE_1;
