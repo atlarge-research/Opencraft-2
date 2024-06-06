@@ -32,7 +32,6 @@ namespace Opencraft.Terrain
         //private static ConcurrentQueue<PowerBlockData> powerQueue;
         static int3[] directions = new int3[] { new int3(-1, 0, 0), new int3(1, 0, 0), new int3(0, -1, 0), new int3(0, 1, 0), new int3(0, 0, -1), new int3(0, 0, 1) };
         static int3 sixteens = new int3(16, 0, 16);
-        static bool temp;
 
         public struct PowerBlockData
         {
@@ -49,7 +48,6 @@ namespace Opencraft.Terrain
             terrainNeighborsLookup = state.GetComponentLookup<TerrainNeighbors>(isReadOnly: false);
             terrainAreaLookup = state.GetComponentLookup<TerrainArea>(isReadOnly: false);
             toDepower = new List<PowerBlockData>();
-            temp = true;
         }
 
         public void OnDestroy(ref SystemState state)
@@ -71,13 +69,8 @@ namespace Opencraft.Terrain
             terrainAreaLookup.Update(ref state);
             Debug.Log("Ticking Power States");
             PropogatePowerState(toDepower, false);
-            //if (temp)
-            //{
             toDepower.Clear();
             PropogatePowerState(powerBlocks.Values, true);
-            //temp = false;
-            //return;
-            //}
         }
 
         private void PropogatePowerState(ICollection<PowerBlockData> poweredBlocks, bool powerState)
@@ -96,7 +89,7 @@ namespace Opencraft.Terrain
                 Entity neighborZN = neighbors.neighborZN;
                 Entity neighborZP = neighbors.neighborZP;
                 Entity[] terrainEntities = new Entity[] { blockEntity, neighborXN, neighborXP, neighborZN, neighborZP };
-                Debug.Log("Checking " + blockLoc.ToString() + " in area " + terrainAreaLookup[blockEntity].location.ToString());
+                //Debug.Log("Checking " + blockLoc.ToString() + " in area " + terrainAreaLookup[blockEntity].location.ToString());
                 for (int i = 0; i < directions.Length; i++)
                 {
                     int3 notNormalisedBlockLoc = (blockLoc + directions[i]);
@@ -120,7 +113,7 @@ namespace Opencraft.Terrain
                                     powerQueue.Enqueue(new PowerBlockData { BlockLocation = neighborBlockLoc, TerrainArea = neighborEntity });
                                 }
                                 blockTypes[blockIndex] = (BlockType)((int)blockTypes[blockIndex] + (powerState ? 1 : -1));
-                                Debug.Log(powerState + " " + neighborBlockLoc.ToString() + " in area " + terrainArea.location.ToString());
+                                //Debug.Log(powerState + " " + neighborBlockLoc.ToString() + " in area " + terrainArea.location.ToString());
                             }
                             //else
                             //{
