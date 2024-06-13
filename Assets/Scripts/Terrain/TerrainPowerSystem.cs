@@ -100,7 +100,7 @@ namespace Opencraft.Terrain
                     int3 neighborBlockLoc = (notNormalisedBlockLoc + sixteens) % 16;
                     int blockIndex = TerrainUtilities.BlockLocationToIndex(ref neighborBlockLoc);
                     DynamicBuffer<BlockType> blocks = terrainBlocksLookup[neighborEntity].Reinterpret<BlockType>();
-                    TerrainArea terrainArea = terrainAreaLookup[neighborEntity];
+                    //TerrainArea terrainArea = terrainAreaLookup[neighborEntity];
                     if (BlockData.PowerableBlock[(int)blocks[blockIndex]])
                     {
                         if (terrainPowerStateLookup.TryGetBuffer(neighborEntity, out DynamicBuffer<BlockPowered> terrainPowerState))
