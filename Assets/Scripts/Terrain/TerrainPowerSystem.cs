@@ -26,6 +26,7 @@ namespace Opencraft.Terrain
         private int tickRate;
         private float timer;
         private BufferLookup<BlockPowered> terrainPowerStateLookup;
+        private BufferLookup<BlockDirection> terrainDirectionLookup;
         private BufferLookup<TerrainBlocks> terrainBlocksLookup;
         private ComponentLookup<TerrainNeighbors> terrainNeighborsLookup;
         private ComponentLookup<TerrainArea> terrainAreaLookup;
@@ -44,6 +45,7 @@ namespace Opencraft.Terrain
             tickRate = 1;
             timer = 0;
             terrainPowerStateLookup = state.GetBufferLookup<BlockPowered>(isReadOnly: false);
+            terrainDirectionLookup = state.GetBufferLookup<BlockDirection>(isReadOnly: false);
             terrainBlocksLookup = state.GetBufferLookup<TerrainBlocks>(isReadOnly: false);
             terrainNeighborsLookup = state.GetComponentLookup<TerrainNeighbors>(isReadOnly: false);
             terrainAreaLookup = state.GetComponentLookup<TerrainArea>(isReadOnly: false);
@@ -66,6 +68,7 @@ namespace Opencraft.Terrain
             terrainNeighborsLookup.Update(ref state);
             terrainBlocksLookup.Update(ref state);
             terrainPowerStateLookup.Update(ref state);
+            terrainDirectionLookup.Update(ref state);
             terrainAreaLookup.Update(ref state);
 
             //Debug.Log("Ticking Power States");

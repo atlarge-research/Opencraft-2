@@ -39,6 +39,7 @@ namespace Opencraft.Terrain
         private ComponentLookup<LocalTransform> _localTransformLookup;
         private BufferLookup<TerrainBlocks> _terrainBlocksLookup;
         private BufferLookup<BlockPowered> _terrainPowerStateLookup;
+        private BufferLookup<BlockDirection> _terrainDirectionLookup;
         private BufferLookup<TerrainColMinY> _terrainColMinLookup;
         private BufferLookup<TerrainColMaxY> _terrainColMaxLookup;
         private BufferLookup<TerrainStructuresToSpawn> _structuresToSpawnLookup;
@@ -62,6 +63,7 @@ namespace Opencraft.Terrain
             _localTransformLookup = state.GetComponentLookup<LocalTransform>(isReadOnly: false);
             _terrainBlocksLookup = state.GetBufferLookup<TerrainBlocks>(isReadOnly: false);
             _terrainPowerStateLookup = state.GetBufferLookup<BlockPowered>(isReadOnly: false);
+            _terrainDirectionLookup = state.GetBufferLookup<BlockDirection>(isReadOnly: false);
             _terrainColMinLookup = state.GetBufferLookup<TerrainColMinY>(isReadOnly: false);
             _terrainColMaxLookup = state.GetBufferLookup<TerrainColMaxY>(isReadOnly: false);
             _structuresToSpawnLookup = state.GetBufferLookup<TerrainStructuresToSpawn>(isReadOnly: false);
@@ -129,6 +131,7 @@ namespace Opencraft.Terrain
                 Allocator.TempJob);
             _terrainBlocksLookup.Update(ref state);
             _terrainPowerStateLookup.Update(ref state);
+            _terrainDirectionLookup.Update(ref state);
             _terrainColMinLookup.Update(ref state);
             _terrainColMaxLookup.Update(ref state);
             _structuresToSpawnLookup.Update(ref state);
@@ -142,6 +145,7 @@ namespace Opencraft.Terrain
                 ecb = parallelEcb,
                 terrainBlocksLookup = _terrainBlocksLookup,
                 terrainPowerStateLookup = _terrainPowerStateLookup,
+                terrainDirectionLookup = _terrainDirectionLookup,
                 terrainColMinLookup = _terrainColMinLookup,
                 terrainColMaxLookup = _terrainColMaxLookup,
                 _structuresToSpawnLookup = _structuresToSpawnLookup,
@@ -194,6 +198,7 @@ namespace Opencraft.Terrain
         public EntityCommandBuffer.ParallelWriter ecb;
         [NativeDisableParallelForRestriction] public BufferLookup<TerrainBlocks> terrainBlocksLookup;
         [NativeDisableParallelForRestriction] public BufferLookup<BlockPowered> terrainPowerStateLookup;
+        [NativeDisableParallelForRestriction] public BufferLookup<BlockDirection> terrainDirectionLookup;
         [NativeDisableParallelForRestriction] public BufferLookup<TerrainColMinY> terrainColMinLookup;
         [NativeDisableParallelForRestriction] public BufferLookup<TerrainColMaxY> terrainColMaxLookup;
         [NativeDisableParallelForRestriction] public BufferLookup<TerrainStructuresToSpawn> _structuresToSpawnLookup;
@@ -285,6 +290,10 @@ namespace Opencraft.Terrain
                 // Power Buffer
                 DynamicBuffer<BlockPowered> terrainPowerStateBuffer = terrainPowerStateLookup[terrainEntity];
                 terrainPowerStateBuffer.Resize(Env.AREA_SIZE_POW_3, NativeArrayOptions.ClearMemory);
+
+                // Direction Buffer
+                DynamicBuffer<BlockDirection> terrainDirectionBuffer = terrainDirectionLookup[terrainEntity];
+                terrainDirectionBuffer.Resize(Env.AREA_SIZE_POW_3, NativeArrayOptions.ClearMemory);
 
                 // Terrain area column min buffer
                 DynamicBuffer<TerrainColMinY> colMinBuffer = terrainColMinLookup[terrainEntity];

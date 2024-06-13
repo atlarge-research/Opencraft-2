@@ -22,6 +22,7 @@ namespace Opencraft.Player
     {
         private BufferLookup<TerrainBlocks> _terrainBlocksBufferLookup;
         private BufferLookup<BlockPowered> _terrainPowerStateLookup;
+        private BufferLookup<BlockDirection> _terrainDirectionLookup;
         private BufferLookup<TerrainColMinY> _terrainColumnMinBufferLookup;
         private BufferLookup<TerrainColMaxY> _terrainColumnMaxBufferLookup;
         private NativeArray<Entity> terrainAreasEntities;
@@ -37,6 +38,7 @@ namespace Opencraft.Player
             state.RequireForUpdate<TerrainSpawner>();
             _terrainBlocksBufferLookup = state.GetBufferLookup<TerrainBlocks>(false);
             _terrainPowerStateLookup = state.GetBufferLookup<BlockPowered>(false);
+            _terrainDirectionLookup = state.GetBufferLookup<BlockDirection>(false);
             _terrainColumnMinBufferLookup = state.GetBufferLookup<TerrainColMinY>(false);
             _terrainColumnMaxBufferLookup = state.GetBufferLookup<TerrainColMaxY>(false);
             _terrainAreaLookup = state.GetComponentLookup<TerrainArea>(isReadOnly: true);
@@ -49,6 +51,7 @@ namespace Opencraft.Player
             state.CompleteDependency();
             _terrainBlocksBufferLookup.Update(ref state);
             _terrainPowerStateLookup.Update(ref state);
+            _terrainDirectionLookup.Update(ref state);
             _terrainColumnMinBufferLookup.Update(ref state);
             _terrainColumnMaxBufferLookup.Update(ref state);
             _terrainAreaLookup.Update(ref state);

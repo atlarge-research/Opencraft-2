@@ -18,6 +18,11 @@
         Off_Lamp,
         On_Lamp,
     }
+
+    public enum Direction : byte
+    {
+        None, XP, XN, YP, YN, ZP, ZN
+    }
     public static class BlockData
     {
         // Maps BlockType to texture array index, currently 1 to 1

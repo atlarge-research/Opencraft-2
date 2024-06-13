@@ -36,6 +36,7 @@ namespace Opencraft.Terrain.Authoring
 
                 AddBuffer<TerrainBlocks>(entity);
                 AddBuffer<BlockPowered>(entity);
+                AddBuffer<BlockDirection>(entity);
                 AddBuffer<TerrainColMinY>(entity);
                 AddBuffer<TerrainColMaxY>(entity);
                 AddBuffer<TerrainStructuresToSpawn>(entity);
@@ -89,6 +90,12 @@ namespace Opencraft.Terrain.Authoring
     public struct BlockPowered : IBufferElementData
     {
         [GhostField] public bool powered;
+    }
+
+    [InternalBufferCapacity(0)]
+    public struct BlockDirection : IBufferElementData
+    {
+        [GhostField] public bool direction;
     }
 
     [InternalBufferCapacity(256)]

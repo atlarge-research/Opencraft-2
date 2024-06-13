@@ -25,6 +25,7 @@ namespace Opencraft.Rendering
         private EntityQuery _terrainAreaQuery;
         private BufferLookup<TerrainBlocks> _terrainBlocksBufferLookup;
         private BufferLookup<BlockPowered> _terrainPowerStateLookup;
+        private BufferLookup<BlockDirection> _terrainDirectionLookup;
         private BufferLookup<TerrainColMinY> _terrainColumnMinBufferLookup;
         private BufferLookup<TerrainColMaxY> _terrainColumnMaxBufferLookup;
         private NativeArray<VertexAttributeDescriptor> _vertexLayout;
@@ -35,9 +36,20 @@ namespace Opencraft.Rendering
             RequireForUpdate<TerrainArea>();
             _terrainSpawnerQuery = GetEntityQuery(ComponentType.ReadOnly<TerrainSpawner>());
             // Fetch terrain that needs to be remeshed
+            NativeList<ComponentType> components = new NativeList<ComponentType>(8, Allocator.Temp)
+            {
+                ComponentType.ReadOnly<TerrainBlocks>(),
+                ComponentType.ReadOnly<BlockPowered>(),
+                ComponentType.ReadOnly<BlockDirection>(),
+                ComponentType.ReadOnly<TerrainArea>(),
+                ComponentType.ReadOnly<TerrainNeighbors>(),
+                ComponentType.ReadOnly<LocalTransform>(),
+                ComponentType.ReadOnly<RenderMeshArray>(),
+                ComponentType.ReadOnly<Remesh>()
+            };
             _terrainAreaQuery = new EntityQueryBuilder(Allocator.Temp)
-                .WithAll<TerrainBlocks, BlockPowered, TerrainArea, TerrainNeighbors, LocalTransform, RenderMeshArray, Remesh>()
-                .Build(EntityManager);
+                    .WithAll(ref components)
+                    .Build(EntityManager);
             // Set layout object for creating VBO
             _vertexLayout = new NativeArray<VertexAttributeDescriptor>(1, Allocator.Persistent);
             // Block locations are on a discrete, limited grid within a terrain area
@@ -45,6 +57,7 @@ namespace Opencraft.Rendering
             // 24 coord, TexCoord as 5 bits, normals as 3 bits
             _vertexLayout[0] = new VertexAttributeDescriptor(attribute: VertexAttribute.Position, format: VertexAttributeFormat.SInt32, dimension: 1, stream: 0);
             Debug.Log("MESHING SYSTEM IS ACTIVE");
+            components.Dispose();
         }
 
         protected override void OnDestroy()
@@ -69,6 +82,7 @@ namespace Opencraft.Rendering
             // Get block types and column heightmaps
             _terrainBlocksBufferLookup = GetBufferLookup<TerrainBlocks>(true);
             _terrainPowerStateLookup = GetBufferLookup<BlockPowered>(true);
+            _terrainDirectionLookup = GetBufferLookup<BlockDirection>(true);
             _terrainColumnMinBufferLookup = GetBufferLookup<TerrainColMinY>(true);
             _terrainColumnMaxBufferLookup = GetBufferLookup<TerrainColMaxY>(true);
             // Construct our unmanaged mesh array that can be passed to the job 
@@ -82,6 +96,7 @@ namespace Opencraft.Rendering
                 terrainNeighbors = terrainNeighbors,
                 terrainBufferLookup = _terrainBlocksBufferLookup,
                 terrainPowerStateLookup = _terrainPowerStateLookup,
+                terrainDirectionLookup = _terrainDirectionLookup,
                 terrainColumnMinBufferLookup = _terrainColumnMinBufferLookup,
                 terrainColumnMaxBufferLookup = _terrainColumnMaxBufferLookup,
                 UseDebug = PolkaDOTS.ApplicationConfig.DebugEnabled.Value
@@ -126,6 +141,7 @@ namespace Opencraft.Rendering
         [ReadOnly] public NativeArray<TerrainNeighbors> terrainNeighbors;
         [ReadOnly] public BufferLookup<TerrainBlocks> terrainBufferLookup;
         [ReadOnly] public BufferLookup<BlockPowered> terrainPowerStateLookup;
+        [ReadOnly] public BufferLookup<BlockDirection> terrainDirectionLookup;
         [ReadOnly] public BufferLookup<TerrainColMinY> terrainColumnMinBufferLookup;
         [ReadOnly] public BufferLookup<TerrainColMaxY> terrainColumnMaxBufferLookup;
         public bool UseDebug;
