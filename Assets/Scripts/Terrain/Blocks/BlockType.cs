@@ -49,6 +49,41 @@
         {
             false, false, false, false, false, false, false, false, false, false, true, true, true, true
         };
+
+        public static readonly BlockType[] DepoweredState = new BlockType[]
+        {
+            BlockType.Air,
+            BlockType.Stone,
+            BlockType.Dirt,
+            BlockType.Tin,
+            BlockType.Gem,
+            BlockType.Grass,
+            BlockType.Leaf,
+            BlockType.Wood,
+            BlockType.Unbreakable,
+            BlockType.Power,
+            BlockType.Off_Wire,
+            BlockType.Off_Wire,
+            BlockType.Off_Lamp,
+            BlockType.Off_Lamp,
+        };
+        public static readonly BlockType[] PoweredState = new BlockType[]
+        {
+            BlockType.Air,
+            BlockType.Stone,
+            BlockType.Dirt,
+            BlockType.Tin,
+            BlockType.Gem,
+            BlockType.Grass,
+            BlockType.Leaf,
+            BlockType.Wood,
+            BlockType.Unbreakable,
+            BlockType.Power,
+            BlockType.On_Wire,
+            BlockType.On_Wire,
+            BlockType.On_Lamp,
+            BlockType.On_Lamp,
+        };
     }
 
 

@@ -138,6 +138,7 @@ namespace Opencraft.Player
                     Entity terrainAreaEntity = player.SelectedBlock.neighborTerrainArea;
                     if (_terrainBlocksBufferLookup.TryGetBuffer(terrainAreaEntity, out DynamicBuffer<TerrainBlocks> terrainBlocks))
                     {
+                        BlockType blockToPlace = (BlockType)player.Input.SelectedItem;
                         int3 blockLoc = player.SelectedBlock.neighborBlockLoc;
                         int blockIndex = TerrainUtilities.BlockLocationToIndex(ref blockLoc);
                         int colIndex = TerrainUtilities.BlockLocationToColIndex(ref blockLoc);
@@ -153,11 +154,11 @@ namespace Opencraft.Player
                                 colMins[colIndex] = (byte)blockLoc.y;
                             if (blockLoc.y + 1 > maxY)
                                 colMaxes[colIndex] = (byte)(blockLoc.y + 1);
-                            blocks[blockIndex] = (BlockType)player.Input.SelectedItem;
+                            blocks[blockIndex] = blockToPlace;
                             TerrainArea terrainArea = _terrainAreaLookup[terrainAreaEntity];
                             int3 globalPos = terrainArea.location * Env.AREA_SIZE + blockLoc;
                             UnityEngine.Debug.Log("Placed block at " + blockLoc.ToString() + " in area " + terrainArea.location.ToString());
-                            if (blocks[blockIndex] == BlockType.Power)
+                            if (blockToPlace == BlockType.Power)
                             {
                                 //TerrainArea terrainArea = _terrainAreaLookup[terrainAreaEntity];
                                 //int3 globalPos = terrainArea.location * Env.AREA_SIZE + blockLoc;
@@ -168,7 +169,7 @@ namespace Opencraft.Player
                                     TerrainArea = player.SelectedBlock.terrainArea,
                                 };
                             }
-                            if (blocks[blockIndex] == BlockType.Off_Wire || blocks[blockIndex] == BlockType.Off_Lamp)
+                            if (blockToPlace == BlockType.Off_Wire || blockToPlace == BlockType.Off_Lamp)
                             {
                                 TerrainPowerSystem.toDepower.Add(new TerrainPowerSystem.PowerBlockData { BlockLocation = blockLoc, TerrainArea = terrainAreaEntity });
                             }

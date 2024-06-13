@@ -67,7 +67,8 @@ namespace Opencraft.Terrain
             terrainBlocksLookup.Update(ref state);
             terrainPowerStateLookup.Update(ref state);
             terrainAreaLookup.Update(ref state);
-            Debug.Log("Ticking Power States");
+
+            //Debug.Log("Ticking Power States");
             PropogatePowerState(toDepower, false);
             toDepower.Clear();
             PropogatePowerState(powerBlocks.Values, true);
@@ -109,22 +110,12 @@ namespace Opencraft.Terrain
                                 terrainPowerState[blockIndex] = new BlockPowered { powered = powerState };
                                 DynamicBuffer<BlockType> blockTypes = terrainBlocksLookup[neighborEntity].Reinterpret<BlockType>();
                                 if (blockTypes[blockIndex] == BlockType.Off_Wire || blockTypes[blockIndex] == BlockType.On_Wire || blockTypes[blockIndex] == BlockType.On_Lamp)
-                                {
                                     powerQueue.Enqueue(new PowerBlockData { BlockLocation = neighborBlockLoc, TerrainArea = neighborEntity });
-                                }
-                                blockTypes[blockIndex] = (BlockType)((int)blockTypes[blockIndex] + (powerState ? 1 : -1));
-                                //Debug.Log(powerState + " " + neighborBlockLoc.ToString() + " in area " + terrainArea.location.ToString());
+                                if (powerState) blockTypes[blockIndex] = (BlockData.PoweredState[(int)blockTypes[blockIndex]]);
+                                else blockTypes[blockIndex] = (BlockData.DepoweredState[(int)blockTypes[blockIndex]]);
                             }
-                            //else
-                            //{
-                            //    Debug.Log("Already " + powerState + " " + neighborBlockLoc.ToString() + " in area " + terrainArea.location.ToString());
-                            //}
                         }
                     }
-                    //else
-                    //{
-                    //    Debug.Log("Not a powerable block " + neighborBlockLoc.ToString() + " in area " + terrainArea.location.ToString());
-                    //}
                 }
             }
         }
@@ -133,21 +124,15 @@ namespace Opencraft.Terrain
         {
             switch (blockLoc.x)
             {
-                case -1:
-                    return 1;
-                case 16:
-                    return 2;
-                default:
-                    break;
+                case -1: return 1;
+                case 16: return 2;
+                default: break;
             }
             switch (blockLoc.z)
             {
-                case -1:
-                    return 3;
-                case 16:
-                    return 4;
-                default:
-                    break;
+                case -1: return 3;
+                case 16: return 4;
+                default: break;
             }
             return 0;
         }
