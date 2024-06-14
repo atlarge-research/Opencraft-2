@@ -17,6 +17,9 @@
         On_Wire,
         Off_Lamp,
         On_Lamp,
+        Off_Switch,
+        On_Switch,
+        Powered_Switch,
     }
 
     public enum Direction : byte
@@ -42,17 +45,20 @@
             (11 & 31) << 24,
             (12 & 31) << 24,
             (13 & 31) << 24,
+            (14 & 31) << 24,
+            (15 & 31) << 24,
+            (16 & 31) << 24,
         };
 
         // UV sizing > 1 tiles a texture across multiple blocks, currently not done for any block types
         public static float[] BlockUVSizing = new float[]
         {
-            1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
+            1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
         };
 
         public static readonly bool[] PowerableBlock = new bool[]
         {
-            false, false, false, false, false, false, false, false, false, false, true, true, true, true
+            false, false, false, false, false, false, false, false, false, false, true, true, true, true, false, true, true
         };
 
         public static readonly BlockType[] DepoweredState = new BlockType[]
@@ -71,6 +77,9 @@
             BlockType.Off_Wire,
             BlockType.Off_Lamp,
             BlockType.Off_Lamp,
+            BlockType.Off_Switch,
+            BlockType.On_Switch,
+            BlockType.On_Switch,
         };
         public static readonly BlockType[] PoweredState = new BlockType[]
         {
@@ -88,6 +97,9 @@
             BlockType.On_Wire,
             BlockType.On_Lamp,
             BlockType.On_Lamp,
+            BlockType.Off_Switch,
+            BlockType.Powered_Switch,
+            BlockType.Powered_Switch,
         };
     }
 

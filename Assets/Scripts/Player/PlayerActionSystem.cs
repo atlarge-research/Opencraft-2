@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Diagnostics;
-using Opencraft.Player.Authoring;
+﻿using Opencraft.Player.Authoring;
 using Opencraft.Terrain;
 using Opencraft.Terrain.Authoring;
 using Opencraft.Terrain.Blocks;
@@ -10,7 +8,6 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
-using UnityEngine;
 
 namespace Opencraft.Player
 {
@@ -123,7 +120,7 @@ namespace Opencraft.Player
                                 UnityEngine.Debug.Log($"globalPos: {globalPos}");
                                 TerrainPowerSystem.powerBlocks.TryRemove(globalPos, out TerrainPowerSystem.PowerBlockData value);
                             }
-                            if (blocks[blockIndex] == BlockType.On_Wire || blocks[blockIndex] == BlockType.Power)
+                            if (blocks[blockIndex] == BlockType.On_Wire || blocks[blockIndex] == BlockType.Power || blocks[blockIndex] == BlockType.Powered_Switch)
                             {
                                 TerrainPowerSystem.toDepower.Add(new TerrainPowerSystem.PowerBlockData { BlockLocation = blockLoc, TerrainArea = terrainAreaEntity });
                             }
@@ -180,29 +177,29 @@ namespace Opencraft.Player
                     }
                 }
 
-                if (player.Input.ThirdAction.IsSet)
+                if (player.Input.ThirdAction.IsSet && player.SelectedBlock.terrainArea != Entity.Null)
                 {
                     UnityEngine.Debug.Log("Third action triggered");
-                    var powerBlocks = TerrainPowerSystem.powerBlocks.ToArray();
-                    foreach (var powerBlock in powerBlocks)
+                    Entity terrainAreaEntity = player.SelectedBlock.terrainArea;
+                    if (_terrainBlocksBufferLookup.TryGetBuffer(terrainAreaEntity, out DynamicBuffer<TerrainBlocks> terrainBlocks))
                     {
-                        //if (_terrainBlocksBufferLookup.TryGetBuffer(powerBlock.Value.TerrainArea, out DynamicBuffer<TerrainBlocks> terrainBlocks))
-                        //{
-                        //    int3 blockLoc = powerBlock.Value.BlockLocation;
-                        //    int blockIndex = TerrainUtilities.BlockLocationToIndex(ref blockLoc);
-                        //    DynamicBuffer<BlockType> blocks = terrainBlocks.Reinterpret<BlockType>();
-                        //    blocks[blockIndex] = (BlockType)player.Input.SelectedItem;
-                        //}
-                        if (_terrainPowerStateLookup.TryGetBuffer(powerBlock.Value.TerrainArea, out DynamicBuffer<BlockPowered> powerStates))
+                        int3 blockLoc = player.SelectedBlock.blockLoc;
+                        int blockIndex = TerrainUtilities.BlockLocationToIndex(ref blockLoc);
+                        DynamicBuffer<BlockType> blocks = terrainBlocks.Reinterpret<BlockType>();
+                        if (blocks[blockIndex] == BlockType.Off_Switch)
                         {
-                            int3 blockLoc = powerBlock.Value.BlockLocation;
-                            int blockIndex = TerrainUtilities.BlockLocationToIndex(ref blockLoc);
-                            powerStates[blockIndex] = new BlockPowered { powered = !powerStates[blockIndex].powered };
-                            //DynamicBuffer<BlockType> blocks = terrainBlocks.Reinterpret<BlockType>();
-                            //blocks[blockIndex] = (BlockType)player.Input.SelectedItem;
+                            blocks[blockIndex] = BlockType.On_Switch;
                         }
+                        else if (blocks[blockIndex] == BlockType.On_Switch || blocks[blockIndex] == BlockType.Powered_Switch)
+                        {
+                            blocks[blockIndex] = BlockType.Off_Switch;
+                        }
+                        else
+                        {
+                            blocks[blockIndex] = (BlockType)math.min((int)blocks[blockIndex] + 1, 16);
+                        }
+                        TerrainPowerSystem.toDepower.Add(new TerrainPowerSystem.PowerBlockData { BlockLocation = blockLoc, TerrainArea = terrainAreaEntity });
                     }
-
                 }
             }
 

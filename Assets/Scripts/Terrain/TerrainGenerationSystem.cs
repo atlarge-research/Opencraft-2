@@ -252,6 +252,7 @@ namespace Opencraft.Terrain
                         break;
                     case LayerType.Power:
                     case LayerType.Wire:
+                    case LayerType.Switch:
                     case LayerType.Lamp:
                         break;
                 }
@@ -365,6 +366,11 @@ namespace Opencraft.Terrain
                                 break;
                             case LayerType.Wire:
                                 heightSoFar = GenerateWireLayer(ref terrainBlockBuffers,
+                                    ref colMinBuffers, ref colMaxBuffers, x, z, startIndex,
+                                    heightSoFar, ref terrainGenerationLayer, columnAccess);
+                                break;
+                            case LayerType.Switch:
+                                heightSoFar = GenerateSwitchLayer(ref terrainBlockBuffers,
                                     ref colMinBuffers, ref colMaxBuffers, x, z, startIndex,
                                     heightSoFar, ref terrainGenerationLayer, columnAccess);
                                 break;
@@ -499,7 +505,23 @@ namespace Opencraft.Terrain
         {
             int modulo_x = 5;
             int modulo_z = 5;
-            int heightToAdd = (x % modulo_x != 0 && z % modulo_z == 0) || (x % modulo_x == 0 && z % modulo_z != 0) ? 1 : 0;
+            int heightToAdd = (x % modulo_x != 0 && z % modulo_z == 0) ? 1 : 0;
+
+            int end = heightSoFar + heightToAdd < worldHeight ? heightSoFar + heightToAdd : worldHeight;
+            SetColumnBlocks(ref terrainBlockBuffers, ref colMinBuffers, ref colMaxBuffers, heightSoFar, end,
+            terrainGenLayer.blockType, blockIndex, columnAccess);
+
+            return end;
+        }
+
+        private int GenerateSwitchLayer(ref NativeArray<DynamicBuffer<BlockType>> terrainBlockBuffers,
+            ref NativeArray<DynamicBuffer<byte>> colMinBuffers,
+            ref NativeArray<DynamicBuffer<byte>> colMaxBuffers, int x, int z,
+            int blockIndex, int heightSoFar, ref TerrainGenerationLayer terrainGenLayer, int columnAccess)
+        {
+            int modulo_x = 5;
+            int modulo_z = 5;
+            int heightToAdd = (x % modulo_x == 0 && z % modulo_z != 0) ? 1 : 0;
 
             int end = heightSoFar + heightToAdd < worldHeight ? heightSoFar + heightToAdd : worldHeight;
             SetColumnBlocks(ref terrainBlockBuffers, ref colMinBuffers, ref colMaxBuffers, heightSoFar, end,

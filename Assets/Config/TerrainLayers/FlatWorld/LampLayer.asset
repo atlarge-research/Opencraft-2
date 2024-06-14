@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c8dc7565f1544ab096b804d358a1a4e4, type: 3}
   m_Name: LampLayer
   m_EditorClassIdentifier: 
-  layerType: 7
+  layerType: 8
   layerName: Dirt noise layer
   index: 400
   blockType: 12

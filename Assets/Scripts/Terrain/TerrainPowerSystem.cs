@@ -112,7 +112,7 @@ namespace Opencraft.Terrain
                             {
                                 terrainPowerState[blockIndex] = new BlockPowered { powered = powerState };
                                 DynamicBuffer<BlockType> blockTypes = terrainBlocksLookup[neighborEntity].Reinterpret<BlockType>();
-                                if (blockTypes[blockIndex] == BlockType.Off_Wire || blockTypes[blockIndex] == BlockType.On_Wire || blockTypes[blockIndex] == BlockType.On_Lamp)
+                                if (blockTypes[blockIndex] == BlockType.Off_Wire || blockTypes[blockIndex] == BlockType.On_Wire || blockTypes[blockIndex] == BlockType.On_Lamp || blocks[blockIndex] == BlockType.On_Switch || blocks[blockIndex] == BlockType.Powered_Switch)
                                     powerQueue.Enqueue(new PowerBlockData { BlockLocation = neighborBlockLoc, TerrainArea = neighborEntity });
                                 if (powerState) blockTypes[blockIndex] = (BlockData.PoweredState[(int)blockTypes[blockIndex]]);
                                 else blockTypes[blockIndex] = (BlockData.DepoweredState[(int)blockTypes[blockIndex]]);
