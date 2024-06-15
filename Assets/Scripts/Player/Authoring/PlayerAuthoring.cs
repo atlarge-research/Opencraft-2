@@ -90,6 +90,8 @@ namespace Opencraft.Player.Authoring
         public ref PlayerContainingArea ContainingArea => ref m_Area.ValueRW;
 
         public ref SelectedBlock SelectedBlock => ref m_SelectedBlock.ValueRW;
+
+        public ref LocalTransform TransformComponent => ref Transform.ValueRW;
     }
 
     [DisallowMultipleComponent]

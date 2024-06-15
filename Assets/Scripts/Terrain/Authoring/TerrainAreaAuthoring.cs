@@ -95,7 +95,7 @@ namespace Opencraft.Terrain.Authoring
     [InternalBufferCapacity(0)]
     public struct BlockDirection : IBufferElementData
     {
-        [GhostField] public bool direction;
+        [GhostField] public Direction direction;
     }
 
     [InternalBufferCapacity(256)]

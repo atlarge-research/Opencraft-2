@@ -157,12 +157,35 @@ namespace Opencraft.Player
                             blocks[blockIndex] = blockToPlace;
                             TerrainArea terrainArea = _terrainAreaLookup[terrainAreaEntity];
                             int3 globalPos = terrainArea.location * Env.AREA_SIZE + blockLoc;
+
+                            if (_terrainDirectionLookup.TryGetBuffer(terrainAreaEntity, out DynamicBuffer<BlockDirection> blockDirections))
+                            {
+                                float3 playerPos = player.TransformComponent.Position;
+                                playerPos = new float3(playerPos.x, NoiseUtilities.FastFloor(playerPos.y), playerPos.z);
+                                float3 offset = globalPos - playerPos;
+                                float3 absoluteOffset = new(math.abs(offset.x), math.abs(offset.y), math.abs(offset.z));
+                                Direction dir = Direction.None;
+                                if (absoluteOffset.x > absoluteOffset.y && absoluteOffset.x > absoluteOffset.z)
+                                {
+                                    if (offset.x > 0) dir = Direction.XP;
+                                    else dir = Direction.XN;
+                                }
+                                else if (absoluteOffset.z > absoluteOffset.x && absoluteOffset.z > absoluteOffset.y)
+                                {
+                                    if (offset.z > 0) dir = Direction.ZP;
+                                    else dir = Direction.ZN;
+                                }
+                                else if (absoluteOffset.y > absoluteOffset.x && absoluteOffset.y > absoluteOffset.z)
+                                {
+                                    if (offset.y > 0) dir = Direction.YP;
+                                    else dir = Direction.YN;
+                                }
+                                blockDirections[blockIndex] = new BlockDirection { direction = dir };
+                            }
+
                             UnityEngine.Debug.Log("Placed block at " + blockLoc.ToString() + " in area " + terrainArea.location.ToString());
                             if (blockToPlace == BlockType.Power)
                             {
-                                //TerrainArea terrainArea = _terrainAreaLookup[terrainAreaEntity];
-                                //int3 globalPos = terrainArea.location * Env.AREA_SIZE + blockLoc;
-                                //UnityEngine.Debug.Log($"globalPos: {globalPos}");
                                 TerrainPowerSystem.powerBlocks[globalPos] = new TerrainPowerSystem.PowerBlockData
                                 {
                                     BlockLocation = blockLoc,
@@ -189,16 +212,13 @@ namespace Opencraft.Player
                         if (blocks[blockIndex] == BlockType.Off_Switch)
                         {
                             blocks[blockIndex] = BlockType.On_Switch;
+                            TerrainPowerSystem.toDepower.Add(new TerrainPowerSystem.PowerBlockData { BlockLocation = blockLoc, TerrainArea = terrainAreaEntity });
                         }
                         else if (blocks[blockIndex] == BlockType.On_Switch || blocks[blockIndex] == BlockType.Powered_Switch)
                         {
                             blocks[blockIndex] = BlockType.Off_Switch;
+                            TerrainPowerSystem.toDepower.Add(new TerrainPowerSystem.PowerBlockData { BlockLocation = blockLoc, TerrainArea = terrainAreaEntity });
                         }
-                        else
-                        {
-                            blocks[blockIndex] = (BlockType)math.min((int)blocks[blockIndex] + 1, 16);
-                        }
-                        TerrainPowerSystem.toDepower.Add(new TerrainPowerSystem.PowerBlockData { BlockLocation = blockLoc, TerrainArea = terrainAreaEntity });
                     }
                 }
             }
