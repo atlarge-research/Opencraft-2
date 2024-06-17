@@ -589,7 +589,18 @@ namespace Opencraft.Terrain
                     int3 blockLoc = TerrainUtilities.BlockIndexToLocation(blockIndex + localY);
                     int3 globalPos = new int3(globalX, localY, globalZ);
                     Entity terrainEntity = terrainAreaEntities[index + colY];
-                    TerrainPowerSystem.powerBlocks[globalPos] = new TerrainPowerSystem.PowerBlockData
+                    TerrainPowerSystem.powerBlocks[globalPos] = new TerrainPowerSystem.LogicBlockData
+                    {
+                        BlockLocation = blockLoc,
+                        TerrainArea = terrainEntity
+                    };
+                }
+                if (blockType == BlockType.AND_Gate || blockType == BlockType.OR_Gate || blockType == BlockType.NOT_Gate)
+                {
+                    int3 blockLoc = TerrainUtilities.BlockIndexToLocation(blockIndex + localY);
+                    int3 globalPos = new int3(globalX, localY, globalZ);
+                    Entity terrainEntity = terrainAreaEntities[index + colY];
+                    TerrainPowerSystem.gateBlocks[globalPos] = new TerrainPowerSystem.LogicBlockData
                     {
                         BlockLocation = blockLoc,
                         TerrainArea = terrainEntity

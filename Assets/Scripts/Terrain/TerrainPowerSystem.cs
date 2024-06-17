@@ -21,8 +21,9 @@ namespace Opencraft.Terrain
 
     public partial struct TerrainPowerSystem : ISystem
     {
-        public static ConcurrentDictionary<int3, PowerBlockData> powerBlocks;
-        public static List<PowerBlockData> toDepower;
+        public static ConcurrentDictionary<int3, LogicBlockData> powerBlocks;
+        public static ConcurrentDictionary<int3, LogicBlockData> gateBlocks;
+        public static List<LogicBlockData> toDepower;
         private int tickRate;
         private float timer;
         private BufferLookup<BlockPowered> terrainPowerStateLookup;
@@ -34,14 +35,15 @@ namespace Opencraft.Terrain
         static int3[] directions = new int3[] { new int3(-1, 0, 0), new int3(1, 0, 0), new int3(0, -1, 0), new int3(0, 1, 0), new int3(0, 0, -1), new int3(0, 0, 1) };
         static int3 sixteens = new int3(16, 0, 16);
 
-        public struct PowerBlockData
+        public struct LogicBlockData
         {
             public int3 BlockLocation;
             public Entity TerrainArea;
         }
         public void OnCreate(ref SystemState state)
         {
-            powerBlocks = new ConcurrentDictionary<int3, PowerBlockData>();
+            powerBlocks = new ConcurrentDictionary<int3, LogicBlockData>();
+            gateBlocks = new ConcurrentDictionary<int3, LogicBlockData>();
             tickRate = 1;
             timer = 0;
             terrainPowerStateLookup = state.GetBufferLookup<BlockPowered>(isReadOnly: false);
@@ -49,12 +51,13 @@ namespace Opencraft.Terrain
             terrainBlocksLookup = state.GetBufferLookup<TerrainBlocks>(isReadOnly: false);
             terrainNeighborsLookup = state.GetComponentLookup<TerrainNeighbors>(isReadOnly: false);
             terrainAreaLookup = state.GetComponentLookup<TerrainArea>(isReadOnly: false);
-            toDepower = new List<PowerBlockData>();
+            toDepower = new List<LogicBlockData>();
         }
 
         public void OnDestroy(ref SystemState state)
         {
             powerBlocks.Clear();
+            gateBlocks.Clear();
         }
 
         public void OnUpdate(ref SystemState state)
@@ -77,12 +80,12 @@ namespace Opencraft.Terrain
             PropogatePowerState(powerBlocks.Values, true);
         }
 
-        private void PropogatePowerState(ICollection<PowerBlockData> poweredBlocks, bool powerState)
+        private void PropogatePowerState(ICollection<LogicBlockData> poweredBlocks, bool powerState)
         {
-            ConcurrentQueue<PowerBlockData> powerQueue = new ConcurrentQueue<PowerBlockData>(poweredBlocks);
+            ConcurrentQueue<LogicBlockData> powerQueue = new ConcurrentQueue<LogicBlockData>(poweredBlocks);
             while (powerQueue.Count > 0)
             {
-                powerQueue.TryDequeue(out PowerBlockData poweredBlock);
+                powerQueue.TryDequeue(out LogicBlockData poweredBlock);
 
                 Entity blockEntity = poweredBlock.TerrainArea;
                 int3 blockLoc = poweredBlock.BlockLocation;
@@ -113,7 +116,7 @@ namespace Opencraft.Terrain
                                 terrainPowerState[blockIndex] = new BlockPowered { powered = powerState };
                                 DynamicBuffer<BlockType> blockTypes = terrainBlocksLookup[neighborEntity].Reinterpret<BlockType>();
                                 if (blockTypes[blockIndex] == BlockType.Off_Wire || blockTypes[blockIndex] == BlockType.On_Wire || blockTypes[blockIndex] == BlockType.On_Lamp || blocks[blockIndex] == BlockType.On_Switch || blocks[blockIndex] == BlockType.Powered_Switch)
-                                    powerQueue.Enqueue(new PowerBlockData { BlockLocation = neighborBlockLoc, TerrainArea = neighborEntity });
+                                    powerQueue.Enqueue(new LogicBlockData { BlockLocation = neighborBlockLoc, TerrainArea = neighborEntity });
                                 if (powerState) blockTypes[blockIndex] = (BlockData.PoweredState[(int)blockTypes[blockIndex]]);
                                 else blockTypes[blockIndex] = (BlockData.DepoweredState[(int)blockTypes[blockIndex]]);
                             }

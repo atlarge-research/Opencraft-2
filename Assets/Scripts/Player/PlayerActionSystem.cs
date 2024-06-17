@@ -118,11 +118,17 @@ namespace Opencraft.Player
                             {
                                 int3 globalPos = terrainArea.location * Env.AREA_SIZE + blockLoc;
                                 UnityEngine.Debug.Log($"globalPos: {globalPos}");
-                                TerrainPowerSystem.powerBlocks.TryRemove(globalPos, out TerrainPowerSystem.PowerBlockData value);
+                                TerrainPowerSystem.powerBlocks.TryRemove(globalPos, out TerrainPowerSystem.LogicBlockData value);
                             }
-                            if (blocks[blockIndex] == BlockType.On_Wire || blocks[blockIndex] == BlockType.Power || blocks[blockIndex] == BlockType.Powered_Switch)
+                            if (blocks[blockIndex] == BlockType.AND_Gate || blocks[blockIndex] == BlockType.OR_Gate || blocks[blockIndex] == BlockType.NOT_Gate)
                             {
-                                TerrainPowerSystem.toDepower.Add(new TerrainPowerSystem.PowerBlockData { BlockLocation = blockLoc, TerrainArea = terrainAreaEntity });
+                                int3 globalPos = terrainArea.location * Env.AREA_SIZE + blockLoc;
+                                UnityEngine.Debug.Log($"globalPos: {globalPos}");
+                                TerrainPowerSystem.gateBlocks.TryRemove(globalPos, out TerrainPowerSystem.LogicBlockData value);
+                            }
+                            if (blocks[blockIndex] == BlockType.On_Wire || blocks[blockIndex] == BlockType.Power || blocks[blockIndex] == BlockType.Powered_Switch || blocks[blockIndex] == BlockType.AND_Gate || blocks[blockIndex] == BlockType.OR_Gate || blocks[blockIndex] == BlockType.NOT_Gate)
+                            {
+                                TerrainPowerSystem.toDepower.Add(new TerrainPowerSystem.LogicBlockData { BlockLocation = blockLoc, TerrainArea = terrainAreaEntity });
                             }
 
                             blocks[blockIndex] = BlockType.Air;
@@ -186,15 +192,23 @@ namespace Opencraft.Player
                             UnityEngine.Debug.Log("Placed block at " + blockLoc.ToString() + " in area " + terrainArea.location.ToString());
                             if (blockToPlace == BlockType.Power)
                             {
-                                TerrainPowerSystem.powerBlocks[globalPos] = new TerrainPowerSystem.PowerBlockData
+                                TerrainPowerSystem.powerBlocks[globalPos] = new TerrainPowerSystem.LogicBlockData
                                 {
                                     BlockLocation = blockLoc,
                                     TerrainArea = player.SelectedBlock.terrainArea,
                                 };
                             }
-                            if (blockToPlace == BlockType.Off_Wire || blockToPlace == BlockType.Off_Lamp)
+                            if (blockToPlace == BlockType.AND_Gate || blockToPlace == BlockType.OR_Gate || blockToPlace == BlockType.NOT_Gate)
                             {
-                                TerrainPowerSystem.toDepower.Add(new TerrainPowerSystem.PowerBlockData { BlockLocation = blockLoc, TerrainArea = terrainAreaEntity });
+                                TerrainPowerSystem.gateBlocks[globalPos] = new TerrainPowerSystem.LogicBlockData
+                                {
+                                    BlockLocation = blockLoc,
+                                    TerrainArea = player.SelectedBlock.terrainArea,
+                                };
+                            }
+                            if (blockToPlace == BlockType.Off_Wire || blockToPlace == BlockType.Off_Lamp || blocks[blockIndex] == BlockType.AND_Gate || blocks[blockIndex] == BlockType.OR_Gate || blocks[blockIndex] == BlockType.NOT_Gate)
+                            {
+                                TerrainPowerSystem.toDepower.Add(new TerrainPowerSystem.LogicBlockData { BlockLocation = blockLoc, TerrainArea = terrainAreaEntity });
                             }
                         }
                     }
@@ -212,12 +226,12 @@ namespace Opencraft.Player
                         if (blocks[blockIndex] == BlockType.Off_Switch)
                         {
                             blocks[blockIndex] = BlockType.On_Switch;
-                            TerrainPowerSystem.toDepower.Add(new TerrainPowerSystem.PowerBlockData { BlockLocation = blockLoc, TerrainArea = terrainAreaEntity });
+                            TerrainPowerSystem.toDepower.Add(new TerrainPowerSystem.LogicBlockData { BlockLocation = blockLoc, TerrainArea = terrainAreaEntity });
                         }
                         else if (blocks[blockIndex] == BlockType.On_Switch || blocks[blockIndex] == BlockType.Powered_Switch)
                         {
                             blocks[blockIndex] = BlockType.Off_Switch;
-                            TerrainPowerSystem.toDepower.Add(new TerrainPowerSystem.PowerBlockData { BlockLocation = blockLoc, TerrainArea = terrainAreaEntity });
+                            TerrainPowerSystem.toDepower.Add(new TerrainPowerSystem.LogicBlockData { BlockLocation = blockLoc, TerrainArea = terrainAreaEntity });
                         }
                     }
                 }
