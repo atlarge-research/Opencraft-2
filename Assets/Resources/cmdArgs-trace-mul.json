@@ -1,9 +1,10 @@
 {
     "args": [
         "-deploymentID",
-        "0",
-        "-deploymentJson",
-	"deployment",
+        "1",
+        "-remoteConfig",
+	"-deploymentURL",
+	"192.168.1.141",
 	"-logStats",
 	"True",
 	"-renderDist",
@@ -12,5 +13,6 @@
 	"playback",
 	"-emulationFile",
 	"experimentTrace"
+
     ]
 }

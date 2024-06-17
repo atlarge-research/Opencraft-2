@@ -94,3 +94,6 @@ InitCodeMarker
 .idea/**/usage.statistics.xml
 .idea/**/dictionaries
 .idea/**/shelf
+*.meta
+*.meta
+/Linux

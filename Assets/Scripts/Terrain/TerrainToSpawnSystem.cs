@@ -6,6 +6,7 @@ using Unity.Transforms;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Profiling;
+using UnityEngine;
 
 namespace Opencraft.Terrain
 {
@@ -44,7 +45,7 @@ namespace Opencraft.Terrain
             markerPlayerTerrainGenCheck.Begin();
             // todo - make this parallel
             var areasPlayersCloseTo = new NativeHashSet<int2>(32, Allocator.TempJob);
-            int viewRange = Env.TERRAIN_SPAWN_RANGE;
+            int viewRange = Env.getTerrainSpawnRange();
             foreach (var transform in SystemAPI.Query<LocalTransform>().WithAll<PlayerComponent, Simulate>())
             {
                 var pos = transform.Position;

@@ -7,7 +7,7 @@
 	"-logStats",
 	"True",
 	"-renderDist",
-	"3",
+	"10",
 	"-emulationType",
 	"playback",
 	"-emulationFile",
