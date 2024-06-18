@@ -15,7 +15,7 @@ MonoBehaviour:
   layerType: 4
   layerName: Stone noise layer
   index: 200
-  blockType: 1
+  blockType: 7
   frequency: 7
   exponent: 1
   minHeight: 1

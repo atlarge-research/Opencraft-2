@@ -170,7 +170,7 @@ namespace Opencraft.Player
                                 playerPos = new float3(playerPos.x, NoiseUtilities.FastFloor(playerPos.y), playerPos.z);
                                 float3 offset = globalPos - playerPos;
                                 float3 absoluteOffset = new(math.abs(offset.x), math.abs(offset.y), math.abs(offset.z));
-                                Direction dir = Direction.None;
+                                Direction dir = Direction.XP;
                                 if (absoluteOffset.x > absoluteOffset.y && absoluteOffset.x > absoluteOffset.z)
                                 {
                                     if (offset.x > 0) dir = Direction.XP;

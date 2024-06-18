@@ -1,9 +1,17 @@
-﻿namespace Opencraft.Terrain.Blocks
+﻿using Unity.Mathematics;
+
+namespace Opencraft.Terrain.Blocks
 {
     // The enum of all supported types
     public enum BlockType : byte
     {
         Air,
+        Off_Switch,
+        On_Switch,
+        Powered_Switch,
+        AND_Gate,
+        OR_Gate,
+        NOT_Gate,
         Stone,
         Dirt,
         Tin,
@@ -17,18 +25,13 @@
         On_Wire,
         Off_Lamp,
         On_Lamp,
-        Off_Switch,
-        On_Switch,
-        Powered_Switch,
-        AND_Gate,
-        OR_Gate,
-        NOT_Gate,
     }
 
     public enum Direction : byte
     {
-        None, XP, XN, YP, YN, ZP, ZN
+        XP, XN, YP, YN, ZP, ZN
     }
+
     public static class BlockData
     {
         // Maps BlockType to texture array index, currently 1 to 1
@@ -64,12 +67,18 @@
 
         public static readonly bool[] PowerableBlock = new bool[]
         {
-            false, false, false, false, false, false, false, false, false, false, true, true, true, true, false, true, true, true, true, true
+            false, false, true, true, false, false, false, false, false, false, false, false, false, false, false, false, true, true, true, true,
         };
 
         public static readonly BlockType[] DepoweredState = new BlockType[]
         {
             BlockType.Air,
+            BlockType.Off_Switch,
+            BlockType.On_Switch,
+            BlockType.On_Switch,
+            BlockType.AND_Gate,
+            BlockType.OR_Gate,
+            BlockType.NOT_Gate,
             BlockType.Stone,
             BlockType.Dirt,
             BlockType.Tin,
@@ -83,16 +92,17 @@
             BlockType.Off_Wire,
             BlockType.Off_Lamp,
             BlockType.Off_Lamp,
-            BlockType.Off_Switch,
-            BlockType.On_Switch,
-            BlockType.On_Switch,
-            BlockType.AND_Gate,
-            BlockType.OR_Gate,
-            BlockType.NOT_Gate,
+
         };
         public static readonly BlockType[] PoweredState = new BlockType[]
         {
             BlockType.Air,
+            BlockType.Off_Switch,
+            BlockType.Powered_Switch,
+            BlockType.Powered_Switch,
+            BlockType.AND_Gate,
+            BlockType.OR_Gate,
+            BlockType.NOT_Gate,
             BlockType.Stone,
             BlockType.Dirt,
             BlockType.Tin,
@@ -106,14 +116,17 @@
             BlockType.On_Wire,
             BlockType.On_Lamp,
             BlockType.On_Lamp,
-            BlockType.Off_Switch,
-            BlockType.Powered_Switch,
-            BlockType.Powered_Switch,
-            BlockType.AND_Gate,
-            BlockType.OR_Gate,
-            BlockType.NOT_Gate,
         };
+
+        public static readonly int3[] Int3Directions = new int3[]
+        {
+            new int3(-1, 0, 0),
+            new int3(1, 0, 0),
+            new int3(0, -1, 0),
+            new int3(0, 1, 0),
+            new int3(0, 0, -1),
+            new int3(0, 0, 1)
+        };
+
     }
-
-
 }
