@@ -86,12 +86,18 @@ namespace Opencraft.Terrain
             CheckLogicPower(gateBlocks.Values);
         }
 
-        private void PropogatePowerState(IEnumerable<LogicBlockData> poweredBlocks, bool powerState)
+        private void PropogatePowerState(IEnumerable<LogicBlockData> poweredBlocks, bool inputPowerState)
         {
-            ConcurrentQueue<LogicBlockData> powerQueue = new ConcurrentQueue<LogicBlockData>(poweredBlocks);
+            ConcurrentQueue<(LogicBlockData, bool)> powerQueue = new ConcurrentQueue<(LogicBlockData, bool)>();
+            foreach (LogicBlockData block in poweredBlocks)
+            {
+                powerQueue.Enqueue((block, inputPowerState));
+            }
             while (powerQueue.Count > 0)
             {
-                powerQueue.TryDequeue(out LogicBlockData poweredBlock);
+                powerQueue.TryDequeue(out (LogicBlockData, bool) entry);
+                LogicBlockData poweredBlock = entry.Item1;
+                bool powerState = entry.Item2;
 
                 Entity blockEntity = poweredBlock.TerrainArea;
                 int3 blockLoc = poweredBlock.BlockLocation;
@@ -105,71 +111,40 @@ namespace Opencraft.Terrain
                 Entity[] terrainEntities = new Entity[] { blockEntity, neighborXN, neighborXP, neighborZN, neighborZP };
 
 
-                if (currentBlockType == BlockType.AND_Gate || currentBlockType == BlockType.OR_Gate || currentBlockType == BlockType.NOT_Gate)
+                if (currentBlockType == BlockType.AND_Gate || currentBlockType == BlockType.OR_Gate)
                 {
                     Direction outputDirection = Direction.ZP;
-                    int3 direction = BlockData.Int3Directions[(int)outputDirection];
-                    int3 notNormalisedBlockLoc = (blockLoc + direction);
-                    int terrainEntityIndex = GetOffsetIndex(notNormalisedBlockLoc);
-                    Entity neighborEntity = terrainEntities[terrainEntityIndex];
-                    if (neighborEntity == Entity.Null) continue;
-
-                    int3 actualBlockLoc = (notNormalisedBlockLoc + sixteens) % 16;
-                    int blockIndex = TerrainUtilities.BlockLocationToIndex(ref actualBlockLoc);
-
-                    DynamicBuffer<TerrainBlocks> terrainBlocks = terrainBlocksLookup[neighborEntity];
-                    DynamicBuffer<BlockType> blockTypes = terrainBlocks.Reinterpret<BlockType>();
-                    //DynamicBuffer<BlockDirection> blockDirections = terrainDirectionLookup[neighborEntity];
-                    DynamicBuffer<BlockPowered> blockPowerState = terrainPowerStateLookup[neighborEntity];
-                    DynamicBuffer<bool> boolPowerState = blockPowerState.Reinterpret<bool>();
-                    BlockType currentBlock = blockTypes[blockIndex];
-                    int currentBlockIndex = (int)currentBlock;
-
-
-                    if (BlockData.PowerableBlock[currentBlockIndex])
-                    {
-                        if (boolPowerState[blockIndex] != powerState)
-                        {
-                            boolPowerState[blockIndex] = powerState;
-                            if (currentBlock == BlockType.Off_Wire || currentBlock == BlockType.On_Wire || currentBlock == BlockType.On_Lamp || currentBlock == BlockType.On_Switch || currentBlock == BlockType.Powered_Switch)
-                                powerQueue.Enqueue(new LogicBlockData { BlockLocation = actualBlockLoc, TerrainArea = neighborEntity });
-                            if (powerState) blockTypes[blockIndex] = (BlockData.PoweredState[currentBlockIndex]);
-                            else blockTypes[blockIndex] = (BlockData.DepoweredState[currentBlockIndex]);
-                        }
-                    }
+                    EvaluateNeighbour(outputDirection, blockLoc, ref terrainEntities, powerState, ref powerQueue);
                     continue;
                 }
 
-                int3[] directions = BlockData.Int3Directions;
-                for (int i = 0; i < directions.Length; i++)
+                if (currentBlockType == BlockType.NOT_Gate)
                 {
-                    int3 notNormalisedBlockLoc = (blockLoc + directions[i]);
+                    Direction inputDirection = Direction.ZN;
+                    int3 notNormalisedBlockLoc = (blockLoc + BlockData.Int3Directions[(int)inputDirection]);
                     int terrainEntityIndex = GetOffsetIndex(notNormalisedBlockLoc);
                     Entity neighborEntity = terrainEntities[terrainEntityIndex];
                     if (neighborEntity == Entity.Null) continue;
-
-                    int3 actualBlockLoc = (notNormalisedBlockLoc + sixteens) % 16;
+                    int lowestCoord = math.min(notNormalisedBlockLoc.x, notNormalisedBlockLoc.z);
+                    int num_sixteens = lowestCoord / 16 + 1;
+                    int3 actualBlockLoc = (notNormalisedBlockLoc + sixteens * num_sixteens) % 16;
                     int blockIndex = TerrainUtilities.BlockLocationToIndex(ref actualBlockLoc);
-
-                    DynamicBuffer<TerrainBlocks> terrainBlocks = terrainBlocksLookup[neighborEntity];
-                    DynamicBuffer<BlockType> blockTypes = terrainBlocks.Reinterpret<BlockType>();
-                    //DynamicBuffer<BlockDirection> blockDirections = terrainDirectionLookup[neighborEntity];
-                    DynamicBuffer<BlockPowered> blockPowerState = terrainPowerStateLookup[neighborEntity];
+                    DynamicBuffer<BlockPowered> blockPowerState = terrainPowerStateLookup[blockEntity];
                     DynamicBuffer<bool> boolPowerState = blockPowerState.Reinterpret<bool>();
-                    BlockType currentBlock = blockTypes[blockIndex];
-                    int currentBlockIndex = (int)currentBlock;
+                    bool NOTInputPower = boolPowerState[blockIndex];
 
-                    if (BlockData.PowerableBlock[currentBlockIndex])
-                    {
-                        if (boolPowerState[blockIndex] != powerState)
-                        {
-                            boolPowerState[blockIndex] = powerState;
-                            if (currentBlock == BlockType.Off_Wire || currentBlock == BlockType.On_Wire || currentBlock == BlockType.On_Lamp || currentBlock == BlockType.On_Switch || currentBlock == BlockType.Powered_Switch)
-                                powerQueue.Enqueue(new LogicBlockData { BlockLocation = actualBlockLoc, TerrainArea = neighborEntity });
-                            if (powerState) blockTypes[blockIndex] = (BlockData.PoweredState[currentBlockIndex]);
-                            else blockTypes[blockIndex] = (BlockData.DepoweredState[currentBlockIndex]);
-                        }
-                    }
+                    Direction outputDirection = Direction.ZP;
+
+
+                    EvaluateNeighbour(outputDirection, blockLoc, ref terrainEntities, !NOTInputPower, ref powerQueue);
+                    continue;
+                }
+
+                Direction[] allDirections = BlockData.AllDirections;
+                for (int i = 0; i < allDirections.Length; i++)
+                {
+                    Direction outputDirection = allDirections[i];
+                    EvaluateNeighbour(outputDirection, blockLoc, ref terrainEntities, powerState, ref powerQueue);
                 }
             }
         }
@@ -217,6 +192,7 @@ namespace Opencraft.Terrain
                 Entity neighborZP = neighbors.neighborZP;
                 Entity[] terrainEntities = new Entity[] { blockEntity, neighborXN, neighborXP, neighborZN, neighborZP };
 
+                int powerableBlocks = 0;
                 int3[] directions = BlockData.Int3Directions;
                 int powerCount = 0;
                 for (int i = 0; i < inputDirections.Length; i++)
@@ -226,7 +202,9 @@ namespace Opencraft.Terrain
                     Entity neighborEntity = terrainEntities[terrainEntityIndex];
                     if (neighborEntity == Entity.Null) continue;
 
-                    int3 actualBlockLoc = (notNormalisedBlockLoc + sixteens) % 16;
+                    int lowestCoord = math.min(notNormalisedBlockLoc.x, notNormalisedBlockLoc.z);
+                    int num_sixteens = lowestCoord / 16 + 1;
+                    int3 actualBlockLoc = (notNormalisedBlockLoc + sixteens * num_sixteens) % 16;
                     int blockIndex2 = TerrainUtilities.BlockLocationToIndex(ref actualBlockLoc);
 
                     DynamicBuffer<TerrainBlocks> terrainBlocks = terrainBlocksLookup[neighborEntity];
@@ -242,9 +220,10 @@ namespace Opencraft.Terrain
                         {
                             powerCount++;
                         }
+                        powerableBlocks++;
                     }
                 }
-                if (powerCount >= requiredPower)
+                if (powerCount >= requiredPower || (powerableBlocks == 1 && currentBlockType == BlockType.NOT_Gate))
                 {
                     poweredGateBlocks[globalPos] = new LogicBlockData { BlockLocation = blockLoc, TerrainArea = blockEntity };
                     boolPowerState[blockIndex] = true;
@@ -256,9 +235,42 @@ namespace Opencraft.Terrain
                 }
 
             }
-
-
         }
+
+        private void EvaluateNeighbour(Direction outputDirection, int3 blockLoc, ref Entity[] terrainEntities, bool powerState, ref ConcurrentQueue<(LogicBlockData, bool)> powerQueue)
+        {
+            int3 direction = BlockData.Int3Directions[(int)outputDirection];
+            int3 notNormalisedBlockLoc = (blockLoc + direction);
+            int terrainEntityIndex = GetOffsetIndex(notNormalisedBlockLoc);
+            Entity neighborEntity = terrainEntities[terrainEntityIndex];
+            if (neighborEntity == Entity.Null) return;
+
+            int lowestCoord = math.min(notNormalisedBlockLoc.x, notNormalisedBlockLoc.z);
+            int num_sixteens = lowestCoord / 16 + 1;
+            int3 actualBlockLoc = (notNormalisedBlockLoc + sixteens * num_sixteens) % 16;
+            int blockIndex = TerrainUtilities.BlockLocationToIndex(ref actualBlockLoc);
+
+            DynamicBuffer<TerrainBlocks> terrainBlocks = terrainBlocksLookup[neighborEntity];
+            DynamicBuffer<BlockType> blockTypes = terrainBlocks.Reinterpret<BlockType>();
+            //DynamicBuffer<BlockDirection> blockDirections = terrainDirectionLookup[neighborEntity];
+            DynamicBuffer<BlockPowered> blockPowerState = terrainPowerStateLookup[neighborEntity];
+            DynamicBuffer<bool> boolPowerState = blockPowerState.Reinterpret<bool>();
+            BlockType currentBlock = blockTypes[blockIndex];
+            int currentBlockIndex = (int)currentBlock;
+
+            if (BlockData.PowerableBlock[currentBlockIndex])
+            {
+                if (boolPowerState[blockIndex] != powerState)
+                {
+                    boolPowerState[blockIndex] = powerState;
+                    if (currentBlock == BlockType.Off_Wire || currentBlock == BlockType.On_Wire || currentBlock == BlockType.On_Lamp || currentBlock == BlockType.On_Switch || currentBlock == BlockType.Powered_Switch)
+                        powerQueue.Enqueue((new LogicBlockData { BlockLocation = actualBlockLoc, TerrainArea = neighborEntity }, powerState));
+                    if (powerState) blockTypes[blockIndex] = (BlockData.PoweredState[currentBlockIndex]);
+                    else blockTypes[blockIndex] = (BlockData.DepoweredState[currentBlockIndex]);
+                }
+            }
+        }
+
 
 
         private int GetOffsetIndex(int3 blockLoc)

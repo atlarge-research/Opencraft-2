@@ -234,12 +234,19 @@ namespace Opencraft.Player
                         {
                             blocks[blockIndex] = BlockType.On_Switch;
                             TerrainPowerSystem.toDepower.Add(new TerrainPowerSystem.LogicBlockData { BlockLocation = blockLoc, TerrainArea = terrainAreaEntity });
+
+                            //DynamicBuffer<bool> blockPowered = _terrainPowerStateLookup[terrainAreaEntity].Reinterpret<bool>();
+                            //blockPowered[blockIndex] = false;
                         }
                         else if (blocks[blockIndex] == BlockType.On_Switch || blocks[blockIndex] == BlockType.Powered_Switch)
                         {
                             blocks[blockIndex] = BlockType.Off_Switch;
                             TerrainPowerSystem.toDepower.Add(new TerrainPowerSystem.LogicBlockData { BlockLocation = blockLoc, TerrainArea = terrainAreaEntity });
+
+                            DynamicBuffer<bool> blockPowered = _terrainPowerStateLookup[terrainAreaEntity].Reinterpret<bool>();
+                            blockPowered[blockIndex] = false;
                         }
+
                     }
                 }
             }

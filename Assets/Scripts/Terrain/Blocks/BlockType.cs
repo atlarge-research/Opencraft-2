@@ -128,5 +128,15 @@ namespace Opencraft.Terrain.Blocks
             new int3(0, 0, 1)
         };
 
+        public static readonly Direction[] AllDirections = new Direction[]
+        {
+            Direction.XN,
+            Direction.XP,
+            Direction.YN,
+            Direction.YP,
+            Direction.ZN,
+            Direction.ZP
+        };
+
     }
 }
