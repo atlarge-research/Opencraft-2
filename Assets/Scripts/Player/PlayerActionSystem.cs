@@ -1,4 +1,5 @@
-﻿using Opencraft.Player.Authoring;
+﻿using System.Linq;
+using Opencraft.Player.Authoring;
 using Opencraft.Terrain;
 using Opencraft.Terrain.Authoring;
 using Opencraft.Terrain.Blocks;
@@ -22,14 +23,12 @@ namespace Opencraft.Player
         private BufferLookup<BlockDirection> _terrainDirectionLookup;
         private BufferLookup<TerrainColMinY> _terrainColumnMinBufferLookup;
         private BufferLookup<TerrainColMaxY> _terrainColumnMaxBufferLookup;
-        private NativeArray<Entity> terrainAreasEntities;
         private ComponentLookup<TerrainArea> _terrainAreaLookup;
 
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
-
             state.RequireForUpdate<PlayerComponent>();
             state.RequireForUpdate<TerrainArea>();
             state.RequireForUpdate<TerrainSpawner>();
@@ -39,7 +38,6 @@ namespace Opencraft.Player
             _terrainColumnMinBufferLookup = state.GetBufferLookup<TerrainColMinY>(false);
             _terrainColumnMaxBufferLookup = state.GetBufferLookup<TerrainColMaxY>(false);
             _terrainAreaLookup = state.GetComponentLookup<TerrainArea>(isReadOnly: true);
-
         }
 
         [BurstCompile]
@@ -52,15 +50,12 @@ namespace Opencraft.Player
             _terrainColumnMinBufferLookup.Update(ref state);
             _terrainColumnMaxBufferLookup.Update(ref state);
             _terrainAreaLookup.Update(ref state);
-            var terrainAreasQuery = SystemAPI.QueryBuilder().WithAll<TerrainArea, LocalTransform>().Build();
-            terrainAreasEntities = terrainAreasQuery.ToEntityArray(state.WorldUpdateAllocator);
 
             foreach (var player in SystemAPI.Query<PlayerAspect>().WithAll<Simulate, PlayerInGame>())
             {
                 // Destroy block action
                 if (player.Input.PrimaryAction.IsSet && player.SelectedBlock.terrainArea != Entity.Null)
                 {
-
                     Entity terrainAreaEntity = player.SelectedBlock.terrainArea;
                     if (_terrainBlocksBufferLookup.TryGetBuffer(terrainAreaEntity, out DynamicBuffer<TerrainBlocks> terrainBlocks))
                     {
@@ -113,34 +108,29 @@ namespace Opencraft.Player
                                     }
                                 }
                             }
-                            BlockType oldBlock = blocks[blockIndex];
+                            BlockType destroyedBlockType = blocks[blockIndex];
                             blocks[blockIndex] = BlockType.Air;
-                            DynamicBuffer<bool> blockPowered = _terrainPowerStateLookup[terrainAreaEntity].Reinterpret<bool>();
-                            blockPowered[blockIndex] = false;
+
+                            DynamicBuffer<bool> boolPowerStates = _terrainPowerStateLookup[terrainAreaEntity].Reinterpret<bool>();
+                            boolPowerStates[blockIndex] = false;
 
                             TerrainArea terrainArea = _terrainAreaLookup[terrainAreaEntity];
                             int3 globalPos = terrainArea.location * Env.AREA_SIZE + blockLoc;
-                            UnityEngine.Debug.Log($"globalPos: {globalPos}");
+                            //UnityEngine.Debug.Log($"globalPos: {globalPos}");
 
-                            if (oldBlock == BlockType.Power)
+                            if (destroyedBlockType == BlockType.Power)
+                                TerrainPowerSystem.RemovePowerBlock(globalPos);
+                            if (BlockData.IsGate(destroyedBlockType))
                             {
-                                TerrainPowerSystem.powerBlocks.TryRemove(globalPos, out TerrainPowerSystem.LogicBlockData value);
+                                TerrainPowerSystem.RemoveGateBlock(globalPos);
+                                TerrainPowerSystem.RemovePoweredGateBlock(globalPos);
                             }
-                            if (oldBlock == BlockType.AND_Gate || oldBlock == BlockType.OR_Gate || oldBlock == BlockType.NOT_Gate || oldBlock == BlockType.XOR_Gate)
-                            {
-                                TerrainPowerSystem.gateBlocks.TryRemove(globalPos, out TerrainPowerSystem.LogicBlockData value);
-                                TerrainPowerSystem.poweredGateBlocks.TryRemove(globalPos, out TerrainPowerSystem.LogicBlockData value2);
-                            }
-                            if (oldBlock == BlockType.On_Wire || oldBlock == BlockType.Power || oldBlock == BlockType.Powered_Switch || oldBlock == BlockType.AND_Gate || oldBlock == BlockType.OR_Gate || oldBlock == BlockType.NOT_Gate || oldBlock == BlockType.XOR_Gate)
-                            {
-                                TerrainPowerSystem.toDepower.Add(new TerrainPowerSystem.LogicBlockData { BlockLocation = blockLoc, TerrainArea = terrainAreaEntity });
-                            }
-
-
+                            if (BlockData.IsPowerTransmitter(destroyedBlockType) || BlockData.IsGate(destroyedBlockType))
+                                TerrainPowerSystem.AddDepowerBlock(blockLoc, terrainAreaEntity);
                         }
                     }
-
                 }
+
                 // Place block action, using the neighbor of selected block
                 if (player.Input.SecondaryAction.IsSet && player.SelectedBlock.neighborTerrainArea != Entity.Null)
                 {
@@ -170,49 +160,14 @@ namespace Opencraft.Player
                             if (_terrainDirectionLookup.TryGetBuffer(terrainAreaEntity, out DynamicBuffer<BlockDirection> blockDirections))
                             {
                                 float3 playerPos = player.TransformComponent.Position;
-                                playerPos = new float3(playerPos.x, NoiseUtilities.FastFloor(playerPos.y), playerPos.z);
-                                float3 offset = globalPos - playerPos;
-                                float3 absoluteOffset = new(math.abs(offset.x), math.abs(offset.y), math.abs(offset.z));
-                                Direction dir = Direction.XP;
-                                if (/* absoluteOffset.x > absoluteOffset.y && */ absoluteOffset.x > absoluteOffset.z)
-                                {
-                                    if (offset.x > 0) dir = Direction.XN;
-                                    else dir = Direction.XP;
-                                }
-                                else if (absoluteOffset.z > absoluteOffset.x /* && absoluteOffset.z > absoluteOffset.y */)
-                                {
-                                    if (offset.z > 0) dir = Direction.ZN;
-                                    else dir = Direction.ZP;
-                                }
-                                //else if (absoluteOffset.y > absoluteOffset.x && absoluteOffset.y > absoluteOffset.z)
-                                //{
-                                //    if (offset.y > 0) dir = Direction.YP;
-                                //    else dir = Direction.YN;
-                                //}
-                                blockDirections[blockIndex] = new BlockDirection { direction = dir };
+                                blockDirections[blockIndex] = new BlockDirection { direction = GetDirection(playerPos, globalPos) };
                             }
-
-                            UnityEngine.Debug.Log("Placed block at " + blockLoc.ToString() + " in area " + terrainArea.location.ToString());
                             if (blockToPlace == BlockType.Power)
-                            {
-                                TerrainPowerSystem.powerBlocks[globalPos] = new TerrainPowerSystem.LogicBlockData
-                                {
-                                    BlockLocation = blockLoc,
-                                    TerrainArea = player.SelectedBlock.terrainArea,
-                                };
-                            }
-                            if (blockToPlace == BlockType.AND_Gate || blockToPlace == BlockType.OR_Gate || blockToPlace == BlockType.NOT_Gate || blockToPlace == BlockType.XOR_Gate)
-                            {
-                                TerrainPowerSystem.gateBlocks[globalPos] = new TerrainPowerSystem.LogicBlockData
-                                {
-                                    BlockLocation = blockLoc,
-                                    TerrainArea = player.SelectedBlock.terrainArea,
-                                };
-                            }
-                            if (blockToPlace == BlockType.Off_Wire || blockToPlace == BlockType.Off_Lamp || blocks[blockIndex] == BlockType.AND_Gate || blocks[blockIndex] == BlockType.OR_Gate || blocks[blockIndex] == BlockType.NOT_Gate || blockToPlace == BlockType.XOR_Gate)
-                            {
-                                TerrainPowerSystem.toDepower.Add(new TerrainPowerSystem.LogicBlockData { BlockLocation = blockLoc, TerrainArea = terrainAreaEntity });
-                            }
+                                TerrainPowerSystem.AddPowerBlock(globalPos, blockLoc, player.SelectedBlock.terrainArea);
+                            if (BlockData.IsGate(blockToPlace))
+                                TerrainPowerSystem.AddGateBlock(globalPos, blockLoc, player.SelectedBlock.terrainArea);
+                            if (blockToPlace == BlockType.Off_Wire || blockToPlace == BlockType.Off_Lamp || BlockData.IsGate(blockToPlace))
+                                TerrainPowerSystem.AddDepowerBlock(blockLoc, terrainAreaEntity);
 
                             DynamicBuffer<bool> blockPowered = _terrainPowerStateLookup[terrainAreaEntity].Reinterpret<bool>();
                             blockPowered[blockIndex] = false;
@@ -232,21 +187,37 @@ namespace Opencraft.Player
                         if (blocks[blockIndex] == BlockType.Off_Switch)
                         {
                             blocks[blockIndex] = BlockType.On_Switch;
-                            TerrainPowerSystem.toDepower.Add(new TerrainPowerSystem.LogicBlockData { BlockLocation = blockLoc, TerrainArea = terrainAreaEntity });
+                            TerrainPowerSystem.AddDepowerBlock(blockLoc, terrainAreaEntity);
                         }
                         else if (blocks[blockIndex] == BlockType.On_Switch || blocks[blockIndex] == BlockType.Powered_Switch)
                         {
                             blocks[blockIndex] = BlockType.Off_Switch;
-                            TerrainPowerSystem.toDepower.Add(new TerrainPowerSystem.LogicBlockData { BlockLocation = blockLoc, TerrainArea = terrainAreaEntity });
+                            TerrainPowerSystem.AddDepowerBlock(blockLoc, terrainAreaEntity);
 
                             DynamicBuffer<bool> blockPowered = _terrainPowerStateLookup[terrainAreaEntity].Reinterpret<bool>();
                             blockPowered[blockIndex] = false;
                         }
-
                     }
                 }
             }
-
+        }
+        private Direction GetDirection(float3 playerPos, int3 globalPos)
+        {
+            playerPos = new float3(playerPos.x, NoiseUtilities.FastFloor(playerPos.y), playerPos.z);
+            float3 offset = globalPos - playerPos;
+            float3 absoluteOffset = new(math.abs(offset.x), math.abs(offset.y), math.abs(offset.z));
+            Direction dir = Direction.XP;
+            if (absoluteOffset.x > absoluteOffset.z)
+            {
+                if (offset.x > 0) dir = Direction.XN;
+                else dir = Direction.XP;
+            }
+            else if (absoluteOffset.z > absoluteOffset.x)
+            {
+                if (offset.z > 0) dir = Direction.ZN;
+                else dir = Direction.ZP;
+            }
+            return dir;
         }
     }
 }

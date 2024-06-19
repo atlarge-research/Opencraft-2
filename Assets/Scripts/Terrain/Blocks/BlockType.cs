@@ -72,6 +72,15 @@ namespace Opencraft.Terrain.Blocks
             false, false, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, true, true, true, true,
         };
 
+        public static bool IsGate(BlockType type)
+        {
+            return type == BlockType.AND_Gate || type == BlockType.OR_Gate || type == BlockType.NOT_Gate || type == BlockType.XOR_Gate;
+        }
+        public static bool IsPowerTransmitter(BlockType type)
+        {
+            return type == BlockType.Power || type == BlockType.On_Wire || type == BlockType.Powered_Switch;
+        }
+
         public static readonly BlockType[] DepoweredState = new BlockType[]
         {
             BlockType.Air,
@@ -95,7 +104,6 @@ namespace Opencraft.Terrain.Blocks
             BlockType.Off_Wire,
             BlockType.Off_Lamp,
             BlockType.Off_Lamp,
-
         };
         public static readonly BlockType[] PoweredState = new BlockType[]
         {

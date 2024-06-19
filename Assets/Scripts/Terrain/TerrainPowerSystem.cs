@@ -25,10 +25,10 @@ namespace Opencraft.Terrain
 
     public partial struct TerrainPowerSystem : ISystem
     {
-        public static ConcurrentDictionary<int3, LogicBlockData> powerBlocks;
-        public static ConcurrentDictionary<int3, LogicBlockData> gateBlocks;
-        public static ConcurrentDictionary<int3, LogicBlockData> poweredGateBlocks;
-        public static List<LogicBlockData> toDepower;
+        private static ConcurrentDictionary<int3, LogicBlockData> powerBlocks;
+        private static ConcurrentDictionary<int3, LogicBlockData> gateBlocks;
+        private static ConcurrentDictionary<int3, LogicBlockData> poweredGateBlocks;
+        private static List<LogicBlockData> toDepower;
         private double tickRate;
         private float timer;
         private BufferLookup<BlockPowered> terrainPowerStateLookup;
@@ -252,7 +252,6 @@ namespace Opencraft.Terrain
 
             DynamicBuffer<TerrainBlocks> terrainBlocks = terrainBlocksLookup[neighborEntity];
             DynamicBuffer<BlockType> blockTypes = terrainBlocks.Reinterpret<BlockType>();
-            //DynamicBuffer<BlockDirection> blockDirections = terrainDirectionLookup[neighborEntity];
             DynamicBuffer<BlockPowered> blockPowerState = terrainPowerStateLookup[neighborEntity];
             DynamicBuffer<bool> boolPowerState = blockPowerState.Reinterpret<bool>();
             BlockType currentBlock = blockTypes[blockIndex];
@@ -319,5 +318,36 @@ namespace Opencraft.Terrain
                     break;
             }
         }
+
+        public static void AddPowerBlock(int3 globalPos, int3 blockLoc, Entity terrainArea)
+        {
+            powerBlocks[globalPos] = new LogicBlockData { BlockLocation = blockLoc, TerrainArea = terrainArea };
+        }
+
+        public static void RemovePowerBlock(int3 globalPos)
+        {
+            powerBlocks.TryRemove(globalPos, out LogicBlockData _);
+        }
+
+        public static void AddGateBlock(int3 globalPos, int3 blockLoc, Entity terrainArea)
+        {
+            gateBlocks[globalPos] = new LogicBlockData { BlockLocation = blockLoc, TerrainArea = terrainArea };
+        }
+
+        public static void RemoveGateBlock(int3 globalPos)
+        {
+            gateBlocks.TryRemove(globalPos, out LogicBlockData _);
+        }
+
+        public static void RemovePoweredGateBlock(int3 globalPos)
+        {
+            poweredGateBlocks.TryRemove(globalPos, out LogicBlockData _);
+        }
+
+        public static void AddDepowerBlock(int3 blockLoc, Entity terrainArea)
+        {
+            toDepower.Add(new LogicBlockData { BlockLocation = blockLoc, TerrainArea = terrainArea });
+        }
+
     }
 }

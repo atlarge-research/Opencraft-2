@@ -321,6 +321,8 @@ namespace Opencraft.Terrain
 
             // iterate up each global y block column
             int globalX, globalZ;
+            int modulo_x = 5;
+            int modulo_z = 5;
             for (int z = 0; z < Env.AREA_SIZE; z++)
             {
                 globalZ = columnZ + z;
@@ -331,6 +333,7 @@ namespace Opencraft.Terrain
                     int columnAccess = x + z * Env.AREA_SIZE;
                     int heightSoFar = 0; // Start at y = 0
                     int startIndex = TerrainUtilities.BlockLocationToIndex(x, 0, z);
+
                     for (int i = 0; i < terrainGenLayers.Length; i++)
                     {
                         TerrainGenerationLayer terrainGenerationLayer = terrainGenLayers[i];
@@ -360,24 +363,24 @@ namespace Opencraft.Terrain
                                     index, noiseInterpSettings, x, z, globalX, heightSoFar, globalZ);
                                 break;
                             case LayerType.Power:
-                                heightSoFar = GeneratePowerLayer(ref terrainBlockBuffers,
-                                    ref colMinBuffers, ref colMaxBuffers, x, z, startIndex,
+                                heightSoFar = GenerateModuloLayer(ref terrainBlockBuffers,
+                                    ref colMinBuffers, ref colMaxBuffers, (x % modulo_x == 0 && z % modulo_z == 0 && x != z) ? 1 : 0, startIndex,
                                     heightSoFar, ref terrainGenerationLayer, columnAccess, globalX, globalZ, index);
                                 break;
                             case LayerType.Wire:
-                                heightSoFar = GenerateWireLayer(ref terrainBlockBuffers,
-                                    ref colMinBuffers, ref colMaxBuffers, x, z, startIndex,
-                                    heightSoFar, ref terrainGenerationLayer, columnAccess);
+                                heightSoFar = GenerateModuloLayer(ref terrainBlockBuffers,
+                                    ref colMinBuffers, ref colMaxBuffers, (x % modulo_x != 0 && z % modulo_z == 0) ? 1 : 0, startIndex,
+                                    heightSoFar, ref terrainGenerationLayer, columnAccess, globalX, globalZ, index);
                                 break;
                             case LayerType.Switch:
-                                heightSoFar = GenerateSwitchLayer(ref terrainBlockBuffers,
-                                    ref colMinBuffers, ref colMaxBuffers, x, z, startIndex,
-                                    heightSoFar, ref terrainGenerationLayer, columnAccess);
+                                heightSoFar = GenerateModuloLayer(ref terrainBlockBuffers,
+                                    ref colMinBuffers, ref colMaxBuffers, (x % modulo_x == 0 && z % modulo_z != 0) ? 1 : 0, startIndex,
+                                    heightSoFar, ref terrainGenerationLayer, columnAccess, globalX, globalZ, index);
                                 break;
                             case LayerType.Lamp:
-                                heightSoFar = GenerateLampLayer(ref terrainBlockBuffers,
-                                    ref colMinBuffers, ref colMaxBuffers, x, z, startIndex,
-                                    heightSoFar, ref terrainGenerationLayer, columnAccess);
+                                heightSoFar = GenerateModuloLayer(ref terrainBlockBuffers,
+                                    ref colMinBuffers, ref colMaxBuffers, (x % modulo_x == 0 && z % modulo_z == 0 && x == z) ? 1 : 0, startIndex,
+                                    heightSoFar, ref terrainGenerationLayer, columnAccess, globalX, globalZ, index);
                                 break;
                         }
                     }
@@ -482,66 +485,16 @@ namespace Opencraft.Terrain
             return end;
         }
 
-        private int GeneratePowerLayer(ref NativeArray<DynamicBuffer<BlockType>> terrainBlockBuffers,
+        private int GenerateModuloLayer(ref NativeArray<DynamicBuffer<BlockType>> terrainBlockBuffers,
             ref NativeArray<DynamicBuffer<byte>> colMinBuffers,
-            ref NativeArray<DynamicBuffer<byte>> colMaxBuffers, int x, int z,
-            int blockIndex, int heightSoFar, ref TerrainGenerationLayer terrainGenLayer, int columnAccess, int globalX, int globalZ, int index)
+            ref NativeArray<DynamicBuffer<byte>> colMaxBuffers, int condional,
+            int blockIndex, int heightSoFar, ref TerrainGenerationLayer terrainGenLayer, int columnAccess, int globalX = -1, int globalZ = -1, int index = -1)
         {
-            int modulo_x = 5;
-            int modulo_z = 5;
-            int heightToAdd = x % modulo_x == 0 && z % modulo_z == 0 && x != z ? 1 : 0;
+            int heightToAdd = condional;
 
-            int end = heightSoFar + heightToAdd < worldHeight ? heightSoFar + heightToAdd : worldHeight;
+            int end = heightSoFar + heightToAdd < worldHeight ? heightSoFar + condional : worldHeight;
             SetColumnBlocks(ref terrainBlockBuffers, ref colMinBuffers, ref colMaxBuffers, heightSoFar, end,
             terrainGenLayer.blockType, blockIndex, columnAccess, globalX, globalZ, index);
-
-            return end;
-        }
-
-        private int GenerateWireLayer(ref NativeArray<DynamicBuffer<BlockType>> terrainBlockBuffers,
-            ref NativeArray<DynamicBuffer<byte>> colMinBuffers,
-            ref NativeArray<DynamicBuffer<byte>> colMaxBuffers, int x, int z,
-            int blockIndex, int heightSoFar, ref TerrainGenerationLayer terrainGenLayer, int columnAccess)
-        {
-            int modulo_x = 5;
-            int modulo_z = 5;
-            int heightToAdd = (x % modulo_x != 0 && z % modulo_z == 0) ? 1 : 0;
-
-            int end = heightSoFar + heightToAdd < worldHeight ? heightSoFar + heightToAdd : worldHeight;
-            SetColumnBlocks(ref terrainBlockBuffers, ref colMinBuffers, ref colMaxBuffers, heightSoFar, end,
-            terrainGenLayer.blockType, blockIndex, columnAccess);
-
-            return end;
-        }
-
-        private int GenerateSwitchLayer(ref NativeArray<DynamicBuffer<BlockType>> terrainBlockBuffers,
-            ref NativeArray<DynamicBuffer<byte>> colMinBuffers,
-            ref NativeArray<DynamicBuffer<byte>> colMaxBuffers, int x, int z,
-            int blockIndex, int heightSoFar, ref TerrainGenerationLayer terrainGenLayer, int columnAccess)
-        {
-            int modulo_x = 5;
-            int modulo_z = 5;
-            int heightToAdd = (x % modulo_x == 0 && z % modulo_z != 0) ? 1 : 0;
-
-            int end = heightSoFar + heightToAdd < worldHeight ? heightSoFar + heightToAdd : worldHeight;
-            SetColumnBlocks(ref terrainBlockBuffers, ref colMinBuffers, ref colMaxBuffers, heightSoFar, end,
-            terrainGenLayer.blockType, blockIndex, columnAccess);
-
-            return end;
-        }
-
-        private int GenerateLampLayer(ref NativeArray<DynamicBuffer<BlockType>> terrainBlockBuffers,
-            ref NativeArray<DynamicBuffer<byte>> colMinBuffers,
-            ref NativeArray<DynamicBuffer<byte>> colMaxBuffers, int x, int z,
-            int blockIndex, int heightSoFar, ref TerrainGenerationLayer terrainGenLayer, int columnAccess)
-        {
-            int modulo_x = 5;
-            int modulo_z = 5;
-            int heightToAdd = x % modulo_x == 0 && z % modulo_z == 0 && x == z ? 1 : 0;
-
-            int end = heightSoFar + heightToAdd < worldHeight ? heightSoFar + heightToAdd : worldHeight;
-            SetColumnBlocks(ref terrainBlockBuffers, ref colMinBuffers, ref colMaxBuffers, heightSoFar, end,
-            terrainGenLayer.blockType, blockIndex, columnAccess);
 
             return end;
         }
@@ -585,18 +538,13 @@ namespace Opencraft.Terrain
                     // Adds every power block to the powerBlocks dictionary
                     // globalPos is the key as it should be unique for every block
                     // blockLoc is the relative position of the block in the terrain area, could probably be back calculated
-                    // terrainEntity is the entity of the block
+                    // terrainEntity is the entity of the containing area
                     int3 blockLoc = TerrainUtilities.BlockIndexToLocation(blockIndex + localY);
                     int3 globalPos = new int3(globalX, localY, globalZ);
                     Entity terrainEntity = terrainAreaEntities[index + colY];
-                    TerrainPowerSystem.powerBlocks[globalPos] = new TerrainPowerSystem.LogicBlockData
-                    {
-                        BlockLocation = blockLoc,
-                        TerrainArea = terrainEntity
-                    };
+                    TerrainPowerSystem.AddPowerBlock(globalPos, blockLoc, terrainEntity);
                 }
                 prevColY = colY;
-
             }
         }
     }
