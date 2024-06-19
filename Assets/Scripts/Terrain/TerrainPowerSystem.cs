@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Unity.Logging.Internal;
 using Unity.VisualScripting;
+using Newtonsoft.Json.Serialization;
 
 [assembly: RegisterGenericJobType(typeof(SortJob<int2, Int2DistanceComparer>))]
 namespace Opencraft.Terrain
@@ -112,7 +113,7 @@ namespace Opencraft.Terrain
                 Entity neighborZP = neighbors.neighborZP;
                 Entity[] terrainEntities = new Entity[] { blockEntity, neighborXN, neighborXP, neighborZN, neighborZP };
 
-                if (currentBlockType == BlockType.AND_Gate || currentBlockType == BlockType.OR_Gate)
+                if (currentBlockType == BlockType.AND_Gate || currentBlockType == BlockType.OR_Gate || currentBlockType == BlockType.XOR_Gate)
                 {
                     EvaluateNeighbour(currentOutputDirection, blockLoc, ref terrainEntities, powerState, ref powerQueue);
                     continue;
@@ -174,6 +175,7 @@ namespace Opencraft.Terrain
                         requiredPower = 2;
                         break;
                     case BlockType.OR_Gate:
+                    case BlockType.XOR_Gate:
                         requiredPower = 1;
                         break;
                     case BlockType.NOT_Gate:
@@ -221,7 +223,7 @@ namespace Opencraft.Terrain
                         powerableBlocks++;
                     }
                 }
-                if (powerCount >= requiredPower || (powerableBlocks == 1 && currentBlockType == BlockType.NOT_Gate))
+                if ((powerCount >= requiredPower && (currentBlockType == BlockType.AND_Gate || currentBlockType == BlockType.OR_Gate)) || (powerCount == requiredPower && currentBlockType == BlockType.XOR_Gate) || (powerableBlocks == 1 && currentBlockType == BlockType.NOT_Gate))
                 {
                     poweredGateBlocks[globalPos] = new LogicBlockData { BlockLocation = blockLoc, TerrainArea = blockEntity };
                     boolPowerState[blockIndex] = true;
@@ -292,6 +294,7 @@ namespace Opencraft.Terrain
             {
                 case BlockType.AND_Gate:
                 case BlockType.OR_Gate:
+                case BlockType.XOR_Gate:
                     {
 
                         switch (currentDirection)

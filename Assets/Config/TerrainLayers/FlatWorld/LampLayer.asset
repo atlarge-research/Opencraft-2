@@ -15,7 +15,7 @@ MonoBehaviour:
   layerType: 8
   layerName: Dirt noise layer
   index: 400
-  blockType: 18
+  blockType: 19
   frequency: 20
   exponent: 1
   minHeight: 2

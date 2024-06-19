@@ -12,6 +12,7 @@ namespace Opencraft.Terrain.Blocks
         AND_Gate,
         OR_Gate,
         NOT_Gate,
+        XOR_Gate,
         Stone,
         Dirt,
         Tin,
@@ -57,17 +58,18 @@ namespace Opencraft.Terrain.Blocks
             (17 & 31) << 24,
             (18 & 31) << 24,
             (19 & 31) << 24,
+            (20 & 31) << 24,
         };
 
         // UV sizing > 1 tiles a texture across multiple blocks, currently not done for any block types
         public static float[] BlockUVSizing = new float[]
         {
-            1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
+            1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
         };
 
         public static readonly bool[] PowerableBlock = new bool[]
         {
-            false, false, true, true, false, false, false, false, false, false, false, false, false, false, false, false, true, true, true, true,
+            false, false, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, true, true, true, true,
         };
 
         public static readonly BlockType[] DepoweredState = new BlockType[]
@@ -79,6 +81,7 @@ namespace Opencraft.Terrain.Blocks
             BlockType.AND_Gate,
             BlockType.OR_Gate,
             BlockType.NOT_Gate,
+            BlockType.XOR_Gate,
             BlockType.Stone,
             BlockType.Dirt,
             BlockType.Tin,
@@ -103,6 +106,7 @@ namespace Opencraft.Terrain.Blocks
             BlockType.AND_Gate,
             BlockType.OR_Gate,
             BlockType.NOT_Gate,
+            BlockType.XOR_Gate,
             BlockType.Stone,
             BlockType.Dirt,
             BlockType.Tin,

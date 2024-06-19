@@ -15,7 +15,7 @@ MonoBehaviour:
   layerType: 3
   layerName: Surface grass layer
   index: 1000
-  blockType: 11
+  blockType: 12
   frequency: 0
   exponent: 0
   minHeight: 0

@@ -15,7 +15,7 @@ MonoBehaviour:
   layerType: 0
   layerName: Surface stone layer
   index: 1000
-  blockType: 7
+  blockType: 8
   frequency: 0
   exponent: 0
   minHeight: 1

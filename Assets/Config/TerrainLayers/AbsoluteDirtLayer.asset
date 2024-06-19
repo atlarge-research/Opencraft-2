@@ -15,7 +15,7 @@ MonoBehaviour:
   layerType: 0
   layerName: Dirt base layer
   index: 300
-  blockType: 8
+  blockType: 9
   frequency: 50
   exponent: 1
   minHeight: 20
