@@ -130,12 +130,22 @@ namespace Opencraft.Terrain.Blocks
 
         public static readonly Direction[] AllDirections = new Direction[]
         {
+            Direction.XP,
+            Direction.XN,
+            Direction.YP,
+            Direction.YN,
+            Direction.ZP,
+            Direction.ZN
+        };
+
+        public static readonly Direction[] OppositeDirections = new Direction[]
+        {
             Direction.XN,
             Direction.XP,
             Direction.YN,
             Direction.YP,
             Direction.ZN,
-            Direction.ZP
+            Direction.ZP,
         };
 
     }

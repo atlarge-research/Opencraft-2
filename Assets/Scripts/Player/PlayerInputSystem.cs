@@ -60,7 +60,7 @@ namespace Opencraft.Player
 
                 input.ValueRW.Movement.x = playerController.inputMovement.x;
                 input.ValueRW.Movement.y = playerController.inputMovement.y;
-                input.ValueRW.SelectedItem = playerController.selectableItems[playerController.selectedItem];
+                input.ValueRW.SelectedItem = playerController.selectableItems[playerController.selectedItemIndex];
 
                 // Actions 
                 if (playerController.inputJump)

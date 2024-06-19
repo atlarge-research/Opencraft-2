@@ -12,6 +12,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Logging.Internal;
+using Unity.VisualScripting;
 
 [assembly: RegisterGenericJobType(typeof(SortJob<int2, Int2DistanceComparer>))]
 namespace Opencraft.Terrain
@@ -27,7 +28,7 @@ namespace Opencraft.Terrain
         public static ConcurrentDictionary<int3, LogicBlockData> gateBlocks;
         public static ConcurrentDictionary<int3, LogicBlockData> poweredGateBlocks;
         public static List<LogicBlockData> toDepower;
-        private int tickRate;
+        private double tickRate;
         private float timer;
         private BufferLookup<BlockPowered> terrainPowerStateLookup;
         private BufferLookup<BlockDirection> terrainDirectionLookup;
@@ -47,7 +48,7 @@ namespace Opencraft.Terrain
             powerBlocks = new ConcurrentDictionary<int3, LogicBlockData>();
             gateBlocks = new ConcurrentDictionary<int3, LogicBlockData>();
             poweredGateBlocks = new ConcurrentDictionary<int3, LogicBlockData>();
-            tickRate = 1;
+            tickRate = 0.33;
             timer = 0;
             terrainPowerStateLookup = state.GetBufferLookup<BlockPowered>(isReadOnly: false);
             terrainDirectionLookup = state.GetBufferLookup<BlockDirection>(isReadOnly: false);
@@ -102,6 +103,7 @@ namespace Opencraft.Terrain
                 Entity blockEntity = poweredBlock.TerrainArea;
                 int3 blockLoc = poweredBlock.BlockLocation;
                 BlockType currentBlockType = terrainBlocksLookup[blockEntity].Reinterpret<BlockType>()[TerrainUtilities.BlockLocationToIndex(ref blockLoc)];
+                Direction currentOutputDirection = terrainDirectionLookup[blockEntity].Reinterpret<Direction>()[TerrainUtilities.BlockLocationToIndex(ref blockLoc)];
 
                 TerrainNeighbors neighbors = terrainNeighborsLookup[blockEntity];
                 Entity neighborXN = neighbors.neighborXN;
@@ -110,17 +112,15 @@ namespace Opencraft.Terrain
                 Entity neighborZP = neighbors.neighborZP;
                 Entity[] terrainEntities = new Entity[] { blockEntity, neighborXN, neighborXP, neighborZN, neighborZP };
 
-
                 if (currentBlockType == BlockType.AND_Gate || currentBlockType == BlockType.OR_Gate)
                 {
-                    Direction outputDirection = Direction.ZP;
-                    EvaluateNeighbour(outputDirection, blockLoc, ref terrainEntities, powerState, ref powerQueue);
+                    EvaluateNeighbour(currentOutputDirection, blockLoc, ref terrainEntities, powerState, ref powerQueue);
                     continue;
                 }
 
                 if (currentBlockType == BlockType.NOT_Gate)
                 {
-                    Direction inputDirection = Direction.ZN;
+                    Direction inputDirection = BlockData.OppositeDirections[(int)currentOutputDirection];
                     int3 notNormalisedBlockLoc = (blockLoc + BlockData.Int3Directions[(int)inputDirection]);
                     int terrainEntityIndex = GetOffsetIndex(notNormalisedBlockLoc);
                     Entity neighborEntity = terrainEntities[terrainEntityIndex];
@@ -133,10 +133,8 @@ namespace Opencraft.Terrain
                     DynamicBuffer<bool> boolPowerState = blockPowerState.Reinterpret<bool>();
                     bool NOTInputPower = boolPowerState[blockIndex];
 
-                    Direction outputDirection = Direction.ZP;
 
-
-                    EvaluateNeighbour(outputDirection, blockLoc, ref terrainEntities, !NOTInputPower, ref powerQueue);
+                    EvaluateNeighbour(currentOutputDirection, blockLoc, ref terrainEntities, !NOTInputPower, ref powerQueue);
                     continue;
                 }
 
@@ -163,22 +161,22 @@ namespace Opencraft.Terrain
                 int3 globalPos = terrainArea.location * Env.AREA_SIZE + blockLoc;
                 BlockType currentBlockType = terrainBlocksLookup[blockEntity].Reinterpret<BlockType>()[blockIndex];
                 DynamicBuffer<BlockPowered> blockPowerState = terrainPowerStateLookup[blockEntity];
+                DynamicBuffer<Direction> directionStates = terrainDirectionLookup[blockEntity].Reinterpret<Direction>();
+                Direction currentDirection = directionStates[blockIndex];
                 DynamicBuffer<bool> boolPowerState = blockPowerState.Reinterpret<bool>();
 
                 Direction[] inputDirections = new Direction[] { };
+                GetInputDirections(currentBlockType, ref inputDirections, currentDirection);
                 int requiredPower = 0;
                 switch (currentBlockType)
                 {
                     case BlockType.AND_Gate:
-                        inputDirections = new Direction[] { Direction.XN, Direction.XP };
                         requiredPower = 2;
                         break;
                     case BlockType.OR_Gate:
-                        inputDirections = new Direction[] { Direction.XN, Direction.XP };
                         requiredPower = 1;
                         break;
                     case BlockType.NOT_Gate:
-                        inputDirections = new Direction[] { Direction.ZN };
                         requiredPower = 1;
                         break;
                     default:
@@ -271,8 +269,6 @@ namespace Opencraft.Terrain
             }
         }
 
-
-
         private int GetOffsetIndex(int3 blockLoc)
         {
             switch (blockLoc.x)
@@ -288,6 +284,37 @@ namespace Opencraft.Terrain
                 default: break;
             }
             return 0;
+        }
+
+        private void GetInputDirections(BlockType currentBlockType, ref Direction[] inputDirections, Direction currentDirection)
+        {
+            switch (currentBlockType)
+            {
+                case BlockType.AND_Gate:
+                case BlockType.OR_Gate:
+                    {
+
+                        switch (currentDirection)
+                        {
+                            case Direction.XN:
+                            case Direction.XP:
+                                inputDirections = new Direction[] { Direction.ZN, Direction.ZP };
+                                break;
+                            case Direction.ZN:
+                            case Direction.ZP:
+                                inputDirections = new Direction[] { Direction.XN, Direction.XP };
+                                break;
+                            default:
+                                break;
+                        }
+                        break;
+                    }
+                case BlockType.NOT_Gate:
+                    inputDirections = new Direction[] { currentDirection };
+                    break;
+                default:
+                    break;
+            }
         }
     }
 }
