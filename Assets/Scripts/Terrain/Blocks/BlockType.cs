@@ -69,7 +69,7 @@ namespace Opencraft.Terrain.Blocks
 
         public static readonly bool[] PowerableBlock = new bool[]
         {
-            false, false, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, true, true, true, true,
+            false, false, false, true, false, false, false, false, false, false, false, false, false, false, false, false, false, true, true, true, true,
         };
 
         public static bool IsGate(BlockType type)
@@ -78,7 +78,7 @@ namespace Opencraft.Terrain.Blocks
         }
         public static bool IsPowerTransmitter(BlockType type)
         {
-            return type == BlockType.Power || type == BlockType.On_Wire || type == BlockType.Powered_Switch;
+            return type == BlockType.On_Wire || type == BlockType.On_Switch;
         }
 
         public static readonly BlockType[] DepoweredState = new BlockType[]

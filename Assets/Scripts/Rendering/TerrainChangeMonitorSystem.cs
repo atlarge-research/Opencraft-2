@@ -21,7 +21,7 @@ namespace Opencraft.Rendering
         protected override void OnUpdate()
         {
             Entities
-                .WithChangeFilter<TerrainBlocks>().WithChangeFilter<BlockPowered>()
+                .WithChangeFilter<TerrainBlocks>().WithChangeFilter<BlockLogicState>()
                 .WithImmediatePlayback()
                 .ForEach((Entity entity, EntityCommandBuffer ecb, in TerrainNeighbors terrainNeighbors) =>
                 {

@@ -19,7 +19,7 @@ namespace Opencraft.Player
     public partial struct PlayerActionSystem : ISystem
     {
         private BufferLookup<TerrainBlocks> _terrainBlocksBufferLookup;
-        private BufferLookup<BlockPowered> _terrainPowerStateLookup;
+        private BufferLookup<BlockLogicState> _terrainPowerStateLookup;
         private BufferLookup<BlockDirection> _terrainDirectionLookup;
         private BufferLookup<TerrainColMinY> _terrainColumnMinBufferLookup;
         private BufferLookup<TerrainColMaxY> _terrainColumnMaxBufferLookup;
@@ -33,7 +33,7 @@ namespace Opencraft.Player
             state.RequireForUpdate<TerrainArea>();
             state.RequireForUpdate<TerrainSpawner>();
             _terrainBlocksBufferLookup = state.GetBufferLookup<TerrainBlocks>(false);
-            _terrainPowerStateLookup = state.GetBufferLookup<BlockPowered>(false);
+            _terrainPowerStateLookup = state.GetBufferLookup<BlockLogicState>(false);
             _terrainDirectionLookup = state.GetBufferLookup<BlockDirection>(false);
             _terrainColumnMinBufferLookup = state.GetBufferLookup<TerrainColMinY>(false);
             _terrainColumnMaxBufferLookup = state.GetBufferLookup<TerrainColMaxY>(false);
@@ -118,15 +118,15 @@ namespace Opencraft.Player
                             int3 globalPos = terrainArea.location * Env.AREA_SIZE + blockLoc;
                             //UnityEngine.Debug.Log($"globalPos: {globalPos}");
 
-                            if (destroyedBlockType == BlockType.Power)
-                                TerrainPowerSystem.RemovePowerBlock(globalPos);
+                            if (destroyedBlockType == BlockType.Off_Switch || destroyedBlockType == BlockType.On_Switch)
+                                TerrainLogicSystem.RemoveInputBlock(globalPos);
                             if (BlockData.IsGate(destroyedBlockType))
                             {
-                                TerrainPowerSystem.RemoveGateBlock(globalPos);
-                                TerrainPowerSystem.RemovePoweredGateBlock(globalPos);
+                                TerrainLogicSystem.RemoveGateBlock(globalPos);
+                                TerrainLogicSystem.RemovePoweredGateBlock(globalPos);
                             }
                             if (BlockData.IsPowerTransmitter(destroyedBlockType) || BlockData.IsGate(destroyedBlockType))
-                                TerrainPowerSystem.AddDepowerBlock(blockLoc, terrainAreaEntity);
+                                TerrainLogicSystem.AddReevaluateBlock(blockLoc, terrainAreaEntity);
                         }
                     }
                 }
@@ -162,12 +162,13 @@ namespace Opencraft.Player
                                 float3 playerPos = player.TransformComponent.Position;
                                 blockDirections[blockIndex] = new BlockDirection { direction = GetDirection(playerPos, globalPos) };
                             }
-                            if (blockToPlace == BlockType.Power)
-                                TerrainPowerSystem.AddPowerBlock(globalPos, blockLoc, player.SelectedBlock.terrainArea);
+
+                            if (blockToPlace == BlockType.Off_Switch)
+                                TerrainLogicSystem.AddInputBlock(globalPos, blockLoc, player.SelectedBlock.terrainArea);
                             if (BlockData.IsGate(blockToPlace))
-                                TerrainPowerSystem.AddGateBlock(globalPos, blockLoc, player.SelectedBlock.terrainArea);
+                                TerrainLogicSystem.AddGateBlock(globalPos, blockLoc, player.SelectedBlock.terrainArea);
                             if (blockToPlace == BlockType.Off_Wire || blockToPlace == BlockType.Off_Lamp || BlockData.IsGate(blockToPlace))
-                                TerrainPowerSystem.AddDepowerBlock(blockLoc, terrainAreaEntity);
+                                TerrainLogicSystem.AddReevaluateBlock(blockLoc, terrainAreaEntity);
 
                             DynamicBuffer<bool> blockPowered = _terrainPowerStateLookup[terrainAreaEntity].Reinterpret<bool>();
                             blockPowered[blockIndex] = false;
@@ -187,15 +188,16 @@ namespace Opencraft.Player
                         if (blocks[blockIndex] == BlockType.Off_Switch)
                         {
                             blocks[blockIndex] = BlockType.On_Switch;
-                            TerrainPowerSystem.AddDepowerBlock(blockLoc, terrainAreaEntity);
+                            //DynamicBuffer<bool> blockPowered = _terrainPowerStateLookup[terrainAreaEntity].Reinterpret<bool>();
+                            //blockPowered[blockIndex] = true;
                         }
-                        else if (blocks[blockIndex] == BlockType.On_Switch || blocks[blockIndex] == BlockType.Powered_Switch)
+                        else if (blocks[blockIndex] == BlockType.On_Switch)
                         {
                             blocks[blockIndex] = BlockType.Off_Switch;
-                            TerrainPowerSystem.AddDepowerBlock(blockLoc, terrainAreaEntity);
+                            TerrainLogicSystem.AddReevaluateBlock(blockLoc, terrainAreaEntity);
 
-                            DynamicBuffer<bool> blockPowered = _terrainPowerStateLookup[terrainAreaEntity].Reinterpret<bool>();
-                            blockPowered[blockIndex] = false;
+                            //DynamicBuffer<bool> blockPowered = _terrainPowerStateLookup[terrainAreaEntity].Reinterpret<bool>();
+                            //blockPowered[blockIndex] = false;
                         }
                     }
                 }

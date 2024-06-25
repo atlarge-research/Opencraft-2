@@ -38,7 +38,7 @@ namespace Opencraft.Terrain
         private ComponentLookup<TerrainArea> _terrainAreaLookup;
         private ComponentLookup<LocalTransform> _localTransformLookup;
         private BufferLookup<TerrainBlocks> _terrainBlocksLookup;
-        private BufferLookup<BlockPowered> _terrainPowerStateLookup;
+        private BufferLookup<BlockLogicState> _terrainPowerStateLookup;
         private BufferLookup<BlockDirection> _terrainDirectionLookup;
         private BufferLookup<TerrainColMinY> _terrainColMinLookup;
         private BufferLookup<TerrainColMaxY> _terrainColMaxLookup;
@@ -62,7 +62,7 @@ namespace Opencraft.Terrain
             _terrainAreaLookup = state.GetComponentLookup<TerrainArea>(isReadOnly: false);
             _localTransformLookup = state.GetComponentLookup<LocalTransform>(isReadOnly: false);
             _terrainBlocksLookup = state.GetBufferLookup<TerrainBlocks>(isReadOnly: false);
-            _terrainPowerStateLookup = state.GetBufferLookup<BlockPowered>(isReadOnly: false);
+            _terrainPowerStateLookup = state.GetBufferLookup<BlockLogicState>(isReadOnly: false);
             _terrainDirectionLookup = state.GetBufferLookup<BlockDirection>(isReadOnly: false);
             _terrainColMinLookup = state.GetBufferLookup<TerrainColMinY>(isReadOnly: false);
             _terrainColMaxLookup = state.GetBufferLookup<TerrainColMaxY>(isReadOnly: false);
@@ -197,7 +197,7 @@ namespace Opencraft.Terrain
 
         public EntityCommandBuffer.ParallelWriter ecb;
         [NativeDisableParallelForRestriction] public BufferLookup<TerrainBlocks> terrainBlocksLookup;
-        [NativeDisableParallelForRestriction] public BufferLookup<BlockPowered> terrainPowerStateLookup;
+        [NativeDisableParallelForRestriction] public BufferLookup<BlockLogicState> terrainPowerStateLookup;
         [NativeDisableParallelForRestriction] public BufferLookup<BlockDirection> terrainDirectionLookup;
         [NativeDisableParallelForRestriction] public BufferLookup<TerrainColMinY> terrainColMinLookup;
         [NativeDisableParallelForRestriction] public BufferLookup<TerrainColMaxY> terrainColMaxLookup;
@@ -289,7 +289,7 @@ namespace Opencraft.Terrain
                 terrainBlockBuffers[columnAreaY] = terrainBlocks;
 
                 // Power Buffer
-                DynamicBuffer<BlockPowered> terrainPowerStateBuffer = terrainPowerStateLookup[terrainEntity];
+                DynamicBuffer<BlockLogicState> terrainPowerStateBuffer = terrainPowerStateLookup[terrainEntity];
                 terrainPowerStateBuffer.Resize(Env.AREA_SIZE_POW_3, NativeArrayOptions.ClearMemory);
 
                 // Direction Buffer
@@ -533,7 +533,7 @@ namespace Opencraft.Terrain
                         colMaxBuffer[columnAccess] = (byte)(end - chunkYMin);
                 }
                 areaBlockBuffer[blockIndex + localY] = blockType;
-                if (blockType == BlockType.Power)
+                if (blockType == BlockType.Off_Switch || blockType == BlockType.On_Switch)
                 {
                     // Adds every power block to the powerBlocks dictionary
                     // globalPos is the key as it should be unique for every block
@@ -542,7 +542,7 @@ namespace Opencraft.Terrain
                     int3 blockLoc = TerrainUtilities.BlockIndexToLocation(blockIndex + localY);
                     int3 globalPos = new int3(globalX, localY, globalZ);
                     Entity terrainEntity = terrainAreaEntities[index + colY];
-                    TerrainPowerSystem.AddPowerBlock(globalPos, blockLoc, terrainEntity);
+                    TerrainLogicSystem.AddInputBlock(globalPos, blockLoc, terrainEntity);
                 }
                 prevColY = colY;
             }
