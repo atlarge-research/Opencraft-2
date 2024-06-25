@@ -19,7 +19,7 @@ namespace Opencraft.Terrain.Layers
         private int index = 0;
         [SerializeField]
         [Tooltip("The block this layer will create.")]
-        [DrawIf("layerType", new[] { LayerType.Absolute, LayerType.Additive, LayerType.Random, LayerType.Surface, LayerType.Power, LayerType.Wire, LayerType.Switch, LayerType.Lamp })]
+        [DrawIf("layerType", new[] { LayerType.Absolute, LayerType.Additive, LayerType.Random, LayerType.Surface, LayerType.On_Input, LayerType.Wire, LayerType.Lamp })]
         private BlockType blockType;
 
         [SerializeField]
@@ -74,9 +74,8 @@ namespace Opencraft.Terrain.Layers
         Structure,
         Surface,
         Additive,
-        Power,
+        On_Input,
         Wire,
-        Switch,
         Lamp
     }
 }

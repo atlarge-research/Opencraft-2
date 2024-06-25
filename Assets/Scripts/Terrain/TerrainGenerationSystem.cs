@@ -38,7 +38,7 @@ namespace Opencraft.Terrain
         private ComponentLookup<TerrainArea> _terrainAreaLookup;
         private ComponentLookup<LocalTransform> _localTransformLookup;
         private BufferLookup<TerrainBlocks> _terrainBlocksLookup;
-        private BufferLookup<BlockLogicState> _terrainPowerStateLookup;
+        private BufferLookup<BlockLogicState> _terrainLogicStateLookup;
         private BufferLookup<BlockDirection> _terrainDirectionLookup;
         private BufferLookup<TerrainColMinY> _terrainColMinLookup;
         private BufferLookup<TerrainColMaxY> _terrainColMaxLookup;
@@ -62,7 +62,7 @@ namespace Opencraft.Terrain
             _terrainAreaLookup = state.GetComponentLookup<TerrainArea>(isReadOnly: false);
             _localTransformLookup = state.GetComponentLookup<LocalTransform>(isReadOnly: false);
             _terrainBlocksLookup = state.GetBufferLookup<TerrainBlocks>(isReadOnly: false);
-            _terrainPowerStateLookup = state.GetBufferLookup<BlockLogicState>(isReadOnly: false);
+            _terrainLogicStateLookup = state.GetBufferLookup<BlockLogicState>(isReadOnly: false);
             _terrainDirectionLookup = state.GetBufferLookup<BlockDirection>(isReadOnly: false);
             _terrainColMinLookup = state.GetBufferLookup<TerrainColMinY>(isReadOnly: false);
             _terrainColMaxLookup = state.GetBufferLookup<TerrainColMaxY>(isReadOnly: false);
@@ -130,7 +130,7 @@ namespace Opencraft.Terrain
                 numColumnsToSpawn * columnHeight,
                 Allocator.TempJob);
             _terrainBlocksLookup.Update(ref state);
-            _terrainPowerStateLookup.Update(ref state);
+            _terrainLogicStateLookup.Update(ref state);
             _terrainDirectionLookup.Update(ref state);
             _terrainColMinLookup.Update(ref state);
             _terrainColMaxLookup.Update(ref state);
@@ -144,7 +144,7 @@ namespace Opencraft.Terrain
                 terrainAreaEntities = terrainAreaEntities,
                 ecb = parallelEcb,
                 terrainBlocksLookup = _terrainBlocksLookup,
-                terrainPowerStateLookup = _terrainPowerStateLookup,
+                terrainLogicStateLookup = _terrainLogicStateLookup,
                 terrainDirectionLookup = _terrainDirectionLookup,
                 terrainColMinLookup = _terrainColMinLookup,
                 terrainColMaxLookup = _terrainColMaxLookup,
@@ -197,7 +197,7 @@ namespace Opencraft.Terrain
 
         public EntityCommandBuffer.ParallelWriter ecb;
         [NativeDisableParallelForRestriction] public BufferLookup<TerrainBlocks> terrainBlocksLookup;
-        [NativeDisableParallelForRestriction] public BufferLookup<BlockLogicState> terrainPowerStateLookup;
+        [NativeDisableParallelForRestriction] public BufferLookup<BlockLogicState> terrainLogicStateLookup;
         [NativeDisableParallelForRestriction] public BufferLookup<BlockDirection> terrainDirectionLookup;
         [NativeDisableParallelForRestriction] public BufferLookup<TerrainColMinY> terrainColMinLookup;
         [NativeDisableParallelForRestriction] public BufferLookup<TerrainColMaxY> terrainColMaxLookup;
@@ -250,9 +250,8 @@ namespace Opencraft.Terrain
                     case LayerType.Structure:
                         // Don't need at lookup table as we only sample noise at points that get a structure
                         break;
-                    case LayerType.Power:
+                    case LayerType.On_Input:
                     case LayerType.Wire:
-                    case LayerType.Switch:
                     case LayerType.Lamp:
                         break;
                 }
@@ -288,9 +287,9 @@ namespace Opencraft.Terrain
                 DynamicBuffer<BlockType> terrainBlocks = terrainBlocksBuffer.Reinterpret<BlockType>();
                 terrainBlockBuffers[columnAreaY] = terrainBlocks;
 
-                // Power Buffer
-                DynamicBuffer<BlockLogicState> terrainPowerStateBuffer = terrainPowerStateLookup[terrainEntity];
-                terrainPowerStateBuffer.Resize(Env.AREA_SIZE_POW_3, NativeArrayOptions.ClearMemory);
+                // Logic Buffer
+                DynamicBuffer<BlockLogicState> terrainLogicStateBuffer = terrainLogicStateLookup[terrainEntity];
+                terrainLogicStateBuffer.Resize(Env.AREA_SIZE_POW_3, NativeArrayOptions.ClearMemory);
 
                 // Direction Buffer
                 DynamicBuffer<BlockDirection> terrainDirectionBuffer = terrainDirectionLookup[terrainEntity];
@@ -362,19 +361,14 @@ namespace Opencraft.Terrain
                                 GenerateStructureLayer(ref terrainGenerationLayer, ref terrainStructureBuffers,
                                     index, noiseInterpSettings, x, z, globalX, heightSoFar, globalZ);
                                 break;
-                            case LayerType.Power:
+                            case LayerType.On_Input:
                                 heightSoFar = GenerateModuloLayer(ref terrainBlockBuffers,
                                     ref colMinBuffers, ref colMaxBuffers, (x % modulo_x == 0 && z % modulo_z == 0 && x != z) ? 1 : 0, startIndex,
                                     heightSoFar, ref terrainGenerationLayer, columnAccess, globalX, globalZ, index);
                                 break;
                             case LayerType.Wire:
                                 heightSoFar = GenerateModuloLayer(ref terrainBlockBuffers,
-                                    ref colMinBuffers, ref colMaxBuffers, (x % modulo_x != 0 && z % modulo_z == 0) ? 1 : 0, startIndex,
-                                    heightSoFar, ref terrainGenerationLayer, columnAccess, globalX, globalZ, index);
-                                break;
-                            case LayerType.Switch:
-                                heightSoFar = GenerateModuloLayer(ref terrainBlockBuffers,
-                                    ref colMinBuffers, ref colMaxBuffers, (x % modulo_x == 0 && z % modulo_z != 0) ? 1 : 0, startIndex,
+                                    ref colMinBuffers, ref colMaxBuffers, ((x % modulo_x != 0 && z % modulo_z == 0) || (x % modulo_x == 0 && z % modulo_z != 0)) ? 1 : 0, startIndex,
                                     heightSoFar, ref terrainGenerationLayer, columnAccess, globalX, globalZ, index);
                                 break;
                             case LayerType.Lamp:
@@ -533,9 +527,9 @@ namespace Opencraft.Terrain
                         colMaxBuffer[columnAccess] = (byte)(end - chunkYMin);
                 }
                 areaBlockBuffer[blockIndex + localY] = blockType;
-                if (blockType == BlockType.Off_Switch || blockType == BlockType.On_Switch)
+                if (blockType == BlockType.Off_Input || blockType == BlockType.On_Input)
                 {
-                    // Adds every power block to the powerBlocks dictionary
+                    // Adds every input block to the inputBlocks dictionary
                     // globalPos is the key as it should be unique for every block
                     // blockLoc is the relative position of the block in the terrain area, could probably be back calculated
                     // terrainEntity is the entity of the containing area

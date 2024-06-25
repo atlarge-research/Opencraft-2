@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c8dc7565f1544ab096b804d358a1a4e4, type: 3}
-  m_Name: PowerLayer
+  m_Name: InputLayer
   m_EditorClassIdentifier: 
   layerType: 5
   layerName: Dirt noise layer

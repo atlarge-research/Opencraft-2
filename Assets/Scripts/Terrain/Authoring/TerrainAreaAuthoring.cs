@@ -89,7 +89,7 @@ namespace Opencraft.Terrain.Authoring
     [InternalBufferCapacity(4096)]
     public struct BlockLogicState : IBufferElementData
     {
-        [GhostField] public bool powered;
+        [GhostField] public bool logicState;
     }
 
     [InternalBufferCapacity(0)]

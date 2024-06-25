@@ -24,7 +24,7 @@ namespace Opencraft.Rendering
         private EntityQuery _terrainSpawnerQuery;
         private EntityQuery _terrainAreaQuery;
         private BufferLookup<TerrainBlocks> _terrainBlocksBufferLookup;
-        private BufferLookup<BlockLogicState> _terrainPowerStateLookup;
+        private BufferLookup<BlockLogicState> _terrainLogicStateLookup;
         private BufferLookup<BlockDirection> _terrainDirectionLookup;
         private BufferLookup<TerrainColMinY> _terrainColumnMinBufferLookup;
         private BufferLookup<TerrainColMaxY> _terrainColumnMaxBufferLookup;
@@ -81,7 +81,7 @@ namespace Opencraft.Rendering
                 _terrainAreaQuery.ToComponentDataArray<TerrainNeighbors>(Allocator.TempJob);
             // Get block types and column heightmaps
             _terrainBlocksBufferLookup = GetBufferLookup<TerrainBlocks>(true);
-            _terrainPowerStateLookup = GetBufferLookup<BlockLogicState>(true);
+            _terrainLogicStateLookup = GetBufferLookup<BlockLogicState>(true);
             _terrainDirectionLookup = GetBufferLookup<BlockDirection>(true);
             _terrainColumnMinBufferLookup = GetBufferLookup<TerrainColMinY>(true);
             _terrainColumnMaxBufferLookup = GetBufferLookup<TerrainColMaxY>(true);
@@ -95,7 +95,7 @@ namespace Opencraft.Rendering
                 terrainAreas = terrainAreas,
                 terrainNeighbors = terrainNeighbors,
                 terrainBufferLookup = _terrainBlocksBufferLookup,
-                terrainPowerStateLookup = _terrainPowerStateLookup,
+                terrainLogicStateLookup = _terrainLogicStateLookup,
                 terrainDirectionLookup = _terrainDirectionLookup,
                 terrainColumnMinBufferLookup = _terrainColumnMinBufferLookup,
                 terrainColumnMaxBufferLookup = _terrainColumnMaxBufferLookup,
@@ -140,7 +140,7 @@ namespace Opencraft.Rendering
         [ReadOnly] public NativeArray<TerrainArea> terrainAreas;
         [ReadOnly] public NativeArray<TerrainNeighbors> terrainNeighbors;
         [ReadOnly] public BufferLookup<TerrainBlocks> terrainBufferLookup;
-        [ReadOnly] public BufferLookup<BlockLogicState> terrainPowerStateLookup;
+        [ReadOnly] public BufferLookup<BlockLogicState> terrainLogicStateLookup;
         [ReadOnly] public BufferLookup<BlockDirection> terrainDirectionLookup;
         [ReadOnly] public BufferLookup<TerrainColMinY> terrainColumnMinBufferLookup;
         [ReadOnly] public BufferLookup<TerrainColMaxY> terrainColumnMaxBufferLookup;
@@ -162,7 +162,6 @@ namespace Opencraft.Rendering
             Mesh.MeshData meshData = meshDataArray[index];
             // The blocks in this chunk
             DynamicBuffer<TerrainBlocks> blocks = terrainBufferLookup[entity];
-            DynamicBuffer<BlockLogicState> powerState = terrainPowerStateLookup[entity];
             // The min and max y of blocks in a given column in the chunk
             DynamicBuffer<byte> colMin = terrainColumnMinBufferLookup[entity].Reinterpret<byte>();
             DynamicBuffer<byte> colMax = terrainColumnMaxBufferLookup[entity].Reinterpret<byte>();

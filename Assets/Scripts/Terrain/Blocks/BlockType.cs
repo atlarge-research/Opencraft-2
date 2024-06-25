@@ -6,9 +6,8 @@ namespace Opencraft.Terrain.Blocks
     public enum BlockType : byte
     {
         Air,
-        Off_Switch,
-        On_Switch,
-        Powered_Switch,
+        Off_Input,
+        On_Input,
         AND_Gate,
         OR_Gate,
         NOT_Gate,
@@ -21,7 +20,6 @@ namespace Opencraft.Terrain.Blocks
         Leaf,
         Wood,
         Unbreakable,
-        Power,
         Off_Wire,
         On_Wire,
         Off_Lamp,
@@ -67,26 +65,25 @@ namespace Opencraft.Terrain.Blocks
             1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
         };
 
-        public static readonly bool[] PowerableBlock = new bool[]
+        public static readonly bool[] CanReceivelogic = new bool[]
         {
-            false, false, false, true, false, false, false, false, false, false, false, false, false, false, false, false, false, true, true, true, true,
+            false, false, true, false, false, false, false, false, false, false, false, false, false, false, false, true, true, true, true,
         };
 
         public static bool IsGate(BlockType type)
         {
             return type == BlockType.AND_Gate || type == BlockType.OR_Gate || type == BlockType.NOT_Gate || type == BlockType.XOR_Gate;
         }
-        public static bool IsPowerTransmitter(BlockType type)
+        public static bool IsTransmitter(BlockType type)
         {
-            return type == BlockType.On_Wire || type == BlockType.On_Switch;
+            return type == BlockType.On_Wire || type == BlockType.On_Input;
         }
 
-        public static readonly BlockType[] DepoweredState = new BlockType[]
+        public static readonly BlockType[] OffState = new BlockType[]
         {
             BlockType.Air,
-            BlockType.Off_Switch,
-            BlockType.On_Switch,
-            BlockType.On_Switch,
+            BlockType.Off_Input,
+            BlockType.On_Input,
             BlockType.AND_Gate,
             BlockType.OR_Gate,
             BlockType.NOT_Gate,
@@ -99,18 +96,16 @@ namespace Opencraft.Terrain.Blocks
             BlockType.Leaf,
             BlockType.Wood,
             BlockType.Unbreakable,
-            BlockType.Power,
             BlockType.Off_Wire,
             BlockType.Off_Wire,
             BlockType.Off_Lamp,
             BlockType.Off_Lamp,
         };
-        public static readonly BlockType[] PoweredState = new BlockType[]
+        public static readonly BlockType[] OnState = new BlockType[]
         {
             BlockType.Air,
-            BlockType.Off_Switch,
-            BlockType.Powered_Switch,
-            BlockType.Powered_Switch,
+            BlockType.Off_Input,
+            BlockType.On_Input,
             BlockType.AND_Gate,
             BlockType.OR_Gate,
             BlockType.NOT_Gate,
@@ -123,7 +118,6 @@ namespace Opencraft.Terrain.Blocks
             BlockType.Leaf,
             BlockType.Wood,
             BlockType.Unbreakable,
-            BlockType.Power,
             BlockType.On_Wire,
             BlockType.On_Wire,
             BlockType.On_Lamp,

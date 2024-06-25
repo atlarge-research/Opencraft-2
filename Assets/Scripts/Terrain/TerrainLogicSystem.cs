@@ -79,13 +79,13 @@ namespace Opencraft.Terrain
             terrainDirectionLookup.Update(ref state);
             terrainAreaLookup.Update(ref state);
 
-            //Debug.Log("Ticking Power States");
+            //Debug.Log("Ticking Logic States");
             List<LogicBlockData> reeavaluateBlocks = new List<LogicBlockData>(toReevaluate);
             toReevaluate.Clear();
             PropogateLogicState(reeavaluateBlocks, false);
             IEnumerable<LogicBlockData> logicBlocks = inputBlocks.Values.Concat(activeGateBlocks.Values);
             PropogateLogicState(logicBlocks, true);
-            CheckLogicPower(gateBlocks.Values);
+            CheckGateState(gateBlocks.Values);
         }
 
         private void PropogateLogicState(IEnumerable<LogicBlockData> logicBlocks, bool inputLogicState)
@@ -106,7 +106,7 @@ namespace Opencraft.Terrain
                 BlockType currentBlockType = terrainBlocksLookup[blockEntity].Reinterpret<BlockType>()[TerrainUtilities.BlockLocationToIndex(ref blockLoc)];
                 Direction currentOutputDirection = terrainDirectionLookup[blockEntity].Reinterpret<Direction>()[TerrainUtilities.BlockLocationToIndex(ref blockLoc)];
 
-                if (logicState && (currentBlockType == BlockType.Off_Switch)) continue;
+                if (logicState && (currentBlockType == BlockType.Off_Input)) continue;
 
                 TerrainNeighbors neighbors = terrainNeighborsLookup[blockEntity];
                 Entity neighborXN = neighbors.neighborXN;
@@ -132,12 +132,12 @@ namespace Opencraft.Terrain
                     int num_sixteens = lowestCoord / 16 + 1;
                     int3 actualBlockLoc = (notNormalisedBlockLoc + sixteens * num_sixteens) % 16;
                     int blockIndex = TerrainUtilities.BlockLocationToIndex(ref actualBlockLoc);
-                    DynamicBuffer<BlockLogicState> blockPowerState = terrainLogicStateLookup[blockEntity];
-                    DynamicBuffer<bool> boolPowerState = blockPowerState.Reinterpret<bool>();
-                    bool NOTInputPower = boolPowerState[blockIndex];
+                    DynamicBuffer<BlockLogicState> blockLogicStates = terrainLogicStateLookup[blockEntity];
+                    DynamicBuffer<bool> boolLogicStates = blockLogicStates.Reinterpret<bool>();
+                    bool NOTInputState = boolLogicStates[blockIndex];
 
 
-                    EvaluateNeighbour(currentOutputDirection, blockLoc, ref terrainEntities, !NOTInputPower, ref logicQueue);
+                    EvaluateNeighbour(currentOutputDirection, blockLoc, ref terrainEntities, !NOTInputState, ref logicQueue);
                     continue;
                 }
 
@@ -151,38 +151,38 @@ namespace Opencraft.Terrain
             }
         }
 
-        private void CheckLogicPower(IEnumerable<LogicBlockData> gateBlocks)
+        private void CheckGateState(IEnumerable<LogicBlockData> gateBlocks)
         {
             ConcurrentQueue<LogicBlockData> gateQueue = new ConcurrentQueue<LogicBlockData>(gateBlocks);
             while (gateQueue.Count > 0)
             {
-                gateQueue.TryDequeue(out LogicBlockData poweredBlock);
+                gateQueue.TryDequeue(out LogicBlockData gateBlock);
 
-                Entity blockEntity = poweredBlock.TerrainEntity;
-                int3 blockLoc = poweredBlock.BlockLocation;
+                Entity blockEntity = gateBlock.TerrainEntity;
+                int3 blockLoc = gateBlock.BlockLocation;
                 int blockIndex = TerrainUtilities.BlockLocationToIndex(ref blockLoc);
                 TerrainArea terrainArea = terrainAreaLookup[blockEntity];
                 int3 globalPos = terrainArea.location * Env.AREA_SIZE + blockLoc;
                 BlockType currentBlockType = terrainBlocksLookup[blockEntity].Reinterpret<BlockType>()[blockIndex];
-                DynamicBuffer<BlockLogicState> blockPowerState = terrainLogicStateLookup[blockEntity];
+                DynamicBuffer<BlockLogicState> blockLogicState = terrainLogicStateLookup[blockEntity];
                 DynamicBuffer<Direction> directionStates = terrainDirectionLookup[blockEntity].Reinterpret<Direction>();
                 Direction currentDirection = directionStates[blockIndex];
-                DynamicBuffer<bool> boolPowerState = blockPowerState.Reinterpret<bool>();
+                DynamicBuffer<bool> boolLogicState = blockLogicState.Reinterpret<bool>();
 
                 Direction[] inputDirections = new Direction[] { };
                 GetInputDirections(currentBlockType, ref inputDirections, currentDirection);
-                int requiredPower = 0;
+                int requiredInputs = 0;
                 switch (currentBlockType)
                 {
                     case BlockType.AND_Gate:
-                        requiredPower = 2;
+                        requiredInputs = 2;
                         break;
                     case BlockType.OR_Gate:
                     case BlockType.XOR_Gate:
-                        requiredPower = 1;
+                        requiredInputs = 1;
                         break;
                     case BlockType.NOT_Gate:
-                        requiredPower = 1;
+                        requiredInputs = 1;
                         break;
                     default:
                         break;
@@ -195,9 +195,9 @@ namespace Opencraft.Terrain
                 Entity neighborZP = neighbors.neighborZP;
                 Entity[] terrainEntities = new Entity[] { blockEntity, neighborXN, neighborXP, neighborZN, neighborZP };
 
-                int powerableBlocks = 0;
+                int transmitterBlocks = 0;
                 int3[] directions = BlockData.Int3Directions;
-                int powerCount = 0;
+                int onCount = 0;
                 for (int i = 0; i < inputDirections.Length; i++)
                 {
                     int3 notNormalisedBlockLoc = (blockLoc + directions[(int)inputDirections[i]]);
@@ -212,24 +212,24 @@ namespace Opencraft.Terrain
 
                     DynamicBuffer<TerrainBlocks> terrainBlocks = terrainBlocksLookup[neighborEntity];
                     DynamicBuffer<BlockType> blockTypes = terrainBlocks.Reinterpret<BlockType>();
-                    DynamicBuffer<BlockLogicState> blockPowerState2 = terrainLogicStateLookup[neighborEntity];
-                    DynamicBuffer<bool> boolPowerState2 = blockPowerState2.Reinterpret<bool>();
+                    DynamicBuffer<BlockLogicState> blockLogicStates2 = terrainLogicStateLookup[neighborEntity];
+                    DynamicBuffer<bool> boolLogicStates2 = blockLogicStates2.Reinterpret<bool>();
                     BlockType currentBlock = blockTypes[blockIndex2];
                     int currentBlockIndex = (int)currentBlock;
 
-                    if (BlockData.PowerableBlock[currentBlockIndex])
+                    if (BlockData.CanReceivelogic[currentBlockIndex])
                     {
-                        if (boolPowerState2[blockIndex2])
+                        if (boolLogicStates2[blockIndex2])
                         {
-                            powerCount++;
+                            onCount++;
                         }
-                        powerableBlocks++;
+                        transmitterBlocks++;
                     }
                 }
-                if ((powerCount >= requiredPower && (currentBlockType == BlockType.AND_Gate || currentBlockType == BlockType.OR_Gate)) || (powerCount == requiredPower && currentBlockType == BlockType.XOR_Gate) || (powerableBlocks == 1 && currentBlockType == BlockType.NOT_Gate))
+                if ((onCount >= requiredInputs && (currentBlockType == BlockType.AND_Gate || currentBlockType == BlockType.OR_Gate)) || (onCount == requiredInputs && currentBlockType == BlockType.XOR_Gate) || (transmitterBlocks == 1 && currentBlockType == BlockType.NOT_Gate))
                 {
                     activeGateBlocks[globalPos] = new LogicBlockData { BlockLocation = blockLoc, TerrainEntity = blockEntity };
-                    boolPowerState[blockIndex] = true;
+                    boolLogicState[blockIndex] = true;
                 }
                 else
                 {
@@ -260,15 +260,15 @@ namespace Opencraft.Terrain
             BlockType currentBlock = blockTypes[blockIndex];
             int currentBlockIndex = (int)currentBlock;
 
-            if (BlockData.PowerableBlock[currentBlockIndex])
+            if (BlockData.CanReceivelogic[currentBlockIndex])
             {
                 if (boolLogicState[blockIndex] != logicState)
                 {
                     boolLogicState[blockIndex] = logicState;
                     if (currentBlock == BlockType.Off_Wire || currentBlock == BlockType.On_Wire || currentBlock == BlockType.On_Lamp)
                         logicQueue.Enqueue((new LogicBlockData { BlockLocation = actualBlockLoc, TerrainEntity = neighborEntity }, logicState));
-                    if (logicState) blockTypes[blockIndex] = (BlockData.PoweredState[currentBlockIndex]);
-                    else blockTypes[blockIndex] = (BlockData.DepoweredState[currentBlockIndex]);
+                    if (logicState) blockTypes[blockIndex] = (BlockData.OnState[currentBlockIndex]);
+                    else blockTypes[blockIndex] = (BlockData.OffState[currentBlockIndex]);
                 }
             }
         }
@@ -342,7 +342,7 @@ namespace Opencraft.Terrain
             gateBlocks.TryRemove(globalPos, out LogicBlockData _);
         }
 
-        public static void RemovePoweredGateBlock(int3 globalPos)
+        public static void RemoveActiveGateBlock(int3 globalPos)
         {
             activeGateBlocks.TryRemove(globalPos, out LogicBlockData _);
         }
