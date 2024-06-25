@@ -118,7 +118,7 @@ namespace Opencraft.Player
                             int3 globalPos = terrainArea.location * Env.AREA_SIZE + blockLoc;
                             //UnityEngine.Debug.Log($"globalPos: {globalPos}");
 
-                            if (destroyedBlockType == BlockType.Off_Input || destroyedBlockType == BlockType.On_Input)
+                            if (destroyedBlockType == BlockType.Off_Input || destroyedBlockType == BlockType.On_Input || destroyedBlockType == BlockType.Clock)
                                 TerrainLogicSystem.RemoveInputBlock(globalPos);
                             if (BlockData.IsGate(destroyedBlockType))
                             {
@@ -163,7 +163,7 @@ namespace Opencraft.Player
                                 blockDirections[blockIndex] = new BlockDirection { direction = GetDirection(playerPos, globalPos) };
                             }
 
-                            if (blockToPlace == BlockType.Off_Input)
+                            if (blockToPlace == BlockType.Off_Input || blockToPlace == BlockType.Clock)
                                 TerrainLogicSystem.AddInputBlock(globalPos, blockLoc, player.SelectedBlock.terrainArea);
                             if (BlockData.IsGate(blockToPlace))
                                 TerrainLogicSystem.AddGateBlock(globalPos, blockLoc, player.SelectedBlock.terrainArea);

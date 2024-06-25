@@ -8,6 +8,7 @@ namespace Opencraft.Terrain.Blocks
         Air,
         Off_Input,
         On_Input,
+        Clock,
         AND_Gate,
         OR_Gate,
         NOT_Gate,
@@ -56,18 +57,17 @@ namespace Opencraft.Terrain.Blocks
             (17 & 31) << 24,
             (18 & 31) << 24,
             (19 & 31) << 24,
-            (20 & 31) << 24,
         };
 
         // UV sizing > 1 tiles a texture across multiple blocks, currently not done for any block types
         public static float[] BlockUVSizing = new float[]
         {
-            1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
+            1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
         };
 
-        public static readonly bool[] CanReceivelogic = new bool[]
+        public static readonly bool[] CanReceiveLogic = new bool[]
         {
-            false, false, true, false, false, false, false, false, false, false, false, false, false, false, false, true, true, true, true,
+            false, false, false, true, false, false, false, false, false, false, false, false, false, false, false, false, true, true, true, true,
         };
 
         public static bool IsGate(BlockType type)
@@ -76,7 +76,7 @@ namespace Opencraft.Terrain.Blocks
         }
         public static bool IsTransmitter(BlockType type)
         {
-            return type == BlockType.On_Wire || type == BlockType.On_Input;
+            return type == BlockType.On_Wire || type == BlockType.On_Input || type == BlockType.Clock;
         }
 
         public static readonly BlockType[] OffState = new BlockType[]
@@ -84,6 +84,7 @@ namespace Opencraft.Terrain.Blocks
             BlockType.Air,
             BlockType.Off_Input,
             BlockType.On_Input,
+            BlockType.Clock,
             BlockType.AND_Gate,
             BlockType.OR_Gate,
             BlockType.NOT_Gate,
@@ -106,6 +107,7 @@ namespace Opencraft.Terrain.Blocks
             BlockType.Air,
             BlockType.Off_Input,
             BlockType.On_Input,
+            BlockType.Clock,
             BlockType.AND_Gate,
             BlockType.OR_Gate,
             BlockType.NOT_Gate,

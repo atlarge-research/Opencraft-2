@@ -31,6 +31,7 @@ namespace Opencraft.Terrain
         private static List<LogicBlockData> toReevaluate;
         private double tickRate;
         private float timer;
+        //private int tickCount;
         private BufferLookup<BlockLogicState> terrainLogicStateLookup;
         private BufferLookup<BlockDirection> terrainDirectionLookup;
         private BufferLookup<TerrainBlocks> terrainBlocksLookup;
@@ -51,6 +52,7 @@ namespace Opencraft.Terrain
             toReevaluate = new List<LogicBlockData>();
             tickRate = 0.33;
             timer = 0;
+            //tickCount = 0;
             terrainLogicStateLookup = state.GetBufferLookup<BlockLogicState>(isReadOnly: false);
             terrainDirectionLookup = state.GetBufferLookup<BlockDirection>(isReadOnly: false);
             terrainBlocksLookup = state.GetBufferLookup<TerrainBlocks>(isReadOnly: false);
@@ -72,6 +74,7 @@ namespace Opencraft.Terrain
                 timer += Time.deltaTime;
                 return;
             }
+            //tickCount++;
             timer = 0;
             terrainNeighborsLookup.Update(ref state);
             terrainBlocksLookup.Update(ref state);
@@ -103,6 +106,7 @@ namespace Opencraft.Terrain
 
                 Entity blockEntity = logicBlock.TerrainEntity;
                 int3 blockLoc = logicBlock.BlockLocation;
+                int blockIndex = TerrainUtilities.BlockLocationToIndex(ref blockLoc);
                 BlockType currentBlockType = terrainBlocksLookup[blockEntity].Reinterpret<BlockType>()[TerrainUtilities.BlockLocationToIndex(ref blockLoc)];
                 Direction currentOutputDirection = terrainDirectionLookup[blockEntity].Reinterpret<Direction>()[TerrainUtilities.BlockLocationToIndex(ref blockLoc)];
 
@@ -114,6 +118,16 @@ namespace Opencraft.Terrain
                 Entity neighborZN = neighbors.neighborZN;
                 Entity neighborZP = neighbors.neighborZP;
                 Entity[] terrainEntities = new Entity[] { blockEntity, neighborXN, neighborXP, neighborZN, neighborZP };
+
+
+                if (currentBlockType == BlockType.Clock)
+                {
+                    //if (tickCount % 2 != 0) continue;
+                    DynamicBuffer<BlockLogicState> blockLogicStates = terrainLogicStateLookup[blockEntity];
+                    DynamicBuffer<bool> boolLogicStates = blockLogicStates.Reinterpret<bool>();
+                    boolLogicStates[blockIndex] = !boolLogicStates[blockIndex];
+                    logicState = boolLogicStates[blockIndex];
+                }
 
                 if (currentBlockType == BlockType.AND_Gate || currentBlockType == BlockType.OR_Gate || currentBlockType == BlockType.XOR_Gate)
                 {
@@ -131,10 +145,10 @@ namespace Opencraft.Terrain
                     int lowestCoord = math.min(notNormalisedBlockLoc.x, notNormalisedBlockLoc.z);
                     int num_sixteens = lowestCoord / 16 + 1;
                     int3 actualBlockLoc = (notNormalisedBlockLoc + sixteens * num_sixteens) % 16;
-                    int blockIndex = TerrainUtilities.BlockLocationToIndex(ref actualBlockLoc);
-                    DynamicBuffer<BlockLogicState> blockLogicStates = terrainLogicStateLookup[blockEntity];
+                    int blockIndex2 = TerrainUtilities.BlockLocationToIndex(ref actualBlockLoc);
+                    DynamicBuffer<BlockLogicState> blockLogicStates = terrainLogicStateLookup[neighborEntity];
                     DynamicBuffer<bool> boolLogicStates = blockLogicStates.Reinterpret<bool>();
-                    bool NOTInputState = boolLogicStates[blockIndex];
+                    bool NOTInputState = boolLogicStates[blockIndex2];
 
 
                     EvaluateNeighbour(currentOutputDirection, blockLoc, ref terrainEntities, !NOTInputState, ref logicQueue);
@@ -145,7 +159,6 @@ namespace Opencraft.Terrain
                 for (int i = 0; i < allDirections.Length; i++)
                 {
                     Direction outputDirection = allDirections[i];
-
                     EvaluateNeighbour(outputDirection, blockLoc, ref terrainEntities, logicState, ref logicQueue);
                 }
             }
@@ -217,7 +230,7 @@ namespace Opencraft.Terrain
                     BlockType currentBlock = blockTypes[blockIndex2];
                     int currentBlockIndex = (int)currentBlock;
 
-                    if (BlockData.CanReceivelogic[currentBlockIndex])
+                    if (BlockData.CanReceiveLogic[currentBlockIndex])
                     {
                         if (boolLogicStates2[blockIndex2])
                         {
@@ -260,7 +273,7 @@ namespace Opencraft.Terrain
             BlockType currentBlock = blockTypes[blockIndex];
             int currentBlockIndex = (int)currentBlock;
 
-            if (BlockData.CanReceivelogic[currentBlockIndex])
+            if (BlockData.CanReceiveLogic[currentBlockIndex])
             {
                 if (boolLogicState[blockIndex] != logicState)
                 {

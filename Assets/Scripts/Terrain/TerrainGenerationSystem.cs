@@ -527,7 +527,7 @@ namespace Opencraft.Terrain
                         colMaxBuffer[columnAccess] = (byte)(end - chunkYMin);
                 }
                 areaBlockBuffer[blockIndex + localY] = blockType;
-                if (blockType == BlockType.Off_Input || blockType == BlockType.On_Input)
+                if (blockType == BlockType.Off_Input || blockType == BlockType.On_Input || blockType == BlockType.Clock)
                 {
                     // Adds every input block to the inputBlocks dictionary
                     // globalPos is the key as it should be unique for every block
