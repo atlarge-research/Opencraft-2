@@ -79,6 +79,11 @@ namespace Opencraft.Terrain.Blocks
             return type == BlockType.On_Wire || type == BlockType.On_Input || type == BlockType.Clock;
         }
 
+        public static bool IsInput(BlockType type)
+        {
+            return type == BlockType.On_Input || type == BlockType.Off_Input || type == BlockType.Clock;
+        }
+
         public static readonly BlockType[] OffState = new BlockType[]
         {
             BlockType.Air,

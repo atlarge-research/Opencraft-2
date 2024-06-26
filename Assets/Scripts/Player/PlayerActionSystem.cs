@@ -21,6 +21,7 @@ namespace Opencraft.Player
         private BufferLookup<TerrainBlocks> _terrainBlocksBufferLookup;
         private BufferLookup<BlockLogicState> _terrainLogicStateLookup;
         private BufferLookup<BlockDirection> _terrainDirectionLookup;
+        private BufferLookup<ToReevaluate> _terrainEvaluationLookup;
         private BufferLookup<TerrainColMinY> _terrainColumnMinBufferLookup;
         private BufferLookup<TerrainColMaxY> _terrainColumnMaxBufferLookup;
         private ComponentLookup<TerrainArea> _terrainAreaLookup;
@@ -35,6 +36,7 @@ namespace Opencraft.Player
             _terrainBlocksBufferLookup = state.GetBufferLookup<TerrainBlocks>(false);
             _terrainLogicStateLookup = state.GetBufferLookup<BlockLogicState>(false);
             _terrainDirectionLookup = state.GetBufferLookup<BlockDirection>(false);
+            _terrainEvaluationLookup = state.GetBufferLookup<ToReevaluate>(false);
             _terrainColumnMinBufferLookup = state.GetBufferLookup<TerrainColMinY>(false);
             _terrainColumnMaxBufferLookup = state.GetBufferLookup<TerrainColMaxY>(false);
             _terrainAreaLookup = state.GetComponentLookup<TerrainArea>(isReadOnly: true);
@@ -47,6 +49,7 @@ namespace Opencraft.Player
             _terrainBlocksBufferLookup.Update(ref state);
             _terrainLogicStateLookup.Update(ref state);
             _terrainDirectionLookup.Update(ref state);
+            _terrainEvaluationLookup.Update(ref state);
             _terrainColumnMinBufferLookup.Update(ref state);
             _terrainColumnMaxBufferLookup.Update(ref state);
             _terrainAreaLookup.Update(ref state);
@@ -114,19 +117,11 @@ namespace Opencraft.Player
                             DynamicBuffer<bool> boolLogicStates = _terrainLogicStateLookup[terrainAreaEntity].Reinterpret<bool>();
                             boolLogicStates[blockIndex] = false;
 
-                            TerrainArea terrainArea = _terrainAreaLookup[terrainAreaEntity];
-                            int3 globalPos = terrainArea.location * Env.AREA_SIZE + blockLoc;
-                            //UnityEngine.Debug.Log($"globalPos: {globalPos}");
-
-                            if (destroyedBlockType == BlockType.Off_Input || destroyedBlockType == BlockType.On_Input || destroyedBlockType == BlockType.Clock)
-                                TerrainLogicSystem.RemoveInputBlock(globalPos);
-                            if (BlockData.IsGate(destroyedBlockType))
-                            {
-                                TerrainLogicSystem.RemoveGateBlock(globalPos);
-                                TerrainLogicSystem.RemoveActiveGateBlock(globalPos);
-                            }
                             if (BlockData.IsTransmitter(destroyedBlockType) || BlockData.IsGate(destroyedBlockType))
-                                TerrainLogicSystem.AddReevaluateBlock(blockLoc, terrainAreaEntity);
+                            {
+                                DynamicBuffer<bool> boolReevaluateStates = _terrainEvaluationLookup[terrainAreaEntity].Reinterpret<bool>();
+                                boolReevaluateStates[blockIndex] = true;
+                            }
                         }
                     }
                 }
@@ -163,12 +158,11 @@ namespace Opencraft.Player
                                 blockDirections[blockIndex] = new BlockDirection { direction = GetDirection(playerPos, globalPos) };
                             }
 
-                            if (blockToPlace == BlockType.Off_Input || blockToPlace == BlockType.Clock)
-                                TerrainLogicSystem.AddInputBlock(globalPos, blockLoc, player.SelectedBlock.terrainArea);
-                            if (BlockData.IsGate(blockToPlace))
-                                TerrainLogicSystem.AddGateBlock(globalPos, blockLoc, player.SelectedBlock.terrainArea);
                             if (blockToPlace == BlockType.Off_Wire || blockToPlace == BlockType.Off_Lamp || BlockData.IsGate(blockToPlace))
-                                TerrainLogicSystem.AddReevaluateBlock(blockLoc, terrainAreaEntity);
+                            {
+                                DynamicBuffer<bool> boolReevaluateStates = _terrainEvaluationLookup[terrainAreaEntity].Reinterpret<bool>();
+                                boolReevaluateStates[blockIndex] = true;
+                            }
 
                             DynamicBuffer<bool> boolLogicStates = _terrainLogicStateLookup[terrainAreaEntity].Reinterpret<bool>();
                             boolLogicStates[blockIndex] = false;
@@ -178,21 +172,25 @@ namespace Opencraft.Player
 
                 if (player.Input.ThirdAction.IsSet && player.SelectedBlock.terrainArea != Entity.Null)
                 {
-                    UnityEngine.Debug.Log("Third action triggered");
+                    //UnityEngine.Debug.Log("Third action triggered");
                     Entity terrainAreaEntity = player.SelectedBlock.terrainArea;
                     if (_terrainBlocksBufferLookup.TryGetBuffer(terrainAreaEntity, out DynamicBuffer<TerrainBlocks> terrainBlocks))
                     {
                         int3 blockLoc = player.SelectedBlock.blockLoc;
                         int blockIndex = TerrainUtilities.BlockLocationToIndex(ref blockLoc);
                         DynamicBuffer<BlockType> blocks = terrainBlocks.Reinterpret<BlockType>();
+                        DynamicBuffer<bool> boolLogicStates = _terrainLogicStateLookup[terrainAreaEntity].Reinterpret<bool>();
                         if (blocks[blockIndex] == BlockType.Off_Input)
                         {
                             blocks[blockIndex] = BlockType.On_Input;
+                            boolLogicStates[blockIndex] = true;
                         }
                         else if (blocks[blockIndex] == BlockType.On_Input)
                         {
                             blocks[blockIndex] = BlockType.Off_Input;
-                            TerrainLogicSystem.AddReevaluateBlock(blockLoc, terrainAreaEntity);
+                            DynamicBuffer<bool> boolReevaluateStates = _terrainEvaluationLookup[terrainAreaEntity].Reinterpret<bool>();
+                            boolReevaluateStates[blockIndex] = true;
+                            boolLogicStates[blockIndex] = false;
                         }
                     }
                 }

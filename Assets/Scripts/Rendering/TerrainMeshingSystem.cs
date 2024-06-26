@@ -24,8 +24,6 @@ namespace Opencraft.Rendering
         private EntityQuery _terrainSpawnerQuery;
         private EntityQuery _terrainAreaQuery;
         private BufferLookup<TerrainBlocks> _terrainBlocksBufferLookup;
-        private BufferLookup<BlockLogicState> _terrainLogicStateLookup;
-        private BufferLookup<BlockDirection> _terrainDirectionLookup;
         private BufferLookup<TerrainColMinY> _terrainColumnMinBufferLookup;
         private BufferLookup<TerrainColMaxY> _terrainColumnMaxBufferLookup;
         private NativeArray<VertexAttributeDescriptor> _vertexLayout;
@@ -41,6 +39,7 @@ namespace Opencraft.Rendering
                 ComponentType.ReadOnly<TerrainBlocks>(),
                 ComponentType.ReadOnly<BlockLogicState>(),
                 ComponentType.ReadOnly<BlockDirection>(),
+                ComponentType.ReadOnly<ToReevaluate>(),
                 ComponentType.ReadOnly<TerrainArea>(),
                 ComponentType.ReadOnly<TerrainNeighbors>(),
                 ComponentType.ReadOnly<LocalTransform>(),
@@ -81,8 +80,6 @@ namespace Opencraft.Rendering
                 _terrainAreaQuery.ToComponentDataArray<TerrainNeighbors>(Allocator.TempJob);
             // Get block types and column heightmaps
             _terrainBlocksBufferLookup = GetBufferLookup<TerrainBlocks>(true);
-            _terrainLogicStateLookup = GetBufferLookup<BlockLogicState>(true);
-            _terrainDirectionLookup = GetBufferLookup<BlockDirection>(true);
             _terrainColumnMinBufferLookup = GetBufferLookup<TerrainColMinY>(true);
             _terrainColumnMaxBufferLookup = GetBufferLookup<TerrainColMaxY>(true);
             // Construct our unmanaged mesh array that can be passed to the job 
@@ -95,8 +92,6 @@ namespace Opencraft.Rendering
                 terrainAreas = terrainAreas,
                 terrainNeighbors = terrainNeighbors,
                 terrainBufferLookup = _terrainBlocksBufferLookup,
-                terrainLogicStateLookup = _terrainLogicStateLookup,
-                terrainDirectionLookup = _terrainDirectionLookup,
                 terrainColumnMinBufferLookup = _terrainColumnMinBufferLookup,
                 terrainColumnMaxBufferLookup = _terrainColumnMaxBufferLookup,
                 UseDebug = PolkaDOTS.ApplicationConfig.DebugEnabled.Value
@@ -140,8 +135,6 @@ namespace Opencraft.Rendering
         [ReadOnly] public NativeArray<TerrainArea> terrainAreas;
         [ReadOnly] public NativeArray<TerrainNeighbors> terrainNeighbors;
         [ReadOnly] public BufferLookup<TerrainBlocks> terrainBufferLookup;
-        [ReadOnly] public BufferLookup<BlockLogicState> terrainLogicStateLookup;
-        [ReadOnly] public BufferLookup<BlockDirection> terrainDirectionLookup;
         [ReadOnly] public BufferLookup<TerrainColMinY> terrainColumnMinBufferLookup;
         [ReadOnly] public BufferLookup<TerrainColMaxY> terrainColumnMaxBufferLookup;
         public bool UseDebug;
