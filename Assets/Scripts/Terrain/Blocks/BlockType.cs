@@ -72,7 +72,11 @@ namespace Opencraft.Terrain.Blocks
 
         public static bool IsGate(BlockType type)
         {
-            return type == BlockType.AND_Gate || type == BlockType.OR_Gate || type == BlockType.NOT_Gate || type == BlockType.XOR_Gate;
+            return IsTwoInputGate(type) || type == BlockType.XOR_Gate;
+        }
+        public static bool IsTwoInputGate(BlockType type)
+        {
+            return type == BlockType.AND_Gate || type == BlockType.OR_Gate || type == BlockType.XOR_Gate;
         }
         public static bool IsTransmitter(BlockType type)
         {

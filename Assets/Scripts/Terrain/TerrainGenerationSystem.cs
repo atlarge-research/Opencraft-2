@@ -19,6 +19,7 @@ using Unity.Profiling;
 using System.Security.Cryptography;
 using System.Text;
 using UnityEngine;
+using Unity.Physics.Authoring;
 
 // Annoyingly this assembly directive must be outside the namespace.
 [assembly: RegisterGenericJobType(typeof(SortJob<int2, Int2DistanceComparer>))]
@@ -258,6 +259,7 @@ namespace Opencraft.Terrain
                     case LayerType.On_Input:
                     case LayerType.Wire:
                     case LayerType.Lamp:
+                    case LayerType.Calculated_Layer:
                         break;
                 }
             }
@@ -385,6 +387,11 @@ namespace Opencraft.Terrain
                                     ref colMinBuffers, ref colMaxBuffers, (x % modulo_x == 0 && z % modulo_z == 0 && x == z) ? 1 : 0, startIndex,
                                     heightSoFar, ref terrainGenerationLayer, columnAccess, index);
                                 break;
+                            case LayerType.Calculated_Layer:
+                                heightSoFar = GenerateCalculatedLayer(ref terrainBlockBuffers,
+                                    ref colMinBuffers, ref colMaxBuffers, startIndex,
+                                    heightSoFar, ref terrainGenerationLayer, columnAccess, index);
+                                break;
                         }
                     }
 
@@ -495,7 +502,25 @@ namespace Opencraft.Terrain
         {
             int heightToAdd = condional;
 
-            int end = heightSoFar + heightToAdd < worldHeight ? heightSoFar + condional : worldHeight;
+            int end = heightSoFar + heightToAdd < worldHeight ? heightSoFar + heightToAdd : worldHeight;
+            SetColumnBlocks(ref terrainBlockBuffers, ref colMinBuffers, ref colMaxBuffers, heightSoFar, end,
+            terrainGenLayer.blockType, blockIndex, columnAccess, index);
+
+            return end;
+        }
+        private int GenerateCalculatedLayer(ref NativeArray<DynamicBuffer<BlockType>> terrainBlockBuffers,
+            ref NativeArray<DynamicBuffer<byte>> colMinBuffers,
+            ref NativeArray<DynamicBuffer<byte>> colMaxBuffers,
+            int blockIndex, int heightSoFar, ref TerrainGenerationLayer terrainGenLayer, int columnAccess, int index = -1)
+        {
+            double add = GetAdd(terrainGenLayer.blockType);
+            Func<int, int, double, bool> conditional = GetConditional(terrainGenLayer.blockType);
+            int3 blockLoc = TerrainUtilities.BlockIndexToLocation(blockIndex);
+            int row = blockLoc.x;
+            int col = blockLoc.z;
+            int heightToAdd = conditional(row, col, add) ? 1 : 0;
+
+            int end = heightSoFar + heightToAdd < worldHeight ? heightSoFar + heightToAdd : worldHeight;
             SetColumnBlocks(ref terrainBlockBuffers, ref colMinBuffers, ref colMaxBuffers, heightSoFar, end,
             terrainGenLayer.blockType, blockIndex, columnAccess, index);
 
@@ -544,6 +569,63 @@ namespace Opencraft.Terrain
                     blockLogicStates[blockIndex + localY] = true;
                 }
                 prevColY = colY;
+            }
+        }
+
+        private double GetAdd(BlockType blockType)
+        {
+            switch (blockType)
+            {
+                case BlockType.Off_Wire:
+                case BlockType.AND_Gate:
+                    return 2;
+                case BlockType.OR_Gate:
+                    return 10;
+                case BlockType.NOT_Gate:
+                    return 2.5;
+                case BlockType.XOR_Gate:
+                    return 6;
+                default:
+                    return 0;
+            }
+        }
+
+        private Func<int, int, double, bool> GetConditional(BlockType blockType)
+        {
+            bool Strips(int row)
+            {
+                return (row % 2 != 0);
+            }
+
+            bool Edges(int row, int col)
+            {
+                return row == 0 || row == 15 || col == 0 || col == 15;
+            }
+            bool TwoInputGate(int row, int col, double add)
+            {
+                return Strips(row) && !Edges(row, col) && (col % 12 == (add + (row + 1) * 0.5) % 12);
+            }
+
+            switch (blockType)
+            {
+                case BlockType.On_Input:
+                    return (row, col, _) => (col == 0 || col == 15) && Strips(row);
+                case BlockType.Clock:
+                    return (row, col, _) => (row == 15) && (col % 3 == 2);
+                case BlockType.Off_Wire:
+                    return (row, col, add) => Strips(row) && !Edges(row, col) && (col % 4 != (add + (row + 1) * 0.5) % 4);
+                case BlockType.Off_Lamp:
+                    return (row, col, _) => Edges(row, col) && (!Strips(row) || (row == 15 && col != 0 && col == 15)) && (col % 3 != 2) || row == 0;
+                case BlockType.AND_Gate:
+                    return (row, col, add) => TwoInputGate(row, col, add);
+                case BlockType.OR_Gate:
+                    return (row, col, add) => TwoInputGate(row, col, add);
+                case BlockType.NOT_Gate:
+                    return (row, col, add) => !Strips(row) && !Edges(row, col) && (col % 12 == (add + (row + 1) * 0.5) % 12);
+                case BlockType.XOR_Gate:
+                    return (row, col, add) => TwoInputGate(row, col, add);
+                default:
+                    return (row, col, _) => false;
             }
         }
     }

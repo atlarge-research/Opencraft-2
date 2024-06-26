@@ -19,4 +19,5 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 1fd9c9d7c5f643f4792289216c937182, type: 2}
   - {fileID: 11400000, guid: ea81988a2a21c0f488f1320553c0c4c9, type: 2}
   - {fileID: 11400000, guid: 8e62e13bc2748b843ae85c4865907b55, type: 2}
+  - {fileID: 11400000, guid: 29674d2c5426a854ca6acd47798e6796, type: 2}
   areaColumnHeight: 1
