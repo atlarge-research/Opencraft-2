@@ -41,7 +41,7 @@ namespace Opencraft.Terrain
         }
         public void OnCreate(ref SystemState state)
         {
-            tickRate = 0.5;
+            tickRate = 1;
             timer = 0;
             terrainLogicStateLookup = state.GetBufferLookup<BlockLogicState>(isReadOnly: false);
             terrainDirectionLookup = state.GetBufferLookup<BlockDirection>(isReadOnly: false);
@@ -88,7 +88,7 @@ namespace Opencraft.Terrain
                     if (toReevaluateBuffer[i])
                     {
                         toReevaluate.Add(new LogicBlockData { BlockLocation = blockLoc, TerrainEntity = terrainEntity });
-                        Debug.Log($"Reevaluating {blockLoc}");
+                        //Debug.Log($"Reevaluating {blockLoc}");
                         toReevaluateBuffer[i] = false;
                     }
                     BlockType blockType = blockTypeBuffer[i];

@@ -471,5 +471,10 @@ namespace Opencraft.Terrain.Utilities
 
             return blocks[access + bpl].type == BlockType.Air;
         }
+
+        public readonly static float[] GetAdd = new float[]
+        {
+             0, 0, 0, 0, 9, 3, 3.5f, 11, 0, 0, 0, 0, 0,0, 0, 0, 3, 0, 0, 0
+        };
     }
 }

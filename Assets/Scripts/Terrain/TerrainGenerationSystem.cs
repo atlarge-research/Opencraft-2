@@ -513,12 +513,54 @@ namespace Opencraft.Terrain
             ref NativeArray<DynamicBuffer<byte>> colMaxBuffers,
             int blockIndex, int heightSoFar, ref TerrainGenerationLayer terrainGenLayer, int columnAccess, int index = -1)
         {
-            double add = GetAdd(terrainGenLayer.blockType);
-            Func<int, int, double, bool> conditional = GetConditional(terrainGenLayer.blockType);
+            BlockType blockType = terrainGenLayer.blockType;
+            float add = TerrainUtilities.GetAdd[(int)blockType];
             int3 blockLoc = TerrainUtilities.BlockIndexToLocation(blockIndex);
             int row = blockLoc.x;
             int col = blockLoc.z;
-            int heightToAdd = conditional(row, col, add) ? 1 : 0;
+
+            bool Strips(int row)
+            {
+                return (row % 2 != 0);
+            }
+
+            bool Edges(int row, int col)
+            {
+                return row == 0 || row == 15 || col == 0 || col == 15;
+            }
+            bool TwoInputGate(int row, int col, double add)
+            {
+                return Strips(row) && !Edges(row, col) && (col % 14 == (add + (row + 1) * 0.5) % 14);
+            }
+
+            int heightToAdd;
+            switch (blockType)
+            {
+                case BlockType.On_Input:
+                    heightToAdd = ((col == 0 || col == 15) && Strips(row) && !(row == 15)) ? 1 : 0;
+                    break;
+                case BlockType.Clock:
+                    heightToAdd = ((row == 15) && (col == 8)) ? 1 : 0;
+                    break;
+                case BlockType.Off_Wire:
+                    heightToAdd = ((Strips(row) && !Edges(row, col) && (col % 6 != (add + (row + 1) * 0.5) % 6)) || (row == 15 && col != 8 && col != 0 && col != 15)) ? 1 : 0;
+                    break;
+                case BlockType.AND_Gate:
+                    heightToAdd = (TwoInputGate(row, col, add)) ? 1 : 0;
+                    break;
+                case BlockType.OR_Gate:
+                    heightToAdd = (TwoInputGate(row, col, add)) ? 1 : 0;
+                    break;
+                case BlockType.NOT_Gate:
+                    heightToAdd = (!Strips(row) && !Edges(row, col) && (col % 6 == (add + (row + 1) * 0.5) % 6)) ? 1 : 0;
+                    break;
+                case BlockType.XOR_Gate:
+                    heightToAdd = (TwoInputGate(row, col, add)) ? 1 : 0;
+                    break;
+                default:
+                    heightToAdd = (false) ? 1 : 0;
+                    break;
+            }
 
             int end = heightSoFar + heightToAdd < worldHeight ? heightSoFar + heightToAdd : worldHeight;
             SetColumnBlocks(ref terrainBlockBuffers, ref colMinBuffers, ref colMaxBuffers, heightSoFar, end,
@@ -572,61 +614,5 @@ namespace Opencraft.Terrain
             }
         }
 
-        private double GetAdd(BlockType blockType)
-        {
-            switch (blockType)
-            {
-                case BlockType.Off_Wire:
-                case BlockType.AND_Gate:
-                    return 2;
-                case BlockType.OR_Gate:
-                    return 10;
-                case BlockType.NOT_Gate:
-                    return 2.5;
-                case BlockType.XOR_Gate:
-                    return 6;
-                default:
-                    return 0;
-            }
-        }
-
-        private Func<int, int, double, bool> GetConditional(BlockType blockType)
-        {
-            bool Strips(int row)
-            {
-                return (row % 2 != 0);
-            }
-
-            bool Edges(int row, int col)
-            {
-                return row == 0 || row == 15 || col == 0 || col == 15;
-            }
-            bool TwoInputGate(int row, int col, double add)
-            {
-                return Strips(row) && !Edges(row, col) && (col % 12 == (add + (row + 1) * 0.5) % 12);
-            }
-
-            switch (blockType)
-            {
-                case BlockType.On_Input:
-                    return (row, col, _) => (col == 0 || col == 15) && Strips(row);
-                case BlockType.Clock:
-                    return (row, col, _) => (row == 15) && (col % 3 == 2);
-                case BlockType.Off_Wire:
-                    return (row, col, add) => Strips(row) && !Edges(row, col) && (col % 4 != (add + (row + 1) * 0.5) % 4);
-                case BlockType.Off_Lamp:
-                    return (row, col, _) => Edges(row, col) && (!Strips(row) || (row == 15 && col != 0 && col == 15)) && (col % 3 != 2) || row == 0;
-                case BlockType.AND_Gate:
-                    return (row, col, add) => TwoInputGate(row, col, add);
-                case BlockType.OR_Gate:
-                    return (row, col, add) => TwoInputGate(row, col, add);
-                case BlockType.NOT_Gate:
-                    return (row, col, add) => !Strips(row) && !Edges(row, col) && (col % 12 == (add + (row + 1) * 0.5) % 12);
-                case BlockType.XOR_Gate:
-                    return (row, col, add) => TwoInputGate(row, col, add);
-                default:
-                    return (row, col, _) => false;
-            }
-        }
     }
 }

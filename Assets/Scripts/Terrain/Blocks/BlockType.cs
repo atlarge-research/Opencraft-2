@@ -1,4 +1,5 @@
-﻿using Unity.Mathematics;
+﻿using System;
+using Unity.Mathematics;
 
 namespace Opencraft.Terrain.Blocks
 {
@@ -164,6 +165,21 @@ namespace Opencraft.Terrain.Blocks
             Direction.ZN,
             Direction.ZP,
         };
+
+
+        private static bool Strips(int row)
+        {
+            return (row % 2 != 0);
+        }
+
+        private static bool Edges(int row, int col)
+        {
+            return row == 0 || row == 15 || col == 0 || col == 15;
+        }
+        private static bool TwoInputGate(int row, int col, double add)
+        {
+            return Strips(row) && !Edges(row, col) && (col % 12 == (add + (row + 1) * 0.5) % 12);
+        }
 
     }
 }
