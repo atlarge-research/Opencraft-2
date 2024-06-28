@@ -105,8 +105,8 @@ namespace Opencraft.Terrain
                 }
             }
 
-            PropogateLogicState(toReevaluate, false);
-            PropogateLogicState(toTransmit, true);
+            PropagateLogicState(toReevaluate, false);
+            PropagateLogicState(toTransmit, true);
             CheckGateState(logicGateBlocks);
 
             terrainAreasEntities.Dispose();
@@ -115,7 +115,7 @@ namespace Opencraft.Terrain
             logicGateBlocks.Clear();
         }
 
-        private void PropogateLogicState(IEnumerable<LogicBlockData> logicBlocks, bool inputLogicState)
+        private void PropagateLogicState(IEnumerable<LogicBlockData> logicBlocks, bool inputLogicState)
         {
             ConcurrentQueue<(LogicBlockData, bool)> logicQueue = new ConcurrentQueue<(LogicBlockData, bool)>();
             foreach (LogicBlockData block in logicBlocks)
