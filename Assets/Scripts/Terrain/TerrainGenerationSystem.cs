@@ -41,7 +41,7 @@ namespace Opencraft.Terrain
         private BufferLookup<TerrainBlocks> _terrainBlocksLookup;
         private BufferLookup<BlockLogicState> _terrainLogicStateLookup;
         private BufferLookup<BlockDirection> _terrainDirectionLookup;
-        private BufferLookup<ToReevaluate> _terrainEvaluationLookup;
+        private BufferLookup<UpdatedBlocks> _terrainUpdateLookup;
         private BufferLookup<TerrainColMinY> _terrainColMinLookup;
         private BufferLookup<TerrainColMaxY> _terrainColMaxLookup;
         private BufferLookup<TerrainStructuresToSpawn> _structuresToSpawnLookup;
@@ -66,7 +66,7 @@ namespace Opencraft.Terrain
             _terrainBlocksLookup = state.GetBufferLookup<TerrainBlocks>(isReadOnly: false);
             _terrainLogicStateLookup = state.GetBufferLookup<BlockLogicState>(isReadOnly: false);
             _terrainDirectionLookup = state.GetBufferLookup<BlockDirection>(isReadOnly: false);
-            _terrainEvaluationLookup = state.GetBufferLookup<ToReevaluate>(isReadOnly: false);
+            _terrainUpdateLookup = state.GetBufferLookup<UpdatedBlocks>(isReadOnly: false);
             _terrainColMinLookup = state.GetBufferLookup<TerrainColMinY>(isReadOnly: false);
             _terrainColMaxLookup = state.GetBufferLookup<TerrainColMaxY>(isReadOnly: false);
             _structuresToSpawnLookup = state.GetBufferLookup<TerrainStructuresToSpawn>(isReadOnly: false);
@@ -135,7 +135,7 @@ namespace Opencraft.Terrain
             _terrainBlocksLookup.Update(ref state);
             _terrainLogicStateLookup.Update(ref state);
             _terrainDirectionLookup.Update(ref state);
-            _terrainEvaluationLookup.Update(ref state);
+            _terrainUpdateLookup.Update(ref state);
             _terrainColMinLookup.Update(ref state);
             _terrainColMaxLookup.Update(ref state);
             _structuresToSpawnLookup.Update(ref state);
@@ -150,7 +150,7 @@ namespace Opencraft.Terrain
                 terrainBlocksLookup = _terrainBlocksLookup,
                 terrainLogicStateLookup = _terrainLogicStateLookup,
                 terrainDirectionLookup = _terrainDirectionLookup,
-                terrainEvaluationLookup = _terrainEvaluationLookup,
+                terrainUpdateLookup = _terrainUpdateLookup,
                 terrainColMinLookup = _terrainColMinLookup,
                 terrainColMaxLookup = _terrainColMaxLookup,
                 _structuresToSpawnLookup = _structuresToSpawnLookup,
@@ -204,7 +204,7 @@ namespace Opencraft.Terrain
         [NativeDisableParallelForRestriction] public BufferLookup<TerrainBlocks> terrainBlocksLookup;
         [NativeDisableParallelForRestriction] public BufferLookup<BlockLogicState> terrainLogicStateLookup;
         [NativeDisableParallelForRestriction] public BufferLookup<BlockDirection> terrainDirectionLookup;
-        [NativeDisableParallelForRestriction] public BufferLookup<ToReevaluate> terrainEvaluationLookup;
+        [NativeDisableParallelForRestriction] public BufferLookup<UpdatedBlocks> terrainUpdateLookup;
         [NativeDisableParallelForRestriction] public BufferLookup<TerrainColMinY> terrainColMinLookup;
         [NativeDisableParallelForRestriction] public BufferLookup<TerrainColMaxY> terrainColMaxLookup;
         [NativeDisableParallelForRestriction] public BufferLookup<TerrainStructuresToSpawn> _structuresToSpawnLookup;
@@ -301,10 +301,6 @@ namespace Opencraft.Terrain
                 // Direction Buffer
                 DynamicBuffer<BlockDirection> terrainDirectionBuffer = terrainDirectionLookup[terrainEntity];
                 terrainDirectionBuffer.Resize(Env.AREA_SIZE_POW_3, NativeArrayOptions.ClearMemory);
-
-                // Evaluation Buffer
-                DynamicBuffer<ToReevaluate> terrainEvaluationBuffer = terrainEvaluationLookup[terrainEntity];
-                terrainEvaluationBuffer.Resize(Env.AREA_SIZE_POW_3, NativeArrayOptions.ClearMemory);
 
                 // Terrain area column min buffer
                 DynamicBuffer<TerrainColMinY> colMinBuffer = terrainColMinLookup[terrainEntity];
@@ -609,6 +605,11 @@ namespace Opencraft.Terrain
                     Entity terrainEntity = terrainAreaEntities[index + colY];
                     DynamicBuffer<bool> blockLogicStates = terrainLogicStateLookup[terrainEntity].Reinterpret<bool>();
                     blockLogicStates[blockIndex + localY] = true;
+                }
+                if (BlockData.IsInput(blockType) || BlockData.IsGate(blockType))
+                {
+                    Entity terrainEntity = terrainAreaEntities[index + colY];
+                    terrainUpdateLookup[terrainEntity].Add(new UpdatedBlocks { updatedLoc = TerrainUtilities.BlockIndexToLocation(blockIndex + localY) });
                 }
                 prevColY = colY;
             }

@@ -12,6 +12,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Transforms;
+using Unity.VisualScripting.FullSerializer;
 
 [assembly: RegisterGenericJobType(typeof(SortJob<int2, Int2DistanceComparer>))]
 namespace Opencraft.Terrain
@@ -25,10 +26,14 @@ namespace Opencraft.Terrain
     {
         private double tickRate;
         private float timer;
+        private static Dictionary<int3, LogicBlockData> inputBlocks;
+        private static Dictionary<int3, LogicBlockData> gateBlocks;
+        private static Dictionary<int3, LogicBlockData> activeGateBlocks;
+        private static List<LogicBlockData> toReevaluate = new List<LogicBlockData>();
         private BufferLookup<BlockLogicState> terrainLogicStateLookup;
         private BufferLookup<BlockDirection> terrainDirectionLookup;
-        private BufferLookup<ToReevaluate> terrainEvaluationLookup;
         private BufferLookup<TerrainBlocks> terrainBlocksLookup;
+        private BufferLookup<UpdatedBlocks> terrainUpdatedLookup;
         private ComponentLookup<TerrainNeighbors> terrainNeighborsLookup;
         private ComponentLookup<TerrainArea> terrainAreaLookup;
         static int3 sixteens = new int3(16, 0, 16);
@@ -43,16 +48,22 @@ namespace Opencraft.Terrain
         {
             tickRate = 1;
             timer = 0;
+            inputBlocks = new Dictionary<int3, LogicBlockData>();
+            gateBlocks = new Dictionary<int3, LogicBlockData>();
+            activeGateBlocks = new Dictionary<int3, LogicBlockData>();
             terrainLogicStateLookup = state.GetBufferLookup<BlockLogicState>(isReadOnly: false);
             terrainDirectionLookup = state.GetBufferLookup<BlockDirection>(isReadOnly: false);
-            terrainEvaluationLookup = state.GetBufferLookup<ToReevaluate>(isReadOnly: false);
             terrainBlocksLookup = state.GetBufferLookup<TerrainBlocks>(isReadOnly: false);
+            terrainUpdatedLookup = state.GetBufferLookup<UpdatedBlocks>(isReadOnly: false);
             terrainNeighborsLookup = state.GetComponentLookup<TerrainNeighbors>(isReadOnly: false);
             terrainAreaLookup = state.GetComponentLookup<TerrainArea>(isReadOnly: false);
         }
 
         public void OnDestroy(ref SystemState state)
         {
+            inputBlocks.Clear();
+            gateBlocks.Clear();
+            activeGateBlocks.Clear();
         }
 
         public void OnUpdate(ref SystemState state)
@@ -63,56 +74,56 @@ namespace Opencraft.Terrain
                 return;
             }
             timer = 0;
-            terrainNeighborsLookup.Update(ref state);
-            terrainBlocksLookup.Update(ref state);
             terrainLogicStateLookup.Update(ref state);
             terrainDirectionLookup.Update(ref state);
-            terrainEvaluationLookup.Update(ref state);
+            terrainBlocksLookup.Update(ref state);
+            terrainUpdatedLookup.Update(ref state);
+            terrainNeighborsLookup.Update(ref state);
             terrainAreaLookup.Update(ref state);
 
             var terrainAreasQuery = SystemAPI.QueryBuilder().WithAll<TerrainArea, LocalTransform>().Build();
             terrainAreasEntities = terrainAreasQuery.ToEntityArray(state.WorldUpdateAllocator);
 
-            List<LogicBlockData> toReevaluate = new List<LogicBlockData>();
-            List<LogicBlockData> toTransmit = new List<LogicBlockData>();
-            List<LogicBlockData> logicGateBlocks = new List<LogicBlockData>();
+
 
             foreach (var terrainEntity in terrainAreasEntities)
             {
-                DynamicBuffer<bool> toReevaluateBuffer = terrainEvaluationLookup[terrainEntity].Reinterpret<bool>();
+                DynamicBuffer<int3> updateBlocks = terrainUpdatedLookup[terrainEntity].Reinterpret<int3>();
+                NativeArray<int3> updateBlocksCopy = updateBlocks.ToNativeArray(Allocator.Temp);
+                updateBlocks.Clear();
                 DynamicBuffer<BlockType> blockTypeBuffer = terrainBlocksLookup[terrainEntity].Reinterpret<BlockType>();
-                DynamicBuffer<bool> logicStateBuffer = terrainLogicStateLookup[terrainEntity].Reinterpret<bool>();
-                for (int i = 0; i < toReevaluateBuffer.Length; i++)
+                TerrainArea terrainArea = terrainAreaLookup[terrainEntity];
+                for (int i = 0; i < updateBlocksCopy.Length; i++)
                 {
-                    int3 blockLoc = TerrainUtilities.BlockIndexToLocation(i);
-                    if (toReevaluateBuffer[i])
+                    int3 blockLoc = updateBlocksCopy[i];
+                    int3 globalPos = terrainArea.location * Env.AREA_SIZE + blockLoc;
+                    int blockIndex = TerrainUtilities.BlockLocationToIndex(ref blockLoc);
+                    BlockType blockType = blockTypeBuffer[blockIndex];
+
+                    LogicBlockData value = new LogicBlockData { BlockLocation = blockLoc, TerrainEntity = terrainEntity };
+
+                    toReevaluate.Add(value);
+
+                    if (blockType == BlockType.Air)
                     {
-                        toReevaluate.Add(new LogicBlockData { BlockLocation = blockLoc, TerrainEntity = terrainEntity });
-                        //Debug.Log($"Reevaluating {blockLoc}");
-                        toReevaluateBuffer[i] = false;
+                        inputBlocks.Remove(blockLoc);
+                        gateBlocks.Remove(blockLoc);
+                        activeGateBlocks.Remove(blockLoc);
                     }
-                    BlockType blockType = blockTypeBuffer[i];
-                    if (BlockData.IsInput(blockType) || blockType == BlockType.NOT_Gate)
-                        toTransmit.Add(new LogicBlockData { BlockLocation = blockLoc, TerrainEntity = terrainEntity });
-                    else if (BlockData.IsTwoInputGate(blockType))
-                    {
-                        if (logicStateBuffer[i])
-                        {
-                            toTransmit.Add(new LogicBlockData { BlockLocation = blockLoc, TerrainEntity = terrainEntity });
-                        }
-                        logicGateBlocks.Add(new LogicBlockData { BlockLocation = blockLoc, TerrainEntity = terrainEntity });
-                    }
+                    else if (BlockData.IsInput(blockType) || blockType == BlockType.NOT_Gate)
+                        inputBlocks.TryAdd(globalPos, value);
+                    else if (BlockData.IsGate(blockType))
+                        gateBlocks.TryAdd(globalPos, value);
                 }
             }
 
+
             PropagateLogicState(toReevaluate, false);
-            PropagateLogicState(toTransmit, true);
-            CheckGateState(logicGateBlocks);
+            toReevaluate.Clear();
+            PropagateLogicState(inputBlocks.Values.Concat(activeGateBlocks.Values), true);
+            CheckGateState(gateBlocks.Values);
 
             terrainAreasEntities.Dispose();
-            toReevaluate.Clear();
-            toTransmit.Clear();
-            logicGateBlocks.Clear();
         }
 
         private void PropagateLogicState(IEnumerable<LogicBlockData> logicBlocks, bool inputLogicState)
@@ -205,7 +216,7 @@ namespace Opencraft.Terrain
                 DynamicBuffer<bool> boolLogicState = blockLogicState.Reinterpret<bool>();
 
                 Direction[] inputDirections = new Direction[] { };
-                GetInputDirections(currentBlockType, ref inputDirections, currentDirection);
+                GetInputDirections(ref inputDirections, currentDirection);
                 int requiredInputs = 0;
                 switch (currentBlockType)
                 {
@@ -254,12 +265,15 @@ namespace Opencraft.Terrain
                 }
 
                 if ((onCount >= requiredInputs && (currentBlockType == BlockType.AND_Gate || currentBlockType == BlockType.OR_Gate)) || (onCount == requiredInputs && currentBlockType == BlockType.XOR_Gate))
+                {
                     boolLogicState[blockIndex] = true;
+                    activeGateBlocks.TryAdd(globalPos, gateBlock);
+                }
                 else
                 {
-                    DynamicBuffer<bool> boolReevaluateStates = terrainEvaluationLookup[blockEntity].Reinterpret<bool>();
-                    boolReevaluateStates[blockIndex] = true;
                     boolLogicState[blockIndex] = false;
+                    activeGateBlocks.Remove(globalPos);
+                    toReevaluate.Add(gateBlock);
                 }
 
             }
@@ -315,32 +329,17 @@ namespace Opencraft.Terrain
             return 0;
         }
 
-        private void GetInputDirections(BlockType currentBlockType, ref Direction[] inputDirections, Direction currentDirection)
+        private void GetInputDirections(ref Direction[] inputDirections, Direction currentDirection)
         {
-            switch (currentBlockType)
+            switch (currentDirection)
             {
-                case BlockType.AND_Gate:
-                case BlockType.OR_Gate:
-                case BlockType.XOR_Gate:
-                    {
-
-                        switch (currentDirection)
-                        {
-                            case Direction.XN:
-                            case Direction.XP:
-                                inputDirections = new Direction[] { Direction.ZN, Direction.ZP };
-                                break;
-                            case Direction.ZN:
-                            case Direction.ZP:
-                                inputDirections = new Direction[] { Direction.XN, Direction.XP };
-                                break;
-                            default:
-                                break;
-                        }
-                        break;
-                    }
-                case BlockType.NOT_Gate:
-                    inputDirections = new Direction[] { currentDirection };
+                case Direction.XN:
+                case Direction.XP:
+                    inputDirections = new Direction[] { Direction.ZN, Direction.ZP };
+                    break;
+                case Direction.ZN:
+                case Direction.ZP:
+                    inputDirections = new Direction[] { Direction.XN, Direction.XP };
                     break;
                 default:
                     break;

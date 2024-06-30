@@ -71,9 +71,14 @@ namespace Opencraft.Terrain.Blocks
             false, false, false, true, false, false, false, false, false, false, false, false, false, false, false, false, true, true, true, true,
         };
 
+        public static bool IsLogic(BlockType type)
+        {
+            return IsInput(type) || IsGate(type) || type == BlockType.Off_Wire || type == BlockType.On_Wire || type == BlockType.Off_Lamp || type == BlockType.On_Lamp;
+        }
+
         public static bool IsGate(BlockType type)
         {
-            return IsTwoInputGate(type) || type == BlockType.XOR_Gate;
+            return IsTwoInputGate(type) || type == BlockType.NOT_Gate;
         }
         public static bool IsTwoInputGate(BlockType type)
         {

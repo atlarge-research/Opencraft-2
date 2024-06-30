@@ -556,11 +556,19 @@ PrefabInstance:
     - target: {fileID: 3243556258562715456, guid: 6752cefe6bfd8d09cb07eba71d738d13,
         type: 3}
       propertyPath: deploymentConfig
-      value: "{\n\"nodes\":[\n\t{\n\t\t\"nodeID\":0,\n\t\t\"worldConfigs\":[\n\t\t\t{\n\t\t\t\"worldName\":
-        \"GameServer\",\n\t\t\t\"worldType\":\"Server\",\n\t\t\t\"initializationMode\":\"Connect\",\n\t\t\t\"serverNodeID\":0,\n\t\t\t},\n\t\t\t{\n\t\t\t\"worldName\":
-        \"GameClient\",\n\t\t\t\"worldType\":\"Client\",\n\t\t\t\"initializationMode\":\"Connect\",\n\t\t\t\"serverNodeID\":0,\n\t\t\t}\n\t\t]\n\t},\n\t{\n\t\t\"nodeID\":1,\n\t\t\"worldConfigs\":[\n\t\t\t{\n\t\t\t\"worldName\":
-        \"SimulatorClientTest\",\n\t\t\t\"worldType\":\"SimulatedClient\",\n\t\t\t\"initializationMode\":\"Connect\",\n\t\t\t\"serverNodeID\":0,\n\t\t\t\"numSimulatedClients\":
-        4\n\t\t\t}\n\t\t]\n\t}\n], \n\"experimentActions\":[]\n}"
+      value: "{\r\n    \"nodes\": [\r\n        {\r\n            \"nodeID\": 0,\r\n           
+        \"worldConfigs\": [\r\n                {\r\n                    \"worldName\":
+        \"GameServer\",\r\n                    \"worldType\": \"Server\",\r\n                   
+        \"initializationMode\": \"Connect\",\r\n                    \"serverNodeID\":
+        0\r\n                },\r\n                {\r\n                    \"worldName\":
+        \"GameClient\",\r\n                    \"worldType\": \"Client\",\r\n                   
+        \"initializationMode\": \"Connect\",\r\n                    \"serverNodeID\":
+        0\r\n                }\r\n            ]\r\n        },\r\n        {\r\n           
+        \"nodeID\": 1,\r\n            \"worldConfigs\": [\r\n                {\r\n                   
+        \"worldName\": \"SimulatorClientTest\",\r\n                    \"worldType\":
+        \"SimulatedClient\",\r\n                    \"initializationMode\": \"Connect\",\r\n                   
+        \"serverNodeID\": 0,\r\n                    \"numSimulatedClients\": 4\r\n               
+        }\r\n            ]\r\n        }\r\n    ],\r\n    \"experimentActions\": []\r\n}"
       objectReference: {fileID: 0}
     - target: {fileID: 3243556258562715456, guid: 6752cefe6bfd8d09cb07eba71d738d13,
         type: 3}
