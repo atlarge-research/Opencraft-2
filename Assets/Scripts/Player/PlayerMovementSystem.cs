@@ -9,6 +9,8 @@ using Unity.Mathematics;
 using Unity.Collections;
 using Unity.NetCode;
 using Unity.Transforms;
+using Unity.Profiling;
+//using UnityEngine;
 
 namespace Opencraft.Player
 {
@@ -29,7 +31,14 @@ namespace Opencraft.Player
         
         // World generation information
         private int _columnHeight;
-        
+        bool playerFly;
+
+        //static ProfilerMarker completionMarker = new ProfilerMarker("playerMovementSystemStateCompletion");
+        //static ProfilerMarker misc = new ProfilerMarker("playerMovementSystemMisc");
+        //static ProfilerMarker updates = new ProfilerMarker("playerMovementSystemUpdates");
+        //static ProfilerMarker entityStuff = new ProfilerMarker("playerMovementSystemEntityStuff");
+        //static ProfilerMarker scheduleMarker = new ProfilerMarker("playerMovementSystemSchedule");
+        //static ProfilerMarker movementSystemMarker = new ProfilerMarker("playerMovementSystem");
 
         public void OnCreate(ref SystemState state)
         {
@@ -64,6 +73,7 @@ namespace Opencraft.Player
             _playerCollisionOffsets.Add(new float3(-d,-1f,d));
 
             _columnHeight = -1;
+            playerFly = ApplicationConfig.playerFly;
         }
 
         public void OnDestroy(ref SystemState state)
@@ -72,11 +82,15 @@ namespace Opencraft.Player
             _playerCollisionOffsets.Dispose();
         }
 
-        [BurstCompile]
+        //[BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
+            //movementSystemMarker.Begin();
+            //completionMarker.Begin();
             state.CompleteDependency();
-            
+            //completionMarker.End();
+
+            //misc.Begin();
             // Fetch world generation information from the WorldParameters singleton
             if (_columnHeight == -1)
             {
@@ -89,15 +103,24 @@ namespace Opencraft.Player
             tickRate.ResolveDefaults();
             // Make the jump arc look the same regardless of simulation tick rate
             var velocityDecrementStep = 60 / tickRate.SimulationTickRate;
-            
+            //misc.End();
+
+            //updates.Begin();
             _terrainBlockLookup.Update(ref state);
             _terrainNeighborLookup.Update(ref state);
+            //updates.End();
+
+            //entityStuff.Begin(); //This takes the greatest amount of time, because there are many terrain areas
+            
             var terrainAreasQuery = SystemAPI.QueryBuilder().WithAll<TerrainArea, LocalTransform>().Build();
             terrainAreasEntities = terrainAreasQuery.ToEntityArray(state.WorldUpdateAllocator);
             terrainAreas = terrainAreasQuery.ToComponentDataArray<TerrainArea>(state.WorldUpdateAllocator);
+            
+            //entityStuff.End();
 
+            //scheduleMarker.Begin();
             new MovePlayerJob()
-            { 
+            {
                 terrainBlockLookup = _terrainBlockLookup,
                 terrainNeighborLookup = _terrainNeighborLookup,
                 terrainAreasEntities = terrainAreasEntities,
@@ -106,12 +129,15 @@ namespace Opencraft.Player
                 playerCollisionOffsets = _playerCollisionOffsets,
                 columnHeight = _columnHeight,
                 velocityDecrementStep = velocityDecrementStep,
-                movementSpeed = movementSpeed
+                movementSpeed = movementSpeed,
+                playerFly = playerFly
             }.ScheduleParallel();
-            
+            //scheduleMarker.End();
+
+            //movementSystemMarker.End();
             /*foreach (var player in SystemAPI.Query<PlayerAspect>().WithAll<Simulate, PlayerInGame>())
             {
-                if (!player.AutoCommandTarget.Enabled)
+                if (!player.AutoCommandTarget.Enabled)  
                 {
                     return;
                 }
@@ -188,7 +214,7 @@ namespace Opencraft.Player
             [ReadOnly]public NativeArray<Entity> terrainAreasEntities;
             [ReadOnly]public NativeArray<TerrainArea> terrainAreas;
         
-            // Static offsets defining player size when used for collision and checking ground support
+            // Static offsets defining player size when used for collision and checking ground support 
             [ReadOnly]public NativeHashSet<float3> playerSupportOffsets;
             [ReadOnly]public NativeHashSet<float3> playerCollisionOffsets;
         
@@ -198,6 +224,7 @@ namespace Opencraft.Player
             // Movement variables
             [ReadOnly]public int velocityDecrementStep;
             [ReadOnly]public float movementSpeed;
+            [ReadOnly] public bool playerFly;
             
             public void Execute(Entity entity,
                 in AutoCommandTarget autoCommandTarget,
@@ -206,6 +233,12 @@ namespace Opencraft.Player
                 in PlayerInput playerInput,
                 ref LocalTransform playerTransform)
             {
+                if (playerFly)
+                {
+                    float3 prevPos = playerTransform.Position;
+                    playerTransform.Position = new float3(prevPos.x, 40, prevPos.z + movementSpeed);
+                    return;
+                }
                 if (!autoCommandTarget.Enabled)
                 {
                     return;

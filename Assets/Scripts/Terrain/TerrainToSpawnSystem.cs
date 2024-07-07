@@ -7,6 +7,7 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Profiling;
 using UnityEngine;
+using System.Linq;
 
 namespace Opencraft.Terrain
 {
@@ -61,7 +62,11 @@ namespace Opencraft.Terrain
                     //{
                     for (int k = -viewRange; k < viewRange; k++)
                     {
-                        nearbyColumns.Add(playerColumn + new int2(i,k));
+                        int2 targetCol = playerColumn + new int2(i, k);
+                        if (!nearbyColumns.Contains(targetCol) && !chunksToSpawnBuffer.ToNativeArray(Allocator.Temp).Contains(targetCol))
+                        { 
+                            nearbyColumns.Add(targetCol); 
+                        }
                     }
                     //}
                 }

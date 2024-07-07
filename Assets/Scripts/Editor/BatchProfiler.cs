@@ -11,15 +11,18 @@ using UnityEngine.Profiling;
 using System;
 using Unity.VisualScripting;
 using UnityEditor.UI;
+using UnityEditorInternal;
 
 public class BatchProfiler : EditorWindow
 {
     private List<string> apks = new List<string> { };
-    private List<string> servers = new List<string>();
+    private List<string> servers = new List<string> { "18","3"};/*{ "10","3","4","5","6","7","8","9"};*/
     private List<string> windowsPlayers = new List<string>();
     private const string controlScriptPath = "C:\\Users\\joach\\Desktop\\Opencraft-2-VR\\Assets\\Scripts\\Editor\\benchmarkScripts\\";
+    private const string serverfileName = "C:\\Users\\joach\\Desktop\\Opencraft-2-VR\\Builds\\windows_builds\\Opencraft-BleedingEdge.exe";
     private bool serverEnabled = true;
     private static string previousPathValue = "";
+    System.Diagnostics.Process serverProc;
     static Unity.EditorCoroutines.Editor.EditorCoroutine routine;
 
     abstract class TargetPlatform
@@ -58,7 +61,7 @@ public class BatchProfiler : EditorWindow
         public virtual void ping() { }
     }
 
-    class TargetQuest : TargetPlatform
+    class TargetAndroid : TargetPlatform
     {
         System.Diagnostics.Process sysProf;
         public  override void startTarget() {
@@ -79,6 +82,9 @@ public class BatchProfiler : EditorWindow
                     sysProf.CloseMainWindow();
                     sysProf.WaitForExit();
                 }
+
+                Debug.Log("sysProf StdOut = " + sysProf.StandardOutput.ReadToEnd());
+                Debug.Log("sysProf StdError = " + sysProf.StandardError.ReadToEnd());
                 startAndAwaitHelpScript("cleanup.ps1", "C:\\Users\\joach\\Desktop\\measuring-the-metaverse\\", playerPath);
             }
             else
@@ -86,7 +92,7 @@ public class BatchProfiler : EditorWindow
                 Debug.LogWarning("attempted close of sysprof, but sysprof is null");
             }
         }
-        ~TargetQuest()
+        ~TargetAndroid()
         {
             if (!sysProf.HasExited)
             {
@@ -107,6 +113,15 @@ public class BatchProfiler : EditorWindow
         }
         public override void stopTarget() {
             sshTargetTask.CloseMainWindow();
+            
+            try
+            {
+                sshTargetTask.Kill();
+            }
+            catch (Exception)
+            {
+            }
+            
             startAndAwaitHelpScript("stop.ps1", helpScriptPath, playerPath);
         }
         public override void startSysprof() {
@@ -155,23 +170,32 @@ public class BatchProfiler : EditorWindow
         }
     }
 
-    private System.Diagnostics.Process startServer(string serverpath)
+    private System.Diagnostics.Process startServer(string serverRenderDist)
     {
-        Debug.Log($"starting server {serverpath}");
+        Debug.Log($"starting server {serverRenderDist}");
         System.Diagnostics.Process serverProc = new System.Diagnostics.Process();
-        serverProc.StartInfo.FileName = serverpath;
-        serverProc.StartInfo.Arguments = "-deploymentID 0 -deploymentJson C:\\Users\\joach\\Desktop\\Opencraft-2-VR\\Assets\\Resources\\deployment.json";
+        serverProc.StartInfo.FileName = serverfileName;
+        serverProc.StartInfo.Arguments = $"-deploymentID 0 -deploymentJson " +
+            $"C:\\Users\\joach\\Desktop\\Opencraft-2-VR\\Assets\\Resources\\deploymentMul.json" +
+            $" -renderDist {serverRenderDist} -playerFly";
         serverProc.Start();
         return serverProc;
     }
 
     private string startUnityProfiler(string playerPath)
     {
+
+        //ProfilerDriver.DirectIPConnect("192.168.23.94");
         Profiler.enabled = true;
 
-        string processedPlayerPath = playerPath.Replace("/", "\\");
-        string playerFileName = playerPath.Substring(processedPlayerPath.LastIndexOf("\\") + 1);
-        string playerFileNameNoExt = playerFileName.Substring(0, playerFileName.LastIndexOf("."));
+        string playerFileNameNoExt = playerPath;
+        if(playerPath.Contains('.'))
+        {
+            string processedPlayerPath = playerPath.Replace("/", "\\");
+            string playerFileName = playerPath.Substring(processedPlayerPath.LastIndexOf("\\") + 1);
+            playerFileNameNoExt = playerFileName.Substring(0, playerFileName.LastIndexOf("."));
+        }
+        
         string logfilePath = Application.dataPath + $"\\..\\profiler\\profiler-{playerFileNameNoExt}-{DateTime.Now.ToString().Replace("/", ".").Replace(" ", "_").Replace(":", ".")}";
 
         Debug.Log($"logfilepath = {logfilePath}");
@@ -192,9 +216,11 @@ public class BatchProfiler : EditorWindow
             string playerPath = players[i];
             target.playerPath = playerPath;
 
-            System.Diagnostics.Process serverProc = null;
+            serverProc = null;
             if (serverEnabled)
             {
+                servers.ForEach(Debug.Log);
+                Debug.Log(servers[i]);
                 serverProc = startServer(servers[i]);
             }
 
@@ -206,6 +232,15 @@ public class BatchProfiler : EditorWindow
             yield return null;
             UnityEditorInternal.ProfilerDriver.ClearAllFrames();
             yield return null;
+            
+            DateTime start = DateTime.Now;
+            //int preTimeout = 0;
+            //Debug.Log($"waiting for {start.AddSeconds(preTimeout)}");
+            //while (DateTime.Now < start.AddSeconds(preTimeout))
+            //{
+            //    yield return null;
+            //}
+            
             string logfilePath = startUnityProfiler(playerPath);
 
             //start measuring the metaverse
@@ -215,9 +250,9 @@ public class BatchProfiler : EditorWindow
             yield return null;
 
             //Wait for some seconds
-            DateTime start = DateTime.Now;
+            start = DateTime.Now;
             int lastSecond = 0;
-            int timeout = 30;
+            int timeout = 150;
             while (DateTime.Now < start.AddSeconds(timeout))
             {
                 if (DateTime.Now.Second != lastSecond)
@@ -268,26 +303,30 @@ public class BatchProfiler : EditorWindow
 
     private void profileQuest()
     {
-        startAndSaveCoroutine(startProfiler(apks, new TargetQuest()));       
+        startAndSaveCoroutine(startProfiler(apks, new TargetAndroid()));       
     }
     private void profileLinuxPlayers()
     {
 
-        System.Diagnostics.Process lsProc = new System.Diagnostics.Process();
-        lsProc.StartInfo.Arguments = "-t joachim@192.168.23.94 \"find ~/Opencraft2 -type f -name '*.x86_64'\"";
-        lsProc.StartInfo.FileName = "C:\\WINDOWS\\System32\\OpenSSH\\ssh.exe";
-        lsProc.StartInfo.UseShellExecute = false;
-        lsProc.StartInfo.RedirectStandardOutput = true;
-        lsProc.StartInfo.RedirectStandardError = true;
-        
+        //System.Diagnostics.Process lsProc = new System.Diagnostics.Process();
+        //lsProc.StartInfo.Arguments = "-t joachim@192.168.23.94 \"find ~/Opencraft2 -type f -name '*.x86_64'\"";
+        //lsProc.StartInfo.FileName = "C:\\WINDOWS\\System32\\OpenSSH\\ssh.exe";
+        //lsProc.StartInfo.UseShellExecute = false;
+        //lsProc.StartInfo.RedirectStandardOutput = true;
+        //lsProc.StartInfo.RedirectStandardError = true;
 
-        lsProc.Start();
-        lsProc.WaitForExit();
-        List<string> paths = new List<string>(lsProc.StandardOutput.ReadToEnd().Split("\r\n"));
-        if (lsProc.ExitCode > 0) {
-            Debug.Log($"ssh ls exited with {lsProc.ExitCode}, where stderr: {lsProc.StandardError.ReadToEnd()}");
-        }
 
+        //lsProc.Start();
+        //lsProc.WaitForExit();
+        //List<string> paths = new List<string>(lsProc.StandardOutput.ReadToEnd().Split("\r\n"));
+        //if (lsProc.ExitCode > 0) {
+        //    Debug.Log($"ssh ls exited with {lsProc.ExitCode}, where stderr: {lsProc.StandardError.ReadToEnd()}");
+        //}
+        List<string> paths = new List<string> { "18" };
+        //for (int i = 6; i < 43; i += 6)
+        //{
+        //    paths.Add(i.ToString());
+        //}
         startAndSaveCoroutine(startProfiler(paths, new TargetLinux()));
     }
 
@@ -312,6 +351,13 @@ public class BatchProfiler : EditorWindow
     {
         this.StopCoroutine(routine);
         routine = null;
+
+        serverProc.Kill();
+    }
+
+    void startServerAction()
+    {
+        startServer("18");
     }
 
     public void CreateGUI()
@@ -322,12 +368,12 @@ public class BatchProfiler : EditorWindow
         VisualElement pathFieldLabel = new Label("please enter the path of the apk folder to batch");
         root.Add(pathFieldLabel);
 
-        string apkDefaultPath = "C:\\Users\\joach\\Desktop\\Opencraft-2-VR\\Builds\\HMD-sing-tracing-sub";
-        string serverDefaultPath = "C:\\Users\\joach\\Desktop\\Opencraft-2-VR\\Builds\\windows_builds\\server-builds";
+        string apkDefaultPath = "C:\\Users\\joach\\Desktop\\Opencraft-2-VR\\Builds\\HMD-sing-tracing";
+        string serverDefaultPath = "C:\\Users\\joach\\Desktop\\Opencraft-2-VR\\Builds\\windows_builds";
         string defaultRemote = "joachim@192.168.23.94";
 
         pathInput("apk path", apkDefaultPath, "*.apk", ref apks, root);
-        pathInput("server path", serverDefaultPath, "*BleedingEdge.exe", ref servers, root);
+        //pathInput("server path", serverDefaultPath, "*BleedingEdge.exe", ref servers, root);
 
         Toggle startServerCheckbox = new Toggle("start server");
         startServerCheckbox.value = serverEnabled;
@@ -340,5 +386,6 @@ public class BatchProfiler : EditorWindow
         root.Add(new Label("linux experiment"));
         addButton("profile linuxPlayers", profileLinuxPlayers, root);
         addButton("force stop experiment", stopExperiment, root);
+        addButton("startServer", startServerAction, root);
     }
 }

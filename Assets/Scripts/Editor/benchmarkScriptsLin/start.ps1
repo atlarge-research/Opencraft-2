@@ -1,10 +1,6 @@
 param (
     [Parameter(Mandatory=$true)][string]$executable
 )
-
-# echo "#" + $executable + "#"
-# ssh -t joachim@192.168.23.94 ls
-# ssh -t joachim@192.168.23.94 "DISPLAY=:0 /home/joachim/Opencraft2/"
-# ssh -t joachim@192.168.23.94 "DISPLAY=:0 /home/joachim/Opencraft2/rd-3"
-#echo $executable > ggdafile.txt
-ssh joachim@192.168.23.94 "DISPLAY=:0 nohup $executable -deploymentID 1 -remoteConfig -deploymentURL 192.168.23.115 -logStats -statsFile $executable.csv -profiler-enable -profiler-log-file $executable.raw"
+ssh joachim@192.168.23.94 "pkill -SIGKILL linux.x86_64"
+echo $executable
+ssh joachim@192.168.23.94 "DISPLAY=:0 nohup ~/Opencraft2/universal/linux.x86_64 -deploymentID 0 -deploymentJson ~/Opencraft2/deploymentSing.json -renderDist $executable -logStats True -statsFile ~/Opencraft2/stats$executable.csv -playerFly"
