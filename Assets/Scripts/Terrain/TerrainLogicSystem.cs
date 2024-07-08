@@ -46,6 +46,7 @@ namespace Opencraft.Terrain
         }
         public void OnCreate(ref SystemState state)
         {
+            state.RequireForUpdate<TerrainArea>();
             tickRate = 1;
             timer = 0;
             inputBlocks = new Dictionary<int3, LogicBlockData>();
@@ -84,11 +85,10 @@ namespace Opencraft.Terrain
             var terrainAreasQuery = SystemAPI.QueryBuilder().WithAll<TerrainArea, LocalTransform>().Build();
             terrainAreasEntities = terrainAreasQuery.ToEntityArray(state.WorldUpdateAllocator);
 
-
-
             foreach (var terrainEntity in terrainAreasEntities)
             {
                 DynamicBuffer<int3> updateBlocks = terrainUpdatedLookup[terrainEntity].Reinterpret<int3>();
+                if (updateBlocks.Length == 0) continue;
                 NativeArray<int3> updateBlocksCopy = updateBlocks.ToNativeArray(Allocator.Temp);
                 updateBlocks.Clear();
                 DynamicBuffer<BlockType> blockTypeBuffer = terrainBlocksLookup[terrainEntity].Reinterpret<BlockType>();
@@ -117,9 +117,11 @@ namespace Opencraft.Terrain
                 }
             }
 
-
-            PropagateLogicState(toReevaluate, false);
-            toReevaluate.Clear();
+            if (toReevaluate.Count != 0)
+            {
+                PropagateLogicState(toReevaluate, false);
+                toReevaluate.Clear();
+            }
             PropagateLogicState(inputBlocks.Values.Concat(activeGateBlocks.Values), true);
             CheckGateState(gateBlocks.Values);
 
@@ -142,8 +144,8 @@ namespace Opencraft.Terrain
                 Entity blockEntity = logicBlock.TerrainEntity;
                 int3 blockLoc = logicBlock.BlockLocation;
                 int blockIndex = TerrainUtilities.BlockLocationToIndex(ref blockLoc);
-                BlockType currentBlockType = terrainBlocksLookup[blockEntity].Reinterpret<BlockType>()[TerrainUtilities.BlockLocationToIndex(ref blockLoc)];
-                Direction currentOutputDirection = terrainDirectionLookup[blockEntity].Reinterpret<Direction>()[TerrainUtilities.BlockLocationToIndex(ref blockLoc)];
+                BlockType currentBlockType = terrainBlocksLookup[blockEntity].Reinterpret<BlockType>()[blockIndex];
+                Direction currentOutputDirection = terrainDirectionLookup[blockEntity].Reinterpret<Direction>()[blockIndex];
 
                 if (logicState && (currentBlockType == BlockType.Off_Input)) continue;
 
@@ -163,7 +165,7 @@ namespace Opencraft.Terrain
                     logicState = boolLogicStates[blockIndex];
                 }
 
-                if (currentBlockType == BlockType.AND_Gate || currentBlockType == BlockType.OR_Gate || currentBlockType == BlockType.XOR_Gate)
+                if (BlockData.IsTwoInputGate(currentBlockType))
                 {
                     EvaluateNeighbour(currentOutputDirection, blockLoc, ref terrainEntities, logicState, ref logicQueue);
                     continue;
