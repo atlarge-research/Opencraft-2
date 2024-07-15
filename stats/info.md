@@ -4,6 +4,11 @@ Run server deployment
 Run simulation clients
 ./Opencraft.exe -remoteConfig -deploymentID 1 -userID 1 -nographics -batchmode -duration 60
 
+./Opencraft.exe -deploymentID 0 -deploymentJson ../stats/deployment1.json -logStats -statsFile ../stats/output1b.csv -duration 120
+./Opencraft.exe -deploymentID 0 -deploymentJson ../stats/deployment5.json -logStats -statsFile ../stats/output5b.csv -duration 120
+./Opencraft.exe -deploymentID 0 -deploymentJson ../stats/deployment10.json -logStats -statsFile ../stats/output10b.csv -duration 120
+
+./Opencraft.exe -remoteConfig -deploymentID 1 -userID 1 -nographics -batchmode -duration 60
 
 
 Data:

@@ -144,57 +144,60 @@ namespace Opencraft.Terrain
                 Entity blockEntity = logicBlock.TerrainEntity;
                 int3 blockLoc = logicBlock.BlockLocation;
                 int blockIndex = TerrainUtilities.BlockLocationToIndex(ref blockLoc);
-                BlockType currentBlockType = terrainBlocksLookup[blockEntity].Reinterpret<BlockType>()[blockIndex];
-                Direction currentOutputDirection = terrainDirectionLookup[blockEntity].Reinterpret<Direction>()[blockIndex];
-
-                if (logicState && (currentBlockType == BlockType.Off_Input)) continue;
-
-                TerrainNeighbors neighbors = terrainNeighborsLookup[blockEntity];
-                Entity neighborXN = neighbors.neighborXN;
-                Entity neighborXP = neighbors.neighborXP;
-                Entity neighborZN = neighbors.neighborZN;
-                Entity neighborZP = neighbors.neighborZP;
-                Entity[] terrainEntities = new Entity[] { blockEntity, neighborXN, neighborXP, neighborZN, neighborZP };
-
-
-                if (currentBlockType == BlockType.Clock)
+                if (terrainBlocksLookup.TryGetBuffer(blockEntity, out DynamicBuffer<TerrainBlocks> terrainBlocks))
                 {
-                    DynamicBuffer<BlockLogicState> blockLogicStates = terrainLogicStateLookup[blockEntity];
-                    DynamicBuffer<bool> boolLogicStates = blockLogicStates.Reinterpret<bool>();
-                    boolLogicStates[blockIndex] = !boolLogicStates[blockIndex];
-                    logicState = boolLogicStates[blockIndex];
-                }
+                    BlockType currentBlockType = terrainBlocks.Reinterpret<BlockType>()[blockIndex];
+                    Direction currentOutputDirection = terrainDirectionLookup[blockEntity].Reinterpret<Direction>()[blockIndex];
 
-                if (BlockData.IsTwoInputGate(currentBlockType))
-                {
-                    EvaluateNeighbour(currentOutputDirection, blockLoc, ref terrainEntities, logicState, ref logicQueue);
-                    continue;
-                }
+                    if (logicState && (currentBlockType == BlockType.Off_Input)) continue;
 
-                if (currentBlockType == BlockType.NOT_Gate)
-                {
-                    Direction inputDirection = BlockData.OppositeDirections[(int)currentOutputDirection];
-                    int3 notNormalisedBlockLoc = (blockLoc + BlockData.Int3Directions[(int)inputDirection]);
-                    int terrainEntityIndex = GetOffsetIndex(notNormalisedBlockLoc);
-                    Entity neighborEntity = terrainEntities[terrainEntityIndex];
-                    if (neighborEntity == Entity.Null) continue;
-                    int lowestCoord = math.min(notNormalisedBlockLoc.x, notNormalisedBlockLoc.z);
-                    int num_sixteens = lowestCoord / 16 + 1;
-                    int3 actualBlockLoc = (notNormalisedBlockLoc + sixteens * num_sixteens) % 16;
-                    int blockIndex2 = TerrainUtilities.BlockLocationToIndex(ref actualBlockLoc);
-                    DynamicBuffer<BlockLogicState> blockLogicStates = terrainLogicStateLookup[neighborEntity];
-                    DynamicBuffer<bool> boolLogicStates = blockLogicStates.Reinterpret<bool>();
-                    bool NOTInputState = boolLogicStates[blockIndex2];
+                    TerrainNeighbors neighbors = terrainNeighborsLookup[blockEntity];
+                    Entity neighborXN = neighbors.neighborXN;
+                    Entity neighborXP = neighbors.neighborXP;
+                    Entity neighborZN = neighbors.neighborZN;
+                    Entity neighborZP = neighbors.neighborZP;
+                    Entity[] terrainEntities = new Entity[] { blockEntity, neighborXN, neighborXP, neighborZN, neighborZP };
 
-                    EvaluateNeighbour(currentOutputDirection, blockLoc, ref terrainEntities, !NOTInputState, ref logicQueue);
-                    continue;
-                }
 
-                Direction[] allDirections = BlockData.AllDirections;
-                for (int i = 0; i < allDirections.Length; i++)
-                {
-                    Direction outputDirection = allDirections[i];
-                    EvaluateNeighbour(outputDirection, blockLoc, ref terrainEntities, logicState, ref logicQueue);
+                    if (currentBlockType == BlockType.Clock)
+                    {
+                        DynamicBuffer<BlockLogicState> blockLogicStates = terrainLogicStateLookup[blockEntity];
+                        DynamicBuffer<bool> boolLogicStates = blockLogicStates.Reinterpret<bool>();
+                        boolLogicStates[blockIndex] = !boolLogicStates[blockIndex];
+                        logicState = boolLogicStates[blockIndex];
+                    }
+
+                    if (BlockData.IsTwoInputGate(currentBlockType))
+                    {
+                        EvaluateNeighbour(currentOutputDirection, blockLoc, ref terrainEntities, logicState, ref logicQueue);
+                        continue;
+                    }
+
+                    if (currentBlockType == BlockType.NOT_Gate)
+                    {
+                        Direction inputDirection = BlockData.OppositeDirections[(int)currentOutputDirection];
+                        int3 notNormalisedBlockLoc = (blockLoc + BlockData.Int3Directions[(int)inputDirection]);
+                        int terrainEntityIndex = GetOffsetIndex(notNormalisedBlockLoc);
+                        Entity neighborEntity = terrainEntities[terrainEntityIndex];
+                        if (neighborEntity == Entity.Null) continue;
+                        int lowestCoord = math.min(notNormalisedBlockLoc.x, notNormalisedBlockLoc.z);
+                        int num_sixteens = lowestCoord / 16 + 1;
+                        int3 actualBlockLoc = (notNormalisedBlockLoc + sixteens * num_sixteens) % 16;
+                        int blockIndex2 = TerrainUtilities.BlockLocationToIndex(ref actualBlockLoc);
+                        DynamicBuffer<BlockLogicState> blockLogicStates = terrainLogicStateLookup[neighborEntity];
+                        DynamicBuffer<bool> boolLogicStates = blockLogicStates.Reinterpret<bool>();
+                        bool NOTInputState = boolLogicStates[blockIndex2];
+
+                        EvaluateNeighbour(currentOutputDirection, blockLoc, ref terrainEntities, !NOTInputState, ref logicQueue);
+                        continue;
+                    }
+
+                    Direction[] allDirections = BlockData.AllDirections;
+                    for (int i = 0; i < allDirections.Length; i++)
+                    {
+                        Direction outputDirection = allDirections[i];
+                        EvaluateNeighbour(outputDirection, blockLoc, ref terrainEntities, logicState, ref logicQueue);
+                    }
                 }
             }
         }

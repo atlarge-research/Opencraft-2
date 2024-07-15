@@ -551,7 +551,7 @@ PrefabInstance:
     - target: {fileID: 3243556258562715456, guid: 6752cefe6bfd8d09cb07eba71d738d13,
         type: 3}
       propertyPath: editorArgs
-      value: -deploymentID 0
+      value: -deploymentID 0 -terrainType TerrainCircuitry
       objectReference: {fileID: 0}
     - target: {fileID: 3243556258562715456, guid: 6752cefe6bfd8d09cb07eba71d738d13,
         type: 3}

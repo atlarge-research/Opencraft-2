@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac255652e50945d8a4e0ec00804a4230, type: 3}
   m_Name: Empty
   m_EditorClassIdentifier: 
-  configName: 
+  configName: Empty
   layers:
   - {fileID: 11400000, guid: f3fd30ecc3310c14eb7eb6c90d0c58f8, type: 2}
   - {fileID: 11400000, guid: d25afcbb99ce5894eb4d6b546ae83e0b, type: 2}

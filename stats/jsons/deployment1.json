@@ -1,0 +1,36 @@
+
+        {
+            "nodes": [
+                {
+                    "nodeID": 0,
+                    "worldConfigs": [
+                        {
+                            "worldName": "GameServer",
+                            "worldType": "Server",
+                            "initializationMode": "Connect",
+                            "serverNodeID": 0
+                        },                 
+                        {
+                        "worldName": "GameClient",
+                        "worldType": "StreamedClient",
+                        "initializationMode": "Connect",
+                        "serverNodeID": 0
+                        }
+                    ]
+                },
+                {
+                    "nodeID": 1,
+                    "worldConfigs": [
+                        {
+                            "worldName": "SimulatorClientTest",
+                            "worldType": "SimulatedClient",
+                            "initializationMode": "Connect",
+                            "serverNodeID": 0,
+                            "numSimulatedClients": 1
+                        }
+                    ]
+                }
+            ],
+            "experimentActions": []
+        }
+        
