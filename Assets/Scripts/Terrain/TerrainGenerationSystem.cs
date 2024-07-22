@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Opencraft.Terrain;
 using Opencraft.Terrain.Authoring;
 using Opencraft.Terrain.Blocks;
@@ -6,6 +7,10 @@ using Opencraft.Terrain.Layers;
 using Opencraft.Terrain.Structures;
 using Opencraft.Terrain.Utilities;
 using Opencraft.ThirdParty;
+
+using UnityEngine;
+
+using PolkaDOTS;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -14,6 +19,9 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Profiling;
+using System.Security.Cryptography;
+using System.Text;
+using System.Linq;
 
 // Annoyingly this assembly directive must be outside the namespace.
 [assembly: RegisterGenericJobType(typeof(SortJob<int2, Int2DistanceComparer>))]
@@ -34,12 +42,15 @@ namespace Opencraft.Terrain
         private BufferLookup<TerrainColMinY> _terrainColMinLookup;
         private BufferLookup<TerrainColMaxY> _terrainColMaxLookup;
         private BufferLookup<TerrainStructuresToSpawn> _structuresToSpawnLookup;
+        
+        private int _hashedSeed;
         //private double lastUpdate;
 
         public void OnCreate(ref SystemState state)
         {
             // Wait for scene load/baking to occur before updates. 
             state.RequireForUpdate<TerrainSpawner>();
+            state.RequireForUpdate<WorldParameters>();
             state.RequireForUpdate<TerrainGenerationLayer>();
             state.RequireForUpdate<TerrainColumnsToSpawn>();
             _newSpawnQuery = SystemAPI.QueryBuilder().WithAll<NewSpawn, TerrainArea, LocalTransform>().Build();
@@ -51,13 +62,20 @@ namespace Opencraft.Terrain
             _terrainColMinLookup = state.GetBufferLookup<TerrainColMinY>(isReadOnly: false);
             _terrainColMaxLookup = state.GetBufferLookup<TerrainColMaxY>(isReadOnly: false);
             _structuresToSpawnLookup = state.GetBufferLookup<TerrainStructuresToSpawn>(isReadOnly: false);
+            
+            // Seed
+            MD5 md5Hasher = MD5.Create();
+            var hashed = md5Hasher.ComputeHash(Encoding.UTF8.GetBytes(ApplicationConfig.Seed.Value));
+            _hashedSeed = BitConverter.ToInt32(hashed, 0);
+            
         }
 
         public void OnDestroy(ref SystemState state)
         {
             _terrainGenLayers.Dispose();
         }
-
+        
+        //[BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             if (!_terrainGenLayers.IsCreated)
@@ -75,8 +93,11 @@ namespace Opencraft.Terrain
 
             // Fetch the terrain spawner entity and component
             var terrainSpawner = SystemAPI.GetSingleton<TerrainSpawner>();
+            var worldParameters = SystemAPI.GetSingleton<WorldParameters>();
             Entity terrainSpawnerEntity = SystemAPI.GetSingletonEntity<TerrainSpawner>();
-
+            int columnHeight = worldParameters.ColumnHeight;
+            int worldHeight = columnHeight * Env.AREA_SIZE;
+            
             // Fetch what chunks to spawn this tick
             var toSpawnbuffer = SystemAPI.GetBuffer<TerrainColumnsToSpawn>(terrainSpawnerEntity);
             DynamicBuffer<int2> chunksColumnsSpawnBuffer = toSpawnbuffer.Reinterpret<int2>();
@@ -85,18 +106,27 @@ namespace Opencraft.Terrain
             {
                 return;
             }
+
+            //Loglines for debugging columns to spawn
+            //string colSpawn = "";
+            //for (int i = 0; i < chunksColumnsSpawnBuffer.Length; i++)
+            //{
+            //    colSpawn += chunksColumnsSpawnBuffer[i] + ", ";
+            //}
+            //Debug.Log($"columns to spawn {chunksColumnsSpawnBuffer.Length} ({colSpawn})");
+
             _markerTerrainGen.Begin();
             NativeArray<int2> columnsToSpawn = chunksColumnsSpawnBuffer.AsNativeArray();
             // Sort the columns to spawn so ones closer to 0,0 are first
             SortJob<int2, Int2DistanceComparer> sortJob = columnsToSpawn.SortJob<int2, Int2DistanceComparer>(new Int2DistanceComparer { });
-            JobHandle sortHandle = sortJob.Schedule();
+            JobHandle sortHandle = sortJob.Schedule(state.Dependency);
 
             // Spawn the terrain area entities
             int numColumnsToSpawn = columnsToSpawn.Length > Env.MAX_COL_PER_TICK
                 ?  Env.MAX_COL_PER_TICK
                 : columnsToSpawn.Length;
             NativeArray<Entity> terrainAreaEntities = state.EntityManager.Instantiate(terrainSpawner.TerrainArea,
-                numColumnsToSpawn * Env.AREA_COLUMN_HEIGHT,
+                numColumnsToSpawn * columnHeight,
                 Allocator.TempJob);
             _terrainBlocksLookup.Update(ref state);
             _terrainColMinLookup.Update(ref state);
@@ -115,7 +145,9 @@ namespace Opencraft.Terrain
                 terrainColMaxLookup = _terrainColMaxLookup,
                 _structuresToSpawnLookup = _structuresToSpawnLookup,
                 columnsToSpawn = columnsToSpawn,
-                noiseSeed = PolkaDOTS.Config.Seed,
+                noiseSeed = _hashedSeed,
+                worldHeight = worldHeight,
+                columnHeight = columnHeight,
                 terrainGenLayers = _terrainGenLayers
             }.Schedule(numColumnsToSpawn, 1, sortHandle); // Each thread gets 1 column
             populateHandle.Complete();
@@ -163,12 +195,15 @@ namespace Opencraft.Terrain
         [NativeDisableParallelForRestriction] public BufferLookup<TerrainColMaxY> terrainColMaxLookup;
         [NativeDisableParallelForRestriction] public BufferLookup<TerrainStructuresToSpawn> _structuresToSpawnLookup;
         public int noiseSeed;
+        public int columnHeight;
+        public int worldHeight;
         [ReadOnly] public NativeArray<TerrainGenerationLayer> terrainGenLayers;
 
+    
         [BurstCompile]
         public void Execute(int jobIndex)
         {
-            int index = jobIndex * Env.AREA_COLUMN_HEIGHT;
+            int index = jobIndex * columnHeight;
             int2 columnToSpawn = columnsToSpawn[jobIndex];
             int columnX = columnToSpawn.x * Env.AREA_SIZE;
             int columnZ = columnToSpawn.y * Env.AREA_SIZE;
@@ -212,16 +247,16 @@ namespace Opencraft.Terrain
             }
             // Arrays of relevant components for entire terrain area column
             NativeArray<DynamicBuffer<BlockType>> terrainBlockBuffers =
-                new NativeArray<DynamicBuffer<BlockType>>(Env.AREA_COLUMN_HEIGHT, Allocator.Temp);
+                new NativeArray<DynamicBuffer<BlockType>>(columnHeight, Allocator.Temp);
             NativeArray<DynamicBuffer<byte>> colMinBuffers =
-                new NativeArray<DynamicBuffer<byte>>(Env.AREA_COLUMN_HEIGHT, Allocator.Temp);
+                new NativeArray<DynamicBuffer<byte>>(columnHeight, Allocator.Temp);
             NativeArray<DynamicBuffer<byte>> colMaxBuffers =
-                new NativeArray<DynamicBuffer<byte>>(Env.AREA_COLUMN_HEIGHT, Allocator.Temp);
+                new NativeArray<DynamicBuffer<byte>>(columnHeight, Allocator.Temp);
             NativeArray<DynamicBuffer<TerrainStructuresToSpawn>> terrainStructureBuffers =
-                new NativeArray<DynamicBuffer<TerrainStructuresToSpawn>>(Env.AREA_COLUMN_HEIGHT, Allocator.Temp);
+                new NativeArray<DynamicBuffer<TerrainStructuresToSpawn>>(columnHeight, Allocator.Temp);
             //Preprocess terrain area column
             for (int columnAreaY = 0;
-                 columnAreaY < Env.AREA_COLUMN_HEIGHT;
+                 columnAreaY < columnHeight;
                  columnAreaY++)
             {
                 //Entity
@@ -364,7 +399,7 @@ namespace Opencraft.Terrain
             {
                 // set blocks from 
                 int start = terrainGenLayer.minHeight > 0 ? terrainGenLayer.minHeight : 0;
-                int end = columnTop < Env.WORLD_HEIGHT ? columnTop : Env.WORLD_HEIGHT;
+                int end = columnTop < worldHeight ? columnTop : worldHeight;
                 SetColumnBlocks(ref terrainBlockBuffers, ref colMinBuffers, ref colMaxBuffers, start, end,
                     terrainGenLayer.blockType, blockIndex, columnAccess);
 
@@ -384,7 +419,7 @@ namespace Opencraft.Terrain
             int heightToAdd= terrainGenLayer.minHeight + (int)(NoiseUtilities.Interpolate(nis, x, z, lut));
             
             
-            int end = heightSoFar + heightToAdd < Env.WORLD_HEIGHT ? heightSoFar + heightToAdd: Env.WORLD_HEIGHT;
+            int end = heightSoFar + heightToAdd < worldHeight ? heightSoFar + heightToAdd: worldHeight;
             SetColumnBlocks(ref terrainBlockBuffers, ref colMinBuffers, ref colMaxBuffers, heightSoFar, end,
                 terrainGenLayer.blockType, blockIndex, columnAccess);
 
@@ -399,7 +434,7 @@ namespace Opencraft.Terrain
         {
             int heightToAdd= 1;
             
-            int end = heightSoFar + heightToAdd < Env.WORLD_HEIGHT ? heightSoFar + heightToAdd: Env.WORLD_HEIGHT;
+            int end = heightSoFar + heightToAdd < worldHeight ? heightSoFar + heightToAdd: worldHeight;
             SetColumnBlocks(ref terrainBlockBuffers, ref colMinBuffers, ref colMaxBuffers, heightSoFar, end,
                 terrainGenLayer.blockType, blockIndex, columnAccess);
 

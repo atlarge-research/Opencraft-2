@@ -1,14 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Opencraft.Terrain.Authoring;
 using Opencraft.Terrain.Blocks;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Jobs;
 using Unity.Mathematics;
-using Unity.Transforms;
 using UnityEngine;
 
 namespace Opencraft.Terrain.Utilities
@@ -17,31 +14,30 @@ namespace Opencraft.Terrain.Utilities
     public static class TerrainUtilities
     {
         
+        [Serializable]
+        public class TerrainChunkNotLoadedException : Exception
+        {
+            public TerrainChunkNotLoadedException() {  }
+
+            public TerrainChunkNotLoadedException(string message)
+                : base(String.Format("Terrain chunk not loaded: {0}", message))
+            {
+
+            }
+        }
+        
         // Draws outline of an area
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void DebugDrawTerrainArea(ref float3 terrainAreaPos, Color color, float duration = 0.0f)
+        public static void DebugDrawTerrainArea(in float3 terrainAreaPos, Color color, float duration = 0.0f)
         {
-            var d = Env.AREA_SIZE;
-            // Draw a bounding box
-            Debug.DrawLine(terrainAreaPos, terrainAreaPos + new float3(d, 0, 0),color,duration );
-            Debug.DrawLine(terrainAreaPos, terrainAreaPos + new float3(0, d, 0),color,duration );
-            Debug.DrawLine(terrainAreaPos, terrainAreaPos + new float3(0, 0, d),color,duration);
-            Debug.DrawLine(terrainAreaPos + new float3(d, d, 0), terrainAreaPos + new float3(d, 0, 0),color,duration);
-            Debug.DrawLine(terrainAreaPos + new float3(d, d, 0), terrainAreaPos + new float3(0, d, 0),color,duration);
-            Debug.DrawLine(terrainAreaPos + new float3(d, d, 0), terrainAreaPos + new float3(d, d, d),color,duration);
-            Debug.DrawLine(terrainAreaPos + new float3(0, d, d), terrainAreaPos + new float3(0, d, 0),color,duration);
-            Debug.DrawLine(terrainAreaPos + new float3(0, d, d), terrainAreaPos + new float3(0, 0, d),color,duration);
-            Debug.DrawLine(terrainAreaPos + new float3(0, d, d), terrainAreaPos + new float3(d, d, d),color,duration);
-            Debug.DrawLine(terrainAreaPos + new float3(d, 0, d), terrainAreaPos + new float3(d, 0, 0),color,duration);
-            Debug.DrawLine(terrainAreaPos + new float3(d, 0, d), terrainAreaPos + new float3(d, d, d),color,duration);
-            Debug.DrawLine(terrainAreaPos + new float3(d, 0, d), terrainAreaPos + new float3(0, 0, d),color,duration);
+            DebugDrawTerrainBlock(in terrainAreaPos, color, duration, Env.AREA_SIZE);
         }
         
         // Draws outline of a block
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void DebugDrawTerrainBlock(ref float3 terrainBlockPos, Color color, float duration = 0.0f)
+        public static void DebugDrawTerrainBlock(in float3 terrainBlockPos, Color color, float duration = 0.0f, float size = 1.0f)
         {
-            var d = 1;
+            var d = size;
             // Draw a bounding box
             Debug.DrawLine(terrainBlockPos, terrainBlockPos + new float3(d, 0, 0),color,duration );
             Debug.DrawLine(terrainBlockPos, terrainBlockPos + new float3(0, d, 0),color,duration );
@@ -59,7 +55,7 @@ namespace Opencraft.Terrain.Utilities
         
         // Converts a continuous world location to a discrete area location
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int3 GetContainingAreaLocation(ref float3 pos)
+        public static int3 GetContainingAreaLocation(in float3 pos)
         {
             // Terrain Areas are placed in cube grid at intervals of Env.AREA_SIZE
             return new int3(
@@ -70,12 +66,12 @@ namespace Opencraft.Terrain.Utilities
         
         // Converts world location to block location within an area
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int3 GetBlockLocationInArea(in float3 blockPos, in int3 terrainAreaPos)
+        public static int3 GetBlockLocationInArea(in int3 blockPos, in int3 terrainAreaPos)
         {
             return new int3(
-                NoiseUtilities.FastFloor(blockPos.x - terrainAreaPos.x),
-                NoiseUtilities.FastFloor(blockPos.y - terrainAreaPos.y),
-                NoiseUtilities.FastFloor(blockPos.z - terrainAreaPos.z));
+                blockPos.x - terrainAreaPos.x,
+                blockPos.y - terrainAreaPos.y,
+                blockPos.z - terrainAreaPos.z);
         }
         
         // Converts a block position in an area to that block's index
@@ -123,7 +119,7 @@ namespace Opencraft.Terrain.Utilities
         [BurstCompile]
         // Given an int3 position and an array of area transforms, return the containing area index if it exists.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool GetTerrainAreaByPosition(ref int3 pos,
+        public static bool GetTerrainAreaByPosition(in int3 pos,
             in NativeArray<TerrainArea> terrainAreas,
             out int containingAreaIndex)
         {
@@ -141,92 +137,32 @@ namespace Opencraft.Terrain.Utilities
             containingAreaIndex = -1;
             return false;
         }
-
-        [BurstCompile]
-        // Given a float3 position and an array of are transforms, return the containing area
-        // entity and the index of the block within it
-        // Returns true if the position is in an existing area, and false if no area contains it
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool GetBlockLocationAtPosition(ref float3 pos,
-            in NativeArray<TerrainArea> terrainAreas,
-            out int terrainAreaIndex,
-            out int3 blockLocation)
-        {
-            int3 containingAreaLocation = GetContainingAreaLocation(ref pos);
-            if (GetTerrainAreaByPosition(ref containingAreaLocation, in terrainAreas,
-                    out int containingAreaIndex))
-            {
-                int3 localPos = GetBlockLocationInArea(in pos, in containingAreaLocation);
-                int index = BlockLocationToIndex(ref localPos);
-                if (index < 0 || index >= Env.AREA_SIZE_POW_3 )
-                {
-                    Debug.LogError(
-                        $"Block position localpos {localPos} with index {index} out of bounds for location {pos} in area {containingAreaLocation}");
-                    terrainAreaIndex = -1;
-                    blockLocation = new int3(-1);
-                    return false;
-                }
-#if UNITY_EDITOR
-                float3 blockPos = new float3(
-                    containingAreaLocation.x + localPos.x,
-                    containingAreaLocation.y + localPos.y,
-                    containingAreaLocation.z + localPos.z);
-                DebugDrawTerrainBlock(ref blockPos, Color.green);
-#endif
-                //Debug.Log($"{pos} in area {containingArea}");
-                terrainAreaIndex = containingAreaIndex;
-                blockLocation = localPos;
-                return true;
-            }
-
-            //Debug.Log($"Not in an existing area {pos}");
-            terrainAreaIndex = -1;
-            blockLocation = new int3(-1);
-            return false;
-        }
-
-        // Given a float3 position and an array of terrain entities, area transforms, and block buffer lookup, return the value of 
-        // the block.
-        // Returns true if the block exists, and false otherwise
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool GetBlockAtPosition(float3 blockGlobalPos,
-            in NativeArray<Entity> terrainAreasEntities,
-            in NativeArray<TerrainArea> terrainAreas,
-            in BufferLookup<TerrainBlocks> terrainBlockLookup,
-            out BlockType blockType)
-        {
-            //Debug.Log($"Checking block type {pos}");
-            if (GetBlockLocationAtPosition(ref blockGlobalPos, in terrainAreas,
-                    out int containingAreaIndex, out int3 blockLocation))
-            {
-                var terrainBuffer = terrainBlockLookup[terrainAreasEntities[containingAreaIndex]];
-
-                BlockType block = terrainBuffer[BlockLocationToIndex(ref blockLocation)].type;
-                if (block != BlockType.Air)
-                {
-                    blockType = block;
-                    return true;
-                }
-            }
-            blockType = BlockType.Air;
-            return false;
-        }
-
+        
         public struct BlockSearchInput
         {
-            public float3 basePos;
-            public float3 offset;
+            public int3 basePos;
+            public int3 offset;
             public Entity areaEntity;
             public int3 terrainAreaPos;
+            public int columnHeight;
             
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static void DefaultBlockSearchInput(ref BlockSearchInput bsi)
             {
-                bsi.basePos = new float3(-1);
-                bsi.offset = float3.zero;
+                bsi.basePos = new int3(-1);
+                bsi.offset = int3.zero;
                 bsi.areaEntity = Entity.Null;
                 bsi.terrainAreaPos = new int3(-1);
+                bsi.columnHeight = 1;
             }
+        }
+
+        public enum BlockSearchResult
+        {
+            SearchNotCompleted = 0,
+            NotLoaded=1,
+            OutOfBounds=2,
+            Found=3
         }
 
         public struct BlockSearchOutput
@@ -235,6 +171,7 @@ namespace Opencraft.Terrain.Utilities
             public int3 containingAreaPos;
             public int3 localPos;
             public BlockType blockType;
+            public BlockSearchResult result;
             
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static void DefaultBlockSearchOutput(ref BlockSearchOutput bso)
@@ -243,6 +180,7 @@ namespace Opencraft.Terrain.Utilities
                 bso.containingAreaPos = new int3(-1);
                 bso.localPos = new int3(-1);
                 bso.blockType = BlockType.Air;
+                bso.result = BlockSearchResult.SearchNotCompleted;
             }
         }
         
@@ -250,117 +188,166 @@ namespace Opencraft.Terrain.Utilities
         // Uses neighbor entity links to check block types via offset from an existing position with a given terrain area
         // Returns true if the block exists and is not air
         public static bool GetBlockAtPositionByOffset(in BlockSearchInput input, ref BlockSearchOutput output,
-            ref ComponentLookup<TerrainNeighbors> terrainNeighborsLookup,
-            ref BufferLookup<TerrainBlocks> terrainBlockLookup)
+            in ComponentLookup<TerrainNeighbors> terrainNeighborsLookup,
+            in BufferLookup<TerrainBlocks> terrainBlockLookup, bool debug = false)
         {
             if (input.areaEntity == Entity.Null)
             {
                 Debug.Log($"Block at offset called with null area entity");
                 return false;
             }
-            float3 offsetPos = input.basePos + input.offset;
+            int3 offsetPos = input.basePos + input.offset;
             int3 localPos = GetBlockLocationInArea(in offsetPos, in input.terrainAreaPos);
             Entity currentEntity = input.areaEntity;
             TerrainNeighbors currentNeighbors;
             bool notFound = false;
+            bool outOfBounds = false;
             int3 terrainAreaPosAdj = input.terrainAreaPos;
             // Iterate through neighbors to get containing area of the offsetPos
+            int step = 0;
             while (true)
             {
+                if (debug)
+                    Debug.Log($"   BlockSearchByOffset [{step}]: global {offsetPos} = local {localPos} in area {terrainAreaPosAdj}");
+                
+
+                step++;
+
                 currentNeighbors = terrainNeighborsLookup[currentEntity];
                 if (localPos.x < 0)
                 {
+                    terrainAreaPosAdj.x -= Env.AREA_SIZE;
+                    localPos.x += Env.AREA_SIZE;
                     if (currentNeighbors.neighborXN != Entity.Null)
                     {
-                        localPos.x += Env.AREA_SIZE;
-                        terrainAreaPosAdj.x += Env.AREA_SIZE;
                         currentEntity = currentNeighbors.neighborXN;
                         continue;
                     }
+                    if (debug)
+                        Debug.LogWarning($"NeighborXN not found!");
                     notFound = true;
                     break;
                 }
                 if (localPos.x >= Env.AREA_SIZE)
                 {
+                    terrainAreaPosAdj.x += Env.AREA_SIZE;
+                    localPos.x -= Env.AREA_SIZE;
                     if (currentNeighbors.neighborXP != Entity.Null)
                     {
-                        localPos.x -= Env.AREA_SIZE;
-                        terrainAreaPosAdj.x -= Env.AREA_SIZE;
                         currentEntity = currentNeighbors.neighborXP;
                         continue;
-                    } 
+                    }
+                    if (debug)
+                        Debug.LogWarning($"NeighborXP not found!");
                     notFound = true;
                     break;
                 }
                 if (localPos.y < 0)
                 {
+                    terrainAreaPosAdj.y -= Env.AREA_SIZE;
+                    localPos.y += Env.AREA_SIZE;
                     if (currentNeighbors.neighborYN != Entity.Null)
                     {
-                        localPos.y += Env.AREA_SIZE;
-                        terrainAreaPosAdj.y += Env.AREA_SIZE;
                         currentEntity = currentNeighbors.neighborYN;
                         continue;
-                    } 
-                    notFound = true;
+                    }
+                    if (debug)
+                        Debug.LogWarning($"NeighborYN not found!");
+                    if (terrainAreaPosAdj.y < 0)
+                    {
+                        outOfBounds = true;
+                    }
+                    else
+                    {
+                        notFound = true;
+                    }
                     break;
                 }
                 if (localPos.y >= Env.AREA_SIZE)
                 {
+                    terrainAreaPosAdj.y += Env.AREA_SIZE;
+                    localPos.y -= Env.AREA_SIZE;
                     if (currentNeighbors.neighborYP != Entity.Null)
                     {
-                        localPos.y -= Env.AREA_SIZE;
-                        terrainAreaPosAdj.y -= Env.AREA_SIZE;
                         currentEntity = currentNeighbors.neighborYP;
                         continue;
                     } 
-                    notFound = true;
+                    if (debug)
+                        Debug.LogWarning($"NeighborYP not found!");
+                    if (terrainAreaPosAdj.y >= input.columnHeight * Env.AREA_SIZE)
+                    {
+                        outOfBounds = true;
+                    }
+                    else
+                    {
+                        notFound = true;
+                    }
                     break;
                 }
                 if (localPos.z < 0)
                 {
+                    terrainAreaPosAdj.z -= Env.AREA_SIZE;
+                    localPos.z += Env.AREA_SIZE;
                     if (currentNeighbors.neighborZN != Entity.Null)
                     {
-                        localPos.z += Env.AREA_SIZE;
-                        terrainAreaPosAdj.z += Env.AREA_SIZE;
                         currentEntity = currentNeighbors.neighborZN;
                         continue;
                     } 
+                    if (debug)
+                        Debug.LogWarning($"NeighborZN not found!");
                     notFound = true;
                     break;
                 }
                 if (localPos.z >= Env.AREA_SIZE)
                 {
+                    terrainAreaPosAdj.z += Env.AREA_SIZE;
+                    localPos.z -= Env.AREA_SIZE;
                     if (currentNeighbors.neighborZP != Entity.Null)
                     {
-                        localPos.z -= Env.AREA_SIZE;
-                        terrainAreaPosAdj.y -= Env.AREA_SIZE;
                         currentEntity = currentNeighbors.neighborZP;
                         continue;
                     } 
+                    if (debug)
+                        Debug.LogWarning($"NeighborZP not found!");
                     notFound = true;
                     break;
                 }
                 break;
             }
 
+            output.containingAreaPos = terrainAreaPosAdj;
+            output.localPos = localPos;
             if (notFound)
             {
+                output.result = BlockSearchResult.NotLoaded;
                 return false;
             }
+
+            if (outOfBounds)
+            {
+                output.result = BlockSearchResult.OutOfBounds;
+                return false;
+            }
+            DynamicBuffer<TerrainBlocks> blocks = terrainBlockLookup[currentEntity];
+            BlockType block = blocks[BlockLocationToIndex(ref localPos)].type;
+            output.containingArea = currentEntity;
+            output.blockType = block;
+            output.result = BlockSearchResult.Found;
 #if UNITY_EDITOR
-            //Debug.Log($"Offset pos is {localPos} in {terrainAreaPos}");
+            if(debug)
+            {
+                float3 p = new float3(offsetPos);
+                DebugDrawTerrainBlock(in p, Color.green,  3.0f);
+                Debug.Log($"Global pos {offsetPos} is localPos {localPos} in chunk {terrainAreaPosAdj}, block is {block}");
+            }
+            /*Debug.Log($"Offset pos is {localPos} in {terrainAreaPos}");
             float3 blockPos = new float3(
                 terrainAreaPosAdj.x + localPos.x,
                 terrainAreaPosAdj.y + localPos.y,
                 terrainAreaPosAdj.z + localPos.z);
-            DebugDrawTerrainBlock(ref blockPos, Color.green);
+            DebugDrawTerrainBlock(ref blockPos, Color.green);*/
 #endif
-            DynamicBuffer<TerrainBlocks> blocks = terrainBlockLookup[currentEntity];
-            BlockType block = blocks[BlockLocationToIndex(ref localPos)].type;
-            output.containingArea = currentEntity;
-            output.containingAreaPos = terrainAreaPosAdj;
-            output.localPos = localPos;
-            output.blockType = block;
+            
             return true;
 
         }
@@ -372,7 +359,7 @@ namespace Opencraft.Terrain.Utilities
         public static bool VisibleFaceXN(int j, int access, bool min, int kBPS2, ref DynamicBuffer<TerrainBlocks> blocks,
             ref DynamicBuffer<TerrainBlocks> neighborXN)
         {
-            int bps = Env.AREA_SIZE;
+            const int bps = Env.AREA_SIZE;
             if (min)
             {
                 //if (chunkPosX == 0)
@@ -392,7 +379,7 @@ namespace Opencraft.Terrain.Utilities
         public static bool VisibleFaceXP(int j, int access, bool max, int kBPS2, ref DynamicBuffer<TerrainBlocks> blocks,
             ref DynamicBuffer<TerrainBlocks> neighborXP)
         {
-            int bps = Env.AREA_SIZE;
+            const int bps = Env.AREA_SIZE;
             if (max)
             {
                 //if (chunkPosX == Constants.ChunkXAmount - 1)
@@ -412,7 +399,7 @@ namespace Opencraft.Terrain.Utilities
         public static bool VisibleFaceYN(int access, bool min, int iBPS, int kBPS2, ref DynamicBuffer<TerrainBlocks> blocks,
             ref DynamicBuffer<TerrainBlocks> neighborYN)
         {
-            int bps = Env.AREA_SIZE;
+            const int bps = Env.AREA_SIZE;
             if (min)
             {
 
@@ -445,8 +432,8 @@ namespace Opencraft.Terrain.Utilities
         public static bool VisibleFaceZN(int j, int access, bool min, int iBPS, ref DynamicBuffer<TerrainBlocks> blocks,
             ref DynamicBuffer<TerrainBlocks> neighborZN)
         {
-            int bps = Env.AREA_SIZE;
-            int bpl = Env.AREA_SIZE_POW_2;
+            const int bps = Env.AREA_SIZE;
+            const int bpl = Env.AREA_SIZE_POW_2;
             if (min)
             {
 
@@ -463,7 +450,7 @@ namespace Opencraft.Terrain.Utilities
         public static bool VisibleFaceZP(int j, int access, bool max, int iBPS, ref DynamicBuffer<TerrainBlocks> blocks,
             ref DynamicBuffer<TerrainBlocks> neighborZP)
         {
-            int bpl = Env.AREA_SIZE_POW_2;
+            const int bpl = Env.AREA_SIZE_POW_2;
             if (max)
             {
 

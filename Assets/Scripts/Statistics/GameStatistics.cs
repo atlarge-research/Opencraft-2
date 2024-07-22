@@ -1,5 +1,7 @@
-﻿using Opencraft.Terrain.Authoring;
+﻿using Opencraft.Player.Authoring;
+using Opencraft.Terrain.Authoring;
 using PolkaDOTS;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.NetCode;
 using Unity.Profiling;
@@ -16,14 +18,21 @@ namespace Opencraft.Statistics
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation | WorldSystemFilterFlags.ClientSimulation)]
     [UpdateAfter(typeof(NetworkReceiveSystemGroup))]
+    [UniqueSystem]
     public partial struct StatisticsSystem : ISystem
     {
         private EntityQuery _terrainAreaQuery;
+        private EntityQuery _playerQuery;
         private bool first;
         
         public void OnCreate(ref SystemState state)
         {
-            _terrainAreaQuery = state.EntityManager.CreateEntityQuery(typeof(TerrainArea));
+            _terrainAreaQuery= new EntityQueryBuilder(Allocator.Temp)
+                .WithAll<TerrainArea>()
+                .Build(state.EntityManager);
+            _playerQuery = new EntityQueryBuilder(Allocator.Temp)
+                .WithAll<PlayerComponent, PlayerInGame>()
+                .Build(state.EntityManager);
             first = true;
         }
         
@@ -31,24 +40,42 @@ namespace Opencraft.Statistics
         {
             if (first)
             {
-                if (Config.LogStats)
+                if (ApplicationConfig.LogStats)
                 {
-                    Debug.Log("Adding terrain areas statistics recorders");
-                    PolkaDOTS.Statistics.StatisticsWriter writer = PolkaDOTS.Statistics.StatisticsWriterInstance.instance;
-                    writer.AddStatisticRecorder("Number of Terrain Areas (Client)", ProfilerCategory.Scripts);
-                    writer.AddStatisticRecorder("Number of Terrain Areas (Server)", ProfilerCategory.Scripts); 
+                    try
+                    {
+                        PolkaDOTS.Statistics.StatisticsWriter writer = PolkaDOTS.Statistics.StatisticsWriterInstance.instance;
+                        Debug.Log($"Adding terrain areas statistics recorders profCat: {ProfilerCategory.Scripts} writer:{writer}");
+                        //writer.AddStatisticRecorder("Number of Terrain Areas (Server)", ProfilerCategory.Scripts);
+                        //writer.AddStatisticRecorder("Number of Players (Client)", ProfilerCategory.Scripts);
+                        //writer.AddStatisticRecorder("Number of Players (Server)", ProfilerCategory.Scripts);
+                        //writer.AddStatisticRecorder("Number of Terrain Areas (Client)", ProfilerCategory.Scripts);
+                    }
+                    catch (System.Exception e)
+                    {
+                        Debug.LogWarning(e);
+                        Debug.LogWarning(e.StackTrace);
+                    }
                 }
                 first = false;
             }
             // Record terrain area data
             var terrainCount = _terrainAreaQuery.CalculateEntityCount();
+            var playerCount = _playerQuery.CalculateEntityCount();
             if (state.WorldUnmanaged.IsClient())
+            {
                 GameStatistics.NumTerrainAreasClient.Value = terrainCount;
-            if(state.WorldUnmanaged.IsServer())
+                GameStatistics.NumPlayersClient.Value = playerCount;
+            }
+
+            if (state.WorldUnmanaged.IsServer())
+            {
                 GameStatistics.NumTerrainAreasServer.Value = terrainCount;
-            
-            
-            
+                GameStatistics.NumPlayersServer.Value = playerCount;
+            }
+
+
+
         }
     }
     
@@ -65,6 +92,12 @@ namespace Opencraft.Statistics
         public const string NumTerrainAreasServerName = "Number of Terrain Areas (Server)";
         public static readonly ProfilerCounterValue<int> NumTerrainAreasServer =
             new ProfilerCounterValue<int>(GameStatisticsCategory, NumTerrainAreasServerName, ProfilerMarkerDataUnit.Count);
+        public const string NumPlayersClientName = "Number of Players (Client)";
+        public static readonly ProfilerCounterValue<int> NumPlayersClient =
+            new ProfilerCounterValue<int>(GameStatisticsCategory, NumPlayersClientName, ProfilerMarkerDataUnit.Count);
+        public const string NumPlayersServerName = "Number of Players (Server)";
+        public static readonly ProfilerCounterValue<int> NumPlayersServer =
+            new ProfilerCounterValue<int>(GameStatisticsCategory, NumPlayersServerName, ProfilerMarkerDataUnit.Count);
         
     }
 #if UNITY_EDITOR
@@ -75,7 +108,9 @@ namespace Opencraft.Statistics
         static readonly ProfilerCounterDescriptor[] k_Counters = new ProfilerCounterDescriptor[]
         {
             new ProfilerCounterDescriptor(GameStatistics.NumTerrainAreasClientName, GameStatistics.GameStatisticsCategory),
-            new ProfilerCounterDescriptor(GameStatistics.NumTerrainAreasServerName, GameStatistics.GameStatisticsCategory)
+            new ProfilerCounterDescriptor(GameStatistics.NumTerrainAreasServerName, GameStatistics.GameStatisticsCategory),
+            new ProfilerCounterDescriptor(GameStatistics.NumPlayersClientName, GameStatistics.GameStatisticsCategory),
+            new ProfilerCounterDescriptor(GameStatistics.NumPlayersServerName, GameStatistics.GameStatisticsCategory)
         };
 
         // Ensure that both ProfilerCategory.Scripts and ProfilerCategory.Memory categories are enabled when our module is active.

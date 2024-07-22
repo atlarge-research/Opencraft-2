@@ -9,7 +9,7 @@ namespace Opencraft.Rendering
 {
     [RequireMatchingQueriesForUpdate]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
-    [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation, WorldSystemFilterFlags.Editor)]
+    [WorldSystemFilter(WorldSystemFilterFlags.Presentation, WorldSystemFilterFlags.Editor)]
     [BurstCompile]
     // Draws bounding boxing on terrain area borders, only in the editor.
     public partial struct DebugRenderSystem : ISystem
@@ -20,7 +20,7 @@ namespace Opencraft.Rendering
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<TerrainArea>();
-            if (!PolkaDOTS.Config.DebugEnabled)
+            if (!PolkaDOTS.ApplicationConfig.DebugEnabled)
             {
                 state.Enabled = false;
             }
@@ -41,7 +41,7 @@ namespace Opencraft.Rendering
         {
 
             var baseLocation = t.Position;
-            TerrainUtilities.DebugDrawTerrainArea(ref baseLocation, Color.white);
+            TerrainUtilities.DebugDrawTerrainArea(in baseLocation, Color.white);
         }
     }
 }

@@ -98,7 +98,7 @@ namespace Opencraft.Terrain
                 {
                     // This structure overlaps with an area that has not been created yet
                     structuresNotReadyToSpawn.Add(structure);   
-                    break;
+                    continue;
                     
                 }
                 // Get the sub-structure that fits within this area, and send the rest to neighboring areas.

@@ -1,0 +1,16 @@
+{
+    "args": [
+        "-deploymentID",
+        "0",
+        "-deploymentJson",
+	"deployment",
+	"-logStats",
+	"True",
+	"-renderDist",
+	"10",
+	"-emulationType",
+	"playback",
+	"-emulationFile",
+	"experimentTrace"
+    ]
+}

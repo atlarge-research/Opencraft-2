@@ -1,0 +1,5 @@
+# Ignore everything
+*
+
+# Allow certain files and directories
+!requirements

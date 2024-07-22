@@ -10,8 +10,8 @@ using Unity.NetCode;
 namespace Opencraft.Terrain
 {
     [BurstCompile]
-    [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation | WorldSystemFilterFlags.ClientSimulation)]
-    [UpdateInGroup(typeof(InitializationSystemGroup))]
+    [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation | WorldSystemFilterFlags.ClientSimulation  | WorldSystemFilterFlags.ThinClientSimulation)]
+    [UpdateInGroup(typeof(SimulationSystemGroup))]
 #if UNITY_CLIENT
     [UpdateBefore(typeof(TerrainRenderInitSystem))]
 #endif
@@ -52,14 +52,12 @@ namespace Opencraft.Terrain
                 terrainAreaEntities = terrainAreaEntities,
                 terrainNeighborsLookup = _terrainNeighborsLookup
             }.ScheduleParallel();
-
         }
     }
 
 
     // When a new terrain area has been spawned, set it's neighbors, and update it's neighbors neighbors.
     [BurstCompile]
-    [WithAll(typeof(NewSpawn))]
     public partial struct SetAreaNeighborsJob : IJobEntity
     {
         // thread safe as long as no terrain areas have the same location!
@@ -71,7 +69,7 @@ namespace Opencraft.Terrain
         public NativeArray<TerrainArea> terrainAreas;
         [NativeDisableParallelForRestriction] public ComponentLookup<TerrainNeighbors> terrainNeighborsLookup;
 
-        public void Execute(Entity entity, ref TerrainArea terrainArea)
+        public void Execute(Entity entity, ref TerrainArea terrainArea, EnabledRefRW<NewSpawn> newSpawn)
         {
             var terrainNeighbors = terrainNeighborsLookup.GetRefRW(entity);
             for (int i = 0; i < terrainAreaEntities.Length; i++)
@@ -116,6 +114,8 @@ namespace Opencraft.Terrain
                     otherTerrainNeighbors.ValueRW.neighborZP = entity;
                 }
             }
+
+            newSpawn.ValueRW = false;
         }
     }
 }

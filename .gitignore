@@ -10,6 +10,7 @@
 /[Ll]ogs/
 /[Uu]ser[Ss]ettings/
 /[Pp]rofile[Aa]nalyzer/
+/measurements
 
 # Include docker related files in build directories
 !/[Bb]uild/Dockerfile
@@ -22,6 +23,7 @@
 # MemoryCaptures can get excessive in size.
 # They also could contain extremely sensitive data
 /[Mm]emoryCaptures/
+mono_crash.mem*
 
 # Asset meta data should only be ignored when the corresponding asset is also ignored
 !/[Aa]ssets/**/*.meta
@@ -92,3 +94,8 @@ InitCodeMarker
 .idea/**/usage.statistics.xml
 .idea/**/dictionaries
 .idea/**/shelf
+*.meta
+*.meta
+/Linux
+/profiler
+/Packages/com.unity.netcode@1.0.17

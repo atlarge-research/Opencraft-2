@@ -1,4 +1,3 @@
-using System;
 using System.Runtime.CompilerServices;
 using Opencraft.Terrain.Authoring;
 using Opencraft.Terrain.Blocks;
@@ -8,6 +7,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
+using Unity.Profiling;
 using Unity.Rendering;
 using Unity.Transforms;
 using UnityEngine;
@@ -29,6 +29,8 @@ namespace Opencraft.Rendering
         private BufferLookup<TerrainColMaxY> _terrainColumnMaxBufferLookup;
         private NativeArray<VertexAttributeDescriptor> _vertexLayout;
 
+        static ProfilerMarker meshingMarker = new ProfilerMarker("terrainMeshingSys");
+
         protected override void OnCreate()
         {
             RequireForUpdate<TerrainSpawner>();
@@ -44,6 +46,7 @@ namespace Opencraft.Rendering
             // Max size of a terrain area is thus 255!
             // 24 coord, TexCoord as 5 bits, normals as 3 bits
             _vertexLayout[0] = new VertexAttributeDescriptor(attribute: VertexAttribute.Position, format: VertexAttributeFormat.SInt32, dimension: 1, stream: 0);
+            Debug.Log("MESHING SYSTEM IS ACTIVE");
         }
 
         protected override void OnDestroy()
@@ -58,6 +61,8 @@ namespace Opencraft.Rendering
             // todo - as remeshing must be done for all neighbors of new areas
             if (_terrainAreaQuery.IsEmpty)
                 return;
+
+            meshingMarker.Begin();
 
             TerrainSpawner terrainSpawner = _terrainSpawnerQuery.GetSingleton<TerrainSpawner>();
             NativeArray<Entity> chunksToUpdate = _terrainAreaQuery.ToEntityArray(Allocator.TempJob);
@@ -80,7 +85,8 @@ namespace Opencraft.Rendering
                 terrainNeighbors= terrainNeighbors,
                 terrainBufferLookup = _terrainBlocksBufferLookup,
                 terrainColumnMinBufferLookup = _terrainColumnMinBufferLookup,
-                terrainColumnMaxBufferLookup = _terrainColumnMaxBufferLookup
+                terrainColumnMaxBufferLookup = _terrainColumnMaxBufferLookup,
+                UseDebug =  PolkaDOTS.ApplicationConfig.DebugEnabled.Value
             };
             // todo we can potentially have the handling of meshJob output happen on later frames to reduce
             // todo stuttering caused by large remesh jobs
@@ -105,11 +111,13 @@ namespace Opencraft.Rendering
 
             // Mark that these areas have been (re)meshed
             EntityManager.SetComponentEnabled<Remesh>(_terrainAreaQuery, false);
+
+            meshingMarker.End();
         }
     }
 
 
-    // Greedy meshing algorithm adapted by https://vercidium.com/blog/voxel-world-optimisations/
+    // Greedy meshing algorithm adapted from https://vercidium.com/blog/voxel-world-optimisations/
     // One mesh per terrain area, one quad face per run
     // X and Z runs extend along y axis, Y runs extend along X axis.
     [BurstCompile]
@@ -124,15 +132,20 @@ namespace Opencraft.Rendering
         [ReadOnly] public BufferLookup<TerrainBlocks> terrainBufferLookup;
         [ReadOnly] public BufferLookup<TerrainColMinY> terrainColumnMinBufferLookup;
         [ReadOnly] public BufferLookup<TerrainColMaxY> terrainColumnMaxBufferLookup;
+        public bool UseDebug;
         public void Execute(int index)
         {
             Entity entity = areasToUpdate[index];
             TerrainNeighbors terrainNeighbor = terrainNeighbors[index];
             TerrainArea terrainArea = terrainAreas[index];
             // When area is remeshed, outline it in red
-            float3 terrainAreaLocation = terrainArea.location * Env.AREA_SIZE;
-            TerrainUtilities.DebugDrawTerrainArea(ref terrainAreaLocation, Color.red, 0.5f);
+            if (UseDebug)
+            {
+                float3 terrainAreaLocation = terrainArea.location * Env.AREA_SIZE;
+                TerrainUtilities.DebugDrawTerrainArea(in terrainAreaLocation, Color.red, 0.5f);
+            }
             
+
             // Mesh object vertex data
             Mesh.MeshData meshData = meshDataArray[index];
             // The blocks in this chunk
@@ -179,7 +192,7 @@ namespace Opencraft.Rendering
             NativeArray<ushort> indices = meshData.GetIndexData<ushort>();
             
             // Precalculate the map-relative Y position of the chunk in the map
-            int chunkY = (int)terrainAreaLocation.y * Env.AREA_SIZE;
+            int chunkY =  terrainArea.location.y * Env.AREA_SIZE;
             // Allocate variables on the stack
             // iBPS is i * bps, kBPS2 is k*bps*bps. S means shifted, x1 means x + 1
             int access, heightMapAccess, iBPS, kBPS2, i1, k1, j, j1, jS, jS1, topJ,

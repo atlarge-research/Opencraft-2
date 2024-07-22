@@ -6,7 +6,7 @@ using Unity.Entities;
 namespace Opencraft.Rendering
 {
     /// <summary>
-    /// Initializes the terrain material, only necessary in worlds running a presentation frontend (only non-guest client)
+    /// Initializes the terrain material, only necessary in worlds running a presentation frontend
     /// </summary>
     [UpdateInGroup(typeof(InitializationSystemGroup))]
     [WorldSystemFilter(WorldSystemFilterFlags.Presentation)]

@@ -34,7 +34,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 1, z: 0}
-  m_LocalScale: {x: 0.75, y: 2, z: 0.75}
+  m_LocalScale: {x: 0.75, y: 1.8, z: 0.75}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -78,13 +78,13 @@ MonoBehaviour:
   DefaultGhostMode: 2
   SupportedGhostModes: 3
   OptimizationMode: 0
-  Importance: 1
+  Importance: 120
   prefabId: 38fc23ac3d47d1547bdbd6f366c8478c
   HasOwner: 1
   SupportAutoCommandTarget: 1
   TrackInterpolationDelay: 0
   GhostGroup: 0
-  UsePreSerialization: 0
+  UsePreSerialization: 1
 --- !u!114 &3404638274729263027
 MonoBehaviour:
   m_ObjectHideFlags: 0

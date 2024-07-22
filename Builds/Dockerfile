@@ -3,7 +3,7 @@ FROM jerriteic/gpu_ubuntu20.04
 # Select which build application folder to include
 ARG BUILD_TO_COPY=./ServerClientLinuxDebug
 # Identify signaling webserver
-ARG WEBSERVER_LOCATION=./Multiplay_WebApp/server
+ARG WEBSERVER_LOCATION=./Multiplay_WebApp/webserver
 
 # Copy game files
 COPY $BUILD_TO_COPY /opencraft2

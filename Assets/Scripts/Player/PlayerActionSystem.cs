@@ -27,7 +27,7 @@ namespace Opencraft.Player
         public void OnCreate(ref SystemState state)
         {
 
-            state.RequireForUpdate<PolkaDOTS.Player>();
+            state.RequireForUpdate<PlayerComponent>();
             state.RequireForUpdate<TerrainArea>();
             state.RequireForUpdate<TerrainSpawner>();
             _terrainBlocksBufferLookup = state.GetBufferLookup<TerrainBlocks>(false);
@@ -48,7 +48,7 @@ namespace Opencraft.Player
             var terrainAreasQuery = SystemAPI.QueryBuilder().WithAll<TerrainArea, LocalTransform>().Build();
             terrainAreasEntities = terrainAreasQuery.ToEntityArray(state.WorldUpdateAllocator);
 
-            foreach (var player in SystemAPI.Query<PlayerAspect>().WithAll<Simulate>())
+            foreach (var player in SystemAPI.Query<PlayerAspect>().WithAll<Simulate, PlayerInGame>())
             {
                 // Destroy block action
                 if (player.Input.PrimaryAction.IsSet && player.SelectedBlock.terrainArea != Entity.Null)
