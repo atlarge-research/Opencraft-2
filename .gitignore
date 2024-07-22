@@ -98,3 +98,4 @@ InitCodeMarker
 *.meta
 /Linux
 /profiler
+/Packages/com.unity.netcode@1.0.17

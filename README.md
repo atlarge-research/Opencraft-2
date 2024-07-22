@@ -205,3 +205,23 @@ The Json is expected to follow this formatting (excluding comments):
 ]
 }
 ```
+
+## Opencraft2-VR
+
+Opencraft can be run in VR (Meta Quest 2 & 3 & pro over OVR), ensure the following things are set up:
+ * switch PolkaDOTS branch to VR-properly
+ * open the Assets/Scenes/MainScene and in the PolkaDOTS frontend object, make 
+ sure that the player prefab is set to multiplayPlayerOVR, you can find this prefab in
+ /Packages/PolkaDOTS/Prefab/Player
+ * Open build settings and switch build target to Android
+ * in build settings go to playersettings->XR-plugin management and make sure
+ Oculus is selected under the Android tab.
+ * in build settings go to playersettings->Meta_XR and do what it sais
+ * configure /Assets/Resources/cmdArgs.json and /Assets/Resources/deployment.json
+ * connect your Meta Quest headset to ADB 
+ * press build and pray I did not forget anything
+ * go get a coffee or smth idk
+ * open cmd and ```adb install ./YOURBUILDHERE.apk``` (replace filename with proper things)
+ * on MQ3, click all apps, top right filter on uknown sources and Opencraft should be there
+ 
+

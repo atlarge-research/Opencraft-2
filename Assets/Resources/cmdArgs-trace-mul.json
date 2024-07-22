@@ -9,10 +9,6 @@
 	"True",
 	"-renderDist",
 	"3",
-	"-emulationType",
-	"playback",
-	"-emulationFile",
-	"experimentTrace"
-
+	"-playerFly"
     ]
 }
