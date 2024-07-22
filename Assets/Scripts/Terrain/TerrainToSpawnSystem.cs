@@ -8,6 +8,7 @@ using Unity.Collections;
 using Unity.Profiling;
 using UnityEngine;
 using System.Linq;
+using Unity.Collections.LowLevel.Unsafe;
 
 namespace Opencraft.Terrain
 {
@@ -47,6 +48,9 @@ namespace Opencraft.Terrain
             // todo - make this parallel
             var areasPlayersCloseTo = new NativeHashSet<int2>(32, Allocator.TempJob);
             int viewRange = Env.getTerrainSpawnRange();
+
+            NativeArray<int2> ChunksToSpawnSnapshot = chunksToSpawnBuffer.ToNativeArray(Allocator.Temp);
+
             foreach (var transform in SystemAPI.Query<LocalTransform>().WithAll<PlayerComponent, Simulate>())
             {
                 var pos = transform.Position;
@@ -56,6 +60,7 @@ namespace Opencraft.Terrain
                 var viewRangeSide = (viewRange +1+ viewRange);
                 // Set of areas forming cube around players current area
                 NativeHashSet<int2> nearbyColumns = new NativeHashSet<int2>(viewRangeSide  * viewRangeSide, Allocator.Temp);
+                
                 for (int i = -viewRange; i < viewRange; i++)
                 {
                     //for (int j = -viewRange; j < viewRange; j++)
@@ -63,10 +68,9 @@ namespace Opencraft.Terrain
                     for (int k = -viewRange; k < viewRange; k++)
                     {
                         int2 targetCol = playerColumn + new int2(i, k);
-                        if (!nearbyColumns.Contains(targetCol) && !chunksToSpawnBuffer.ToNativeArray(Allocator.Temp).Contains(targetCol))
-                        { 
-                            nearbyColumns.Add(targetCol); 
-                        }
+                         
+                        nearbyColumns.Add(targetCol); 
+                        
                     }
                     //}
                 }
@@ -82,8 +86,16 @@ namespace Opencraft.Terrain
                 // Copy the nearby areas of this player that aren't yet spawned to the global hashset
                 areasPlayersCloseTo.UnionWith(nearbyColumns);
             }
+
+            //like a filter over here maybe?
+
+
             // Mark areas that need to be spawned
+            areasPlayersCloseTo.ExceptWith(ChunksToSpawnSnapshot);
             chunksToSpawnBuffer.AddRange(areasPlayersCloseTo.ToNativeArray(Allocator.Temp));
+
+           
+
             areasPlayersCloseTo.Dispose();
             markerPlayerTerrainGenCheck.End();
             

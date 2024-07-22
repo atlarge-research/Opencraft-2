@@ -16,7 +16,7 @@ using UnityEditorInternal;
 public class BatchProfiler : EditorWindow
 {
     private List<string> apks = new List<string> { };
-    private List<string> servers = new List<string> { "18","3"};/*{ "10","3","4","5","6","7","8","9"};*/
+    private List<string> servers = new List<string> { "9","3"};/*{ "10","3","4","5","6","7","8","9"};*/
     private List<string> windowsPlayers = new List<string>();
     private const string controlScriptPath = "C:\\Users\\joach\\Desktop\\Opencraft-2-VR\\Assets\\Scripts\\Editor\\benchmarkScripts\\";
     private const string serverfileName = "C:\\Users\\joach\\Desktop\\Opencraft-2-VR\\Builds\\windows_builds\\Opencraft-BleedingEdge.exe";
@@ -357,7 +357,7 @@ public class BatchProfiler : EditorWindow
 
     void startServerAction()
     {
-        startServer("18");
+        startServer("9");
     }
 
     public void CreateGUI()
@@ -368,7 +368,7 @@ public class BatchProfiler : EditorWindow
         VisualElement pathFieldLabel = new Label("please enter the path of the apk folder to batch");
         root.Add(pathFieldLabel);
 
-        string apkDefaultPath = "C:\\Users\\joach\\Desktop\\Opencraft-2-VR\\Builds\\HMD-sing-tracing";
+        string apkDefaultPath = "C:\\Users\\joach\\Desktop\\Opencraft-2-VR\\Builds\\HMD-mul-fly";
         string serverDefaultPath = "C:\\Users\\joach\\Desktop\\Opencraft-2-VR\\Builds\\windows_builds";
         string defaultRemote = "joachim@192.168.23.94";
 
