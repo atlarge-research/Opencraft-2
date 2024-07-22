@@ -8,7 +8,7 @@ Shader "Custom/BasicVoxelShader"
     SubShader
     {
         
-        //Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline" "IgnoreProjector" = "True"}
+        Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline" "IgnoreProjector" = "True"}
         Pass
         {
             Name "Forward"
@@ -21,8 +21,8 @@ Shader "Custom/BasicVoxelShader"
             Cull[_Cull]
             AlphaToMask[_AlphaToMask]*/
             
-            CGPROGRAM
-            #pragma target 3.5
+            HLSLPROGRAM
+            #pragma target 4.5
             // use "vert" function as the vertex shader
             #pragma vertex VoxelForwardVertex
             // use "frag" function as the pixel (fragment) shader
@@ -30,8 +30,6 @@ Shader "Custom/BasicVoxelShader"
             // texture arrays are not available everywhere,
             // only compile shader on platforms where they are
             #pragma require 2darray
-
-            #include "UnityCG.cginc"
             
             /* GPU Instancing
             #pragma multi_compile_instancing
@@ -41,20 +39,18 @@ Shader "Custom/BasicVoxelShader"
             //#pragma multi_compile_instancing
             #pragma multi_compile_instancing
             #pragma multi_compile _ DOTS_INSTANCING_ON
-            //#include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DOTS.hlsl
 
-            //#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Input.hlsl"
-            
-            //#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            
-            //#include <HLSLSupport.cginc>
-            //#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
-            
-            //#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            //#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/UnityInstancing.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderVariablesFunctions.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Input.hlsl"
             //uniform float _uvSizes[2 * 6]; // Needs to be set from C#
+
+            
             struct Attributes
             {
                 int packedData    : POSITION;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct Varyings
@@ -63,14 +59,28 @@ Shader "Custom/BasicVoxelShader"
                 //float3 positionWS  : TEXCOORD1;   
                 half3  normalWS    : TEXCOORD1;
                 float4 positionHCS  : SV_POSITION;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
-            
+
+            #ifdef DOTS_INSTANCING_ON
+                UNITY_DOTS_INSTANCING_START(MaterialPropertyMetadata)
+                    UNITY_DOTS_INSTANCED_PROP(float4, _Color)
+                UNITY_DOTS_INSTANCING_END(MaterialPropertyMetadata)
+                #define _Color UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _Color)
+            #endif
+
             Varyings VoxelForwardVertex(Attributes input)
             {
+
                 Varyings output = (Varyings)0;
-                
+
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
+
+                //float3 positionOS = float3(float(input.packedData&(255)), float((input.packedData >> 8)&(255)), float((input.packedData >> 16)&(255)));
                 float4 positionOS = float4(float(input.packedData&(255)), float((input.packedData >> 8)&(255)), float((input.packedData >> 16)&(255)), 1);
                 int normal = int((input.packedData >> 29)&(7));
+                //float3 normalOS;
                 float4 normalOS;
                 
                 if(normal == 0)
@@ -115,21 +125,22 @@ Shader "Custom/BasicVoxelShader"
                 
                 //output.uv = TRANSFORM_TEX(input.texcoord, _BaseMap);
                 //output.positionWS.xyz = vertexInput.positionWS;
-                output.positionHCS = UnityObjectToClipPos(positionOS.xyz);
+                output.positionHCS = GetVertexPositionInputs(positionOS.xyz).positionCS;
                 output.normalWS = normalOS;
 
                 return output;
             }
             
-            UNITY_DECLARE_TEX2DARRAY(_ColourTextures);
+            //UNITY_DECLARE_TEX2DARRAY(_ColourTextures);
             
             half4 VoxelForwardFragment(Varyings input) : SV_Target0
             {
-                return half4(UNITY_SAMPLE_TEX2DARRAY(_ColourTextures, input.uv).rgb, 1.0);
+                UNITY_SETUP_INSTANCE_ID(input);
+                return (1,1,1,1);
             }
             
             
-            ENDCG
+            ENDHLSL
         }
         
         

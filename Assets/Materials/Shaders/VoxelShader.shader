@@ -76,7 +76,7 @@ Shader "Custom/VoxelShader"
             //#pragma multi_compile_fragment _ _LIGHT_LAYERS
             //#pragma multi_compile_fragment _ _LIGHT_COOKIES
             #pragma multi_compile _ _FORWARD_PLUS
-            #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/RenderingLayers.hlsl"
+            //#include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/RenderingLayers.hlsl"
             
             // GPU Instancing
             #pragma multi_compile_instancing
@@ -86,15 +86,16 @@ Shader "Custom/VoxelShader"
 
             //#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Input.hlsl"
             
-            #include <HLSLSupport.cginc>
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include <HLSLSupport.cginc>
             
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            //#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             
             #define BUMP_SCALE_NOT_SUPPORTED 1
             
             UNITY_DECLARE_TEX2DARRAY(_ColourTextures);
             uniform float _uvSizes[2 * 6]; // Needs to be set from C#
+            
             #include "Assets/Materials/Shaders/VoxelShaderInput.hlsl"
             #include "Assets/Materials/Shaders/VoxelForwardPass.hlsl"
             ENDHLSL

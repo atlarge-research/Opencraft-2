@@ -7,6 +7,9 @@ using Opencraft.Terrain.Layers;
 using Opencraft.Terrain.Structures;
 using Opencraft.Terrain.Utilities;
 using Opencraft.ThirdParty;
+
+using UnityEngine;
+
 using PolkaDOTS;
 using Unity.Entities;
 using Unity.Jobs;
@@ -18,6 +21,7 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Profiling;
 using System.Security.Cryptography;
 using System.Text;
+using System.Linq;
 
 // Annoyingly this assembly directive must be outside the namespace.
 [assembly: RegisterGenericJobType(typeof(SortJob<int2, Int2DistanceComparer>))]
@@ -38,7 +42,7 @@ namespace Opencraft.Terrain
         private BufferLookup<TerrainColMinY> _terrainColMinLookup;
         private BufferLookup<TerrainColMaxY> _terrainColMaxLookup;
         private BufferLookup<TerrainStructuresToSpawn> _structuresToSpawnLookup;
-
+        
         private int _hashedSeed;
         //private double lastUpdate;
 
@@ -102,6 +106,15 @@ namespace Opencraft.Terrain
             {
                 return;
             }
+
+            //Loglines for debugging columns to spawn
+            //string colSpawn = "";
+            //for (int i = 0; i < chunksColumnsSpawnBuffer.Length; i++)
+            //{
+            //    colSpawn += chunksColumnsSpawnBuffer[i] + ", ";
+            //}
+            //Debug.Log($"columns to spawn {chunksColumnsSpawnBuffer.Length} ({colSpawn})");
+
             _markerTerrainGen.Begin();
             NativeArray<int2> columnsToSpawn = chunksColumnsSpawnBuffer.AsNativeArray();
             // Sort the columns to spawn so ones closer to 0,0 are first
@@ -185,6 +198,7 @@ namespace Opencraft.Terrain
         public int columnHeight;
         public int worldHeight;
         [ReadOnly] public NativeArray<TerrainGenerationLayer> terrainGenLayers;
+
     
         [BurstCompile]
         public void Execute(int jobIndex)

@@ -116,6 +116,7 @@ when run standalone. In editor, the hierarchy of configuration is `Deployment Gr
 | -duration                   | _int_                                                                        | -1                                                       | Exit after a set amount of seconds.                                  |
 | -startDelay                 | _int_                                                                        | 0                                                        | Seconds to wait before calling the bootstrap.                        |
 | -userID                     | _int_                                                                        | 0                                                        | Player's user ID. Acts as a username.                                |
+| -renderDist                 | _int_                                                                        | 3                                                        | the maximum distance the area's will loaded.                         |
 | -signalingUrl               | _URL_                                                                        | ws://127.0.0.1:7981                                      | URL of the stream signaling service.                                 |
 | -multiplayRole              | Disabled<br/>Host<br/>CloudHost<br/>Guest                                    | Disabled                                                 | Stream gaming role.                                                  |
 | -emulationType              | None<br/>Playback<br/>Simulation<br/>Record                                  | None                                                     | Player emulation type mode.                                          |
@@ -204,3 +205,23 @@ The Json is expected to follow this formatting (excluding comments):
 ]
 }
 ```
+
+## Opencraft2-VR
+
+Opencraft can be run in VR (Meta Quest 2 & 3 & pro over OVR), ensure the following things are set up:
+ * switch PolkaDOTS branch to VR-properly
+ * open the Assets/Scenes/MainScene and in the PolkaDOTS frontend object, make 
+ sure that the player prefab is set to multiplayPlayerOVR, you can find this prefab in
+ /Packages/PolkaDOTS/Prefab/Player
+ * Open build settings and switch build target to Android
+ * in build settings go to playersettings->XR-plugin management and make sure
+ Oculus is selected under the Android tab.
+ * in build settings go to playersettings->Meta_XR and do what it sais
+ * configure /Assets/Resources/cmdArgs.json and /Assets/Resources/deployment.json
+ * connect your Meta Quest headset to ADB 
+ * press build and pray I did not forget anything
+ * go get a coffee or smth idk
+ * open cmd and ```adb install ./YOURBUILDHERE.apk``` (replace filename with proper things)
+ * on MQ3, click all apps, top right filter on uknown sources and Opencraft should be there
+ 
+

@@ -1,0 +1,14 @@
+{
+    "args": [
+        "-deploymentID",
+        "1",
+        "-remoteConfig",
+	"-deploymentURL",
+	"192.168.1.141",
+	"-logStats",
+	"True",
+	"-renderDist",
+	"3",
+	"-playerFly"
+    ]
+}
