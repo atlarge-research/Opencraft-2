@@ -2,10 +2,11 @@
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
+using Unity.Profiling;
 using Unity.Transforms;
 using Unity.VisualScripting;
 using UnityEngine;
-
+using UnityEngine.Profiling;
 
 namespace Opencraft.Player
 {
@@ -14,6 +15,10 @@ namespace Opencraft.Player
     [UpdateInGroup(typeof(GhostInputSystemGroup))]
     public partial struct SamplePlayerInput : ISystem
     {
+        public static ProfilerMarker SamplePlayerInputOne = new ProfilerMarker("samplePlayerInputOne");
+        public static ProfilerMarker SamplePlayerInputTwo = new ProfilerMarker("samplePlayerInputTwo");
+        public static ProfilerMarker SamplePlayerInputThree = new ProfilerMarker("samplePlayerInputThree");
+        public static ProfilerMarker SamplePlayerInputFour = new ProfilerMarker("samplePlayerInputThree");
         private static float3 _cameraOffset = new float3(0.0f,Env.CAMERA_Y_OFFSET,0.0f);
 
         public void OnCreate(ref SystemState state)
@@ -24,14 +29,19 @@ namespace Opencraft.Player
         
         public void OnUpdate(ref SystemState state)
         {
+            SamplePlayerInputFour.Begin();
             PolkaDOTS.Multiplay.Multiplay multiplay = PolkaDOTS.Multiplay.MultiplaySingleton.Instance;
             if (multiplay.IsUnityNull())
                 return;
             // Apply movement input to owned player ghosts
+            SamplePlayerInputFour.End();
+
             foreach (var (player, localToWorld, input)
                      in SystemAPI.Query<RefRO<PlayerComponent>, RefRO<LocalToWorld>, RefRW<PlayerInput>>()
                          .WithAll<GhostOwnerIsLocal>())
             {
+                SamplePlayerInputOne.Begin();
+
                 // Check if the connection has been created
                 if (!player.ValueRO.multiplayConnectionID.IsCreated)
                 {
@@ -50,8 +60,10 @@ namespace Opencraft.Player
 
                 var playerObj = multiplay.connectionPlayerObjects[connID.ToString()];
                 var playerController = playerObj.GetComponent<PolkaDOTS.Multiplay.MultiplayPlayerController>();
-                
-                
+
+                SamplePlayerInputOne.End();
+                SamplePlayerInputTwo.Begin();
+
                 input.ValueRW.Movement = default;
                 input.ValueRW.Jump = default;
                 input.ValueRW.PrimaryAction= default;
@@ -59,7 +71,9 @@ namespace Opencraft.Player
                 
                 input.ValueRW.Movement.x = playerController.inputMovement.x;
                 input.ValueRW.Movement.y = playerController.inputMovement.y;
-                
+
+                SamplePlayerInputTwo.End();
+                SamplePlayerInputThree.Begin();
                 // Actions 
                 if (playerController.inputJump)
                 {
@@ -76,6 +90,8 @@ namespace Opencraft.Player
                     input.ValueRW.SecondaryAction.Set();
                     playerController.inputSecondaryAction= false;
                 }
+
+                
                 
                 // Look
                 input.ValueRW.Pitch = math.clamp(input.ValueRW.Pitch + playerController.inputLook.y, -math.PI / 2,
@@ -88,7 +104,8 @@ namespace Opencraft.Player
                     quaternion.RotateX(-input.ValueRO.Pitch));
                 //var offset = math.rotate(playerObj.transform.rotation, new float3(0)/*_cameraOffset*/);
                 playerObj.transform.position = localToWorld.ValueRO.Position + _cameraOffset;
-                
+
+                SamplePlayerInputThree.End();
             }
         }
     }

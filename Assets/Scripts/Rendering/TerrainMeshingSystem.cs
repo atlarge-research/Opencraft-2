@@ -7,6 +7,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
+using Unity.Profiling;
 using Unity.Rendering;
 using Unity.Transforms;
 using UnityEngine;
@@ -27,6 +28,8 @@ namespace Opencraft.Rendering
         private BufferLookup<TerrainColMinY> _terrainColumnMinBufferLookup;
         private BufferLookup<TerrainColMaxY> _terrainColumnMaxBufferLookup;
         private NativeArray<VertexAttributeDescriptor> _vertexLayout;
+
+        static ProfilerMarker meshingMarker = new ProfilerMarker("terrainMeshingSys");
 
         protected override void OnCreate()
         {
@@ -58,6 +61,8 @@ namespace Opencraft.Rendering
             // todo - as remeshing must be done for all neighbors of new areas
             if (_terrainAreaQuery.IsEmpty)
                 return;
+
+            meshingMarker.Begin();
 
             TerrainSpawner terrainSpawner = _terrainSpawnerQuery.GetSingleton<TerrainSpawner>();
             NativeArray<Entity> chunksToUpdate = _terrainAreaQuery.ToEntityArray(Allocator.TempJob);
@@ -106,6 +111,8 @@ namespace Opencraft.Rendering
 
             // Mark that these areas have been (re)meshed
             EntityManager.SetComponentEnabled<Remesh>(_terrainAreaQuery, false);
+
+            meshingMarker.End();
         }
     }
 
