@@ -1,1 +1,1 @@
-Opencraft.exe -deploymentID 0 -deploymentJson deploymentMul.json
+opencraft2.exe -deploymentID 0 -deploymentJson deploymentMul.json

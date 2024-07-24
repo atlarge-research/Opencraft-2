@@ -1,7 +1,10 @@
 # Opencraft 2
+
 Opencraft 2 is an Minecraft-like online game built in Unity. It is intended for supporting experimental research on
 online game and cloud gaming performance. 
+
 ## Setup
+
 Install *Unity 2022 LTS*, clone this repository using `git clone --recurse-submodules`, and open it in Unity. 
 Unity should automatically install required packages. This includes the [ParrelSync](https://github.com/VeriorPies/ParrelSync) package,
 which is useful for testing multiplayer functionality in-editor.
@@ -12,20 +15,35 @@ then press the play button. Additional configuration can be specified in command
 which can be set in-editor on the `Editor Args` field of the `GameBootstrap -> Editor Cmd Args` singleton component.
 
 ## Builds
+
 Opencraft 2 is built by the Unity editor, using `File -> Build Settings` with `Platform` set to `Windows, Mac, Linux` and
 `Target Platform` set to `Linux` or `Windows` (Mac is untested). For debugging, analysis, and metric collection the `Development Build`
 flag must be set. The builds folder is location under `./Builds/`. This folder also contains the Docker files for containerizing Opencraft 2.
 
+## Play
+
+Build the game using the instructions in the previous section and save it as `opencraft2.exe`.
+To run and play the game, you'll need to run the game with your desired configuration settings.
+The `Builds` directory contains three `.bat` scripts to get you started: `Opencraft Server.bat`, `Opencraft Client.bat`,
+and `Opencraft Local.bat`.
+These files require `opencraft2.exe` to be present, and run the game as a stand-alone server, a client,
+or a combined server and client, respectively.
+See the [Configuration Deployment section](#deployment-configuration) for a more in-depth example of the game's
+configuration file.
+
 ## Contributing
+
 See [WORKFLOW.md](WORKFLOW.md) for contribution guidelines and workflow.
 
 ### Docker
+
 Opencraft 2 can be run as a container. The main game container can be built from the `./Builds/` folder using 
 `docker build -t jerriteic/opencraft2:base .`. This base image depends on `jerriteic/gpu_ubuntu20.04` which allows
 container application to run graphics applications with NVIDIA GPU hardware acceleration. That container can 
 be built in the same folder using the `Dockerfile.ubuntugpu` dockerfile.
 
 #### Docker Requirements
+
 The game container runs a hardware-accelerated 3D graphics application through VirtualGL. 
 This requires extensive configuration to the host platform:
 1. Install correct NVIDIA drivers for your platform and GPU.
@@ -35,7 +53,9 @@ This requires extensive configuration to the host platform:
    1. Do not reinstall the NVIDIA drivers, skip the step marked `Install NVIDIA Driver from CUDA .run shell script`.
 
 #### Running the Container
+
 If the Docker requirements are met, run the container using the following command:
+
 ```
 docker run \
 --runtime=nvidia \
@@ -52,20 +72,24 @@ docker run \
 jerriteic/opencraft2:base \
 ./opencraft2.x86_64 -logFile ./logs/opencraft2_log.txt
 ```
+
 > [!WARNING]
 > Running Docker containers with these flags gives them **UNRESTRICTED HOST ROOT ACCESS**! Act accordingly.
 
 ## Parrelsync
+
 [ParrelSync](https://github.com/VeriorPies/ParrelSync) allows synchronizing multiple copies of a Unity project. These
 can be run in parallel to test networked functionality. In `ParrelSync -> Preferences`, make sure that `/UnityRenderStreaming`
 is listed under `Optional Folders to Symbolically Link`. Then, to create a new ParrelSync clone select `Add new clone` in `ParrelSync -> Clones Manager`.
 
 ## Multiplay
+
 This project supports a single game client acting as a streamed gaming host for many players on guest clients.  
 Testing Multiplay is easiest using ParrelSync, in the clone's launch arguments in the clone manager add `-multiplayRole Guest`
 to run it as a Multiplay guest client.
 
 ### Signalling Service WebApp
+
 Multiplay functionality requires a signalling service to establish a direct connection between host and guest clients.
 The signaling service is run as a webapp, the source is available in `./UnityRenderStreaming/WebApp/` 
 and can be build using `./UnityRenderStreaming/pack_webapp.sh` which has `npm` as a dependency. 
@@ -75,6 +99,7 @@ application command line argument `-signalingPort <int>`.
 
 
 ## Debugging and Analysis
+
 Inspecting existing entities, components, systems, and queries in each existing world can be done using
 Entities information pages under `Window -> Entities`. Information not specific to ECS can be found under `Window -> Analysis`,
 with the `Profiler` being particularly important for determining performance impact of various changes.
@@ -87,9 +112,12 @@ it is worth trying `Edit > Preferences -> External Tools -> Regenerate project f
 through the right-click menu in the `Project` window.
 
 ## Configuration and Parameters
+
 The Opencraft 2 application can be configured in a variety of ways, with some methods being different in-editor and
 when run standalone. In editor, the hierarchy of configuration is `Deployment Graph`>`Multiplayer PlayMode Tools` >`Editor Args`.
+
 ### Command Line Arguments
+
 | Argument                    | Options                                                                      | Default                                                  | Description                                                          |
 |-----------------------------|------------------------------------------------------------------------------|----------------------------------------------------------|----------------------------------------------------------------------|
 | -deploymentJson             | _FilePath_                                                                   | null                                                     | Path to a deployment configuration Json file.                        |
@@ -133,6 +161,7 @@ when run standalone. In editor, the hierarchy of configuration is `Deployment Gr
 The deployment service constructs a deployment graph based on a configuration file. The deployment configuration file path is set
 using the command line argument `-deploymentJson <FilePath>`. In editor, a json file can be set on the `Deployment Config` field of the `GameBootstrap->Cmd Args Reader` singleton component.
 The Json is expected to follow this formatting (excluding comments):
+
 ```
 {
 "nodes":[
