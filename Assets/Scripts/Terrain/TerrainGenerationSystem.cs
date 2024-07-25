@@ -18,8 +18,6 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Profiling;
 using System.Security.Cryptography;
 using System.Text;
-using UnityEngine;
-using Unity.Physics.Authoring;
 
 // Annoyingly this assembly directive must be outside the namespace.
 [assembly: RegisterGenericJobType(typeof(SortJob<int2, Int2DistanceComparer>))]

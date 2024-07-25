@@ -9,7 +9,7 @@ namespace Opencraft.Terrain.Layers
     {
         [SerializeField]
         private string configName = "";
-        
+
         [SerializeField]
         private LayerConfig[] layers = null;
 
@@ -17,7 +17,7 @@ namespace Opencraft.Terrain.Layers
         private int areaColumnHeight = 1;
 
         public string Name => configName;
-        
+
         public LayerConfig[] Layers { get { return layers; } }
 
         public int AreaColumnHeight
@@ -30,9 +30,9 @@ namespace Opencraft.Terrain.Layers
             Array.Sort(layers, new LayerConfigComparer());
         }
     }
-    
+
     // Comparer for sorting locations by distance from zero
-    struct LayerConfigComparer: IComparer<LayerConfig>
+    struct LayerConfigComparer : IComparer<LayerConfig>
     {
         public int Compare(LayerConfig a, LayerConfig b)
         {
@@ -44,7 +44,7 @@ namespace Opencraft.Terrain.Layers
                 return 0;
             if (a.Index > b.Index)
                 return 1;
-            if (a.Index < b.Index )
+            if (a.Index < b.Index)
                 return -1;
             return 0;
         }

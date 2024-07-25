@@ -12,7 +12,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Transforms;
-using Unity.VisualScripting.FullSerializer;
+using Unity.Profiling;
+using Opencraft.Statistics;
+using PolkaDOTS;
 
 [assembly: RegisterGenericJobType(typeof(SortJob<int2, Int2DistanceComparer>))]
 namespace Opencraft.Terrain
@@ -24,6 +26,7 @@ namespace Opencraft.Terrain
 
     public partial struct TerrainLogicSystem : ISystem
     {
+        private static bool isRunning = true;
         private double tickRate;
         private float timer;
         private static Dictionary<int3, LogicBlockData> inputBlocks;
@@ -39,6 +42,12 @@ namespace Opencraft.Terrain
         static int3 sixteens = new int3(16, 0, 16);
         private NativeArray<Entity> terrainAreasEntities;
 
+        public static ProfilerMarker GetUpdatesMarker = new ProfilerMarker("GetUpdates");
+        public static ProfilerMarker ReevaluatePropagateMarker = new ProfilerMarker("ReevaluatePropagateMarker");
+        public static ProfilerMarker PropagateLogicStateMaker = new ProfilerMarker("PropagateLogicState");
+        public static ProfilerMarker CheckGateStateMarker = new ProfilerMarker("CheckGateState");
+
+
         public struct LogicBlockData
         {
             public int3 BlockLocation;
@@ -46,6 +55,11 @@ namespace Opencraft.Terrain
         }
         public void OnCreate(ref SystemState state)
         {
+            if (!ApplicationConfig.ActiveLogic.Value)
+            {
+                isRunning = false;
+                return;
+            }
             state.RequireForUpdate<TerrainArea>();
             tickRate = 1;
             timer = 0;
@@ -62,6 +76,7 @@ namespace Opencraft.Terrain
 
         public void OnDestroy(ref SystemState state)
         {
+            if (!isRunning) return;
             inputBlocks.Clear();
             gateBlocks.Clear();
             activeGateBlocks.Clear();
@@ -69,6 +84,7 @@ namespace Opencraft.Terrain
 
         public void OnUpdate(ref SystemState state)
         {
+            if (!isRunning) return;
             if (timer < tickRate)
             {
                 timer += Time.deltaTime;
@@ -85,6 +101,7 @@ namespace Opencraft.Terrain
             var terrainAreasQuery = SystemAPI.QueryBuilder().WithAll<TerrainArea, LocalTransform>().Build();
             terrainAreasEntities = terrainAreasQuery.ToEntityArray(state.WorldUpdateAllocator);
 
+            GetUpdatesMarker.Begin();
             foreach (var terrainEntity in terrainAreasEntities)
             {
                 DynamicBuffer<int3> updateBlocks = terrainUpdatedLookup[terrainEntity].Reinterpret<int3>();
@@ -116,16 +133,28 @@ namespace Opencraft.Terrain
                         gateBlocks.TryAdd(globalPos, value);
                 }
             }
+            GetUpdatesMarker.End();
 
+            ReevaluatePropagateMarker.Begin();
             if (toReevaluate.Count != 0)
             {
                 PropagateLogicState(toReevaluate, false);
                 toReevaluate.Clear();
             }
+            ReevaluatePropagateMarker.End();
+
+            PropagateLogicStateMaker.Begin();
             PropagateLogicState(inputBlocks.Values.Concat(activeGateBlocks.Values), true);
+            PropagateLogicStateMaker.End();
+
+            CheckGateStateMarker.Begin();
             CheckGateState(gateBlocks.Values);
+            CheckGateStateMarker.End();
 
             terrainAreasEntities.Dispose();
+
+            GameStatistics.NumInputTypeBlocks.Value = inputBlocks.Count;
+            GameStatistics.NumGateTypeBlocks.Value = gateBlocks.Count;
         }
 
         private void PropagateLogicState(IEnumerable<LogicBlockData> logicBlocks, bool inputLogicState)

@@ -24,10 +24,10 @@ namespace Opencraft.Statistics
         private EntityQuery _terrainAreaQuery;
         private EntityQuery _playerQuery;
         private bool first;
-        
+
         public void OnCreate(ref SystemState state)
         {
-            _terrainAreaQuery= new EntityQueryBuilder(Allocator.Temp)
+            _terrainAreaQuery = new EntityQueryBuilder(Allocator.Temp)
                 .WithAll<TerrainArea>()
                 .Build(state.EntityManager);
             _playerQuery = new EntityQueryBuilder(Allocator.Temp)
@@ -35,7 +35,7 @@ namespace Opencraft.Statistics
                 .Build(state.EntityManager);
             first = true;
         }
-        
+
         public void OnUpdate(ref SystemState state)
         {
             if (first)
@@ -44,10 +44,15 @@ namespace Opencraft.Statistics
                 {
                     Debug.Log("Adding terrain areas statistics recorders");
                     PolkaDOTS.Statistics.StatisticsWriter writer = PolkaDOTS.Statistics.StatisticsWriterInstance.instance;
+                    if (ApplicationConfig.ActiveLogic)
+                    {
+                        writer.AddStatisticRecorder(GameStatistics.NumGateBlocksName, ProfilerCategory.Scripts);
+                        writer.AddStatisticRecorder(GameStatistics.NumInputTypeBlocksName, ProfilerCategory.Scripts);
+                    }
                     writer.AddStatisticRecorder("Number of Terrain Areas (Client)", ProfilerCategory.Scripts);
-                    writer.AddStatisticRecorder("Number of Terrain Areas (Server)", ProfilerCategory.Scripts); 
+                    writer.AddStatisticRecorder("Number of Terrain Areas (Server)", ProfilerCategory.Scripts);
                     writer.AddStatisticRecorder("Number of Players (Client)", ProfilerCategory.Scripts);
-                    writer.AddStatisticRecorder("Number of Players (Server)", ProfilerCategory.Scripts); 
+                    writer.AddStatisticRecorder("Number of Players (Server)", ProfilerCategory.Scripts);
                 }
                 first = false;
             }
@@ -65,36 +70,44 @@ namespace Opencraft.Statistics
                 GameStatistics.NumTerrainAreasServer.Value = terrainCount;
                 GameStatistics.NumPlayersServer.Value = playerCount;
             }
-
-
-
         }
     }
-    
+
     /// <summary>
     ///  Profiler module for game-specific performance data
     /// </summary>
     public class GameStatistics
     {
         public static readonly ProfilerCategory GameStatisticsCategory = ProfilerCategory.Scripts;
-        
+
         public const string NumTerrainAreasClientName = "Number of Terrain Areas (Client)";
         public static readonly ProfilerCounterValue<int> NumTerrainAreasClient =
             new ProfilerCounterValue<int>(GameStatisticsCategory, NumTerrainAreasClientName, ProfilerMarkerDataUnit.Count);
+
         public const string NumTerrainAreasServerName = "Number of Terrain Areas (Server)";
         public static readonly ProfilerCounterValue<int> NumTerrainAreasServer =
             new ProfilerCounterValue<int>(GameStatisticsCategory, NumTerrainAreasServerName, ProfilerMarkerDataUnit.Count);
+
         public const string NumPlayersClientName = "Number of Players (Client)";
         public static readonly ProfilerCounterValue<int> NumPlayersClient =
             new ProfilerCounterValue<int>(GameStatisticsCategory, NumPlayersClientName, ProfilerMarkerDataUnit.Count);
+
         public const string NumPlayersServerName = "Number of Players (Server)";
         public static readonly ProfilerCounterValue<int> NumPlayersServer =
             new ProfilerCounterValue<int>(GameStatisticsCategory, NumPlayersServerName, ProfilerMarkerDataUnit.Count);
-        
+
+        public const string NumGateBlocksName = "NumGateBlocks";
+        public static readonly ProfilerCounterValue<int> NumGateTypeBlocks =
+            new ProfilerCounterValue<int>(GameStatisticsCategory, NumGateBlocksName, ProfilerMarkerDataUnit.Count);
+
+        public const string NumInputTypeBlocksName = "NumInputTypeBlocks";
+        public static readonly ProfilerCounterValue<int> NumInputTypeBlocks =
+            new ProfilerCounterValue<int>(GameStatisticsCategory, NumInputTypeBlocksName, ProfilerMarkerDataUnit.Count);
+
     }
 #if UNITY_EDITOR
     [System.Serializable]
-    [ProfilerModuleMetadata("Game Statistics")] 
+    [ProfilerModuleMetadata("Game Statistics")]
     public class GameProfilerModule : ProfilerModule
     {
         static readonly ProfilerCounterDescriptor[] k_Counters = new ProfilerCounterDescriptor[]
@@ -102,7 +115,9 @@ namespace Opencraft.Statistics
             new ProfilerCounterDescriptor(GameStatistics.NumTerrainAreasClientName, GameStatistics.GameStatisticsCategory),
             new ProfilerCounterDescriptor(GameStatistics.NumTerrainAreasServerName, GameStatistics.GameStatisticsCategory),
             new ProfilerCounterDescriptor(GameStatistics.NumPlayersClientName, GameStatistics.GameStatisticsCategory),
-            new ProfilerCounterDescriptor(GameStatistics.NumPlayersServerName, GameStatistics.GameStatisticsCategory)
+            new ProfilerCounterDescriptor(GameStatistics.NumPlayersServerName, GameStatistics.GameStatisticsCategory),
+            new ProfilerCounterDescriptor(GameStatistics.NumGateBlocksName, GameStatistics.GameStatisticsCategory),
+            new ProfilerCounterDescriptor(GameStatistics.NumInputTypeBlocksName, GameStatistics.GameStatisticsCategory),
         };
 
         // Ensure that both ProfilerCategory.Scripts and ProfilerCategory.Memory categories are enabled when our module is active.
@@ -116,5 +131,5 @@ namespace Opencraft.Statistics
         public GameProfilerModule() : base(k_Counters, autoEnabledCategoryNames: k_AutoEnabledCategoryNames) { }
     }
 #endif
-    
+
 }
