@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c8dc7565f1544ab096b804d358a1a4e4, type: 3}
   m_Name: Input
   m_EditorClassIdentifier: 
-  layerType: 8
+  layerType: 5
   layerName: New Layer
   index: 0
   blockType: 2

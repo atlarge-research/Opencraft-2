@@ -24,6 +24,7 @@ namespace Opencraft.Statistics
         private EntityQuery _terrainAreaQuery;
         private EntityQuery _playerQuery;
         private bool first;
+        public static ProfilerMarker _markerStatsSystem = new ProfilerMarker("StatisticsSystem");
 
         public void OnCreate(ref SystemState state)
         {
@@ -38,6 +39,7 @@ namespace Opencraft.Statistics
 
         public void OnUpdate(ref SystemState state)
         {
+            _markerStatsSystem.Begin();
             if (first)
             {
                 if (ApplicationConfig.LogStats)
@@ -70,6 +72,7 @@ namespace Opencraft.Statistics
                 GameStatistics.NumTerrainAreasServer.Value = terrainCount;
                 GameStatistics.NumPlayersServer.Value = playerCount;
             }
+            _markerStatsSystem.End();
         }
     }
 

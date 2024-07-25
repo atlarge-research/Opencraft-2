@@ -18,6 +18,7 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Profiling;
 using System.Security.Cryptography;
 using System.Text;
+using UnityEngine;
 
 // Annoyingly this assembly directive must be outside the namespace.
 [assembly: RegisterGenericJobType(typeof(SortJob<int2, Int2DistanceComparer>))]
@@ -143,6 +144,7 @@ namespace Opencraft.Terrain
             // Populate new terrain areas on worker threads
             JobHandle populateHandle = new PopulateTerrainColumns
             {
+
                 terrainAreaEntities = terrainAreaEntities,
                 ecb = parallelEcb,
                 terrainBlocksLookup = _terrainBlocksLookup,
@@ -254,9 +256,6 @@ namespace Opencraft.Terrain
                     case LayerType.Structure:
                         // Don't need at lookup table as we only sample noise at points that get a structure
                         break;
-                    case LayerType.On_Input:
-                    case LayerType.Wire:
-                    case LayerType.Lamp:
                     case LayerType.Calculated_Layer:
                         break;
                 }
@@ -325,8 +324,6 @@ namespace Opencraft.Terrain
 
             // iterate up each global y block column
             int globalX, globalZ;
-            int modulo_x = 5;
-            int modulo_z = 5;
             for (int z = 0; z < Env.AREA_SIZE; z++)
             {
                 globalZ = columnZ + z;
@@ -366,25 +363,10 @@ namespace Opencraft.Terrain
                                 GenerateStructureLayer(ref terrainGenerationLayer, ref terrainStructureBuffers,
                                     index, noiseInterpSettings, x, z, globalX, heightSoFar, globalZ);
                                 break;
-                            case LayerType.On_Input:
-                                heightSoFar = GenerateModuloLayer(ref terrainBlockBuffers,
-                                    ref colMinBuffers, ref colMaxBuffers, (x % modulo_x == 0 && z % modulo_z == 0 && x != z) ? 1 : 0, startIndex,
-                                    heightSoFar, ref terrainGenerationLayer, columnAccess, index);
-                                break;
-                            case LayerType.Wire:
-                                heightSoFar = GenerateModuloLayer(ref terrainBlockBuffers,
-                                    ref colMinBuffers, ref colMaxBuffers, ((x % modulo_x != 0 && z % modulo_z == 0) || (x % modulo_x == 0 && z % modulo_z != 0)) ? 1 : 0, startIndex,
-                                    heightSoFar, ref terrainGenerationLayer, columnAccess, index);
-                                break;
-                            case LayerType.Lamp:
-                                heightSoFar = GenerateModuloLayer(ref terrainBlockBuffers,
-                                    ref colMinBuffers, ref colMaxBuffers, (x % modulo_x == 0 && z % modulo_z == 0 && x == z) ? 1 : 0, startIndex,
-                                    heightSoFar, ref terrainGenerationLayer, columnAccess, index);
-                                break;
                             case LayerType.Calculated_Layer:
                                 heightSoFar = GenerateCalculatedLayer(ref terrainBlockBuffers,
                                     ref colMinBuffers, ref colMaxBuffers, startIndex,
-                                    heightSoFar, ref terrainGenerationLayer, columnAccess, index);
+                                    heightSoFar, ref terrainGenerationLayer, columnAccess, columnX, columnZ, index);
                                 break;
                         }
                     }
@@ -488,25 +470,12 @@ namespace Opencraft.Terrain
             //Return the new global height of this column
             return end;
         }
-
-        private int GenerateModuloLayer(ref NativeArray<DynamicBuffer<BlockType>> terrainBlockBuffers,
-            ref NativeArray<DynamicBuffer<byte>> colMinBuffers,
-            ref NativeArray<DynamicBuffer<byte>> colMaxBuffers, int condional,
-            int blockIndex, int heightSoFar, ref TerrainGenerationLayer terrainGenLayer, int columnAccess, int index = -1)
-        {
-            int heightToAdd = condional;
-
-            int end = heightSoFar + heightToAdd < worldHeight ? heightSoFar + heightToAdd : worldHeight;
-            SetColumnBlocks(ref terrainBlockBuffers, ref colMinBuffers, ref colMaxBuffers, heightSoFar, end,
-            terrainGenLayer.blockType, blockIndex, columnAccess, index);
-
-            return end;
-        }
         private int GenerateCalculatedLayer(ref NativeArray<DynamicBuffer<BlockType>> terrainBlockBuffers,
             ref NativeArray<DynamicBuffer<byte>> colMinBuffers,
             ref NativeArray<DynamicBuffer<byte>> colMaxBuffers,
-            int blockIndex, int heightSoFar, ref TerrainGenerationLayer terrainGenLayer, int columnAccess, int index = -1)
+            int blockIndex, int heightSoFar, ref TerrainGenerationLayer terrainGenLayer, int columnAccess, int columnX, int columnZ, int index = -1)
         {
+            if (math.abs(columnX / 16) > 3 || math.abs(columnZ / 16) > 3) return 0;
             BlockType blockType = terrainGenLayer.blockType;
             float add = TerrainUtilities.GetAdd[(int)blockType];
             int3 blockLoc = TerrainUtilities.BlockIndexToLocation(blockIndex);
@@ -597,6 +566,7 @@ namespace Opencraft.Terrain
                         colMaxBuffer[columnAccess] = (byte)(end - chunkYMin);
                 }
                 areaBlockBuffer[blockIndex + localY] = blockType;
+
                 if (blockType == BlockType.On_Input)
                 {
                     // terrainEntity is the entity of the containing area

@@ -42,6 +42,8 @@ namespace Opencraft.Terrain
         static int3 sixteens = new int3(16, 0, 16);
         private NativeArray<Entity> terrainAreasEntities;
 
+        public static ProfilerMarker _markerTerrainLogic = new ProfilerMarker("TerrainLogicSystem");
+
         public static ProfilerMarker GetUpdatesMarker = new ProfilerMarker("GetUpdates");
         public static ProfilerMarker ReevaluatePropagateMarker = new ProfilerMarker("ReevaluatePropagateMarker");
         public static ProfilerMarker PropagateLogicStateMaker = new ProfilerMarker("PropagateLogicState");
@@ -90,6 +92,7 @@ namespace Opencraft.Terrain
                 timer += Time.deltaTime;
                 return;
             }
+            _markerTerrainLogic.Begin();
             timer = 0;
             terrainLogicStateLookup.Update(ref state);
             terrainDirectionLookup.Update(ref state);
@@ -155,6 +158,7 @@ namespace Opencraft.Terrain
 
             GameStatistics.NumInputTypeBlocks.Value = inputBlocks.Count;
             GameStatistics.NumGateTypeBlocks.Value = gateBlocks.Count;
+            _markerTerrainLogic.End();
         }
 
         private void PropagateLogicState(IEnumerable<LogicBlockData> logicBlocks, bool inputLogicState)
