@@ -18,3 +18,10 @@ b. Logic system with logic generation and clocks/inputs (1 layer)
 c. Normal terrain generation
 d. Normal terrain generation + logic generation
 e. Logic system 
+
+
+-deploymentID 0 -terrainType 1-Layer -userID 0 -logStats -statsFile stats/temp.csv -duration 60
+
+./Opencraft.exe -remoteConfig -deploymentID 1 -userID 1 -nographics -batchmode -duration 30
+./Opencraft.exe -remoteConfig -deploymentID 1 -userID 1
+./Opencraft.exe -remoteConfig -deploymentID 2 -userID 2

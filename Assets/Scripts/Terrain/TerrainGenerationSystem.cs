@@ -41,7 +41,7 @@ namespace Opencraft.Terrain
         private BufferLookup<TerrainBlocks> _terrainBlocksLookup;
         private BufferLookup<BlockLogicState> _terrainLogicStateLookup;
         private BufferLookup<BlockDirection> _terrainDirectionLookup;
-        private BufferLookup<UpdatedBlocks> _terrainUpdateLookup;
+        private BufferLookup<TerrainBlockUpdates> _terrainUpdateLookup;
         private BufferLookup<TerrainColMinY> _terrainColMinLookup;
         private BufferLookup<TerrainColMaxY> _terrainColMaxLookup;
         private BufferLookup<TerrainStructuresToSpawn> _structuresToSpawnLookup;
@@ -66,7 +66,7 @@ namespace Opencraft.Terrain
             _terrainBlocksLookup = state.GetBufferLookup<TerrainBlocks>(isReadOnly: false);
             _terrainLogicStateLookup = state.GetBufferLookup<BlockLogicState>(isReadOnly: false);
             _terrainDirectionLookup = state.GetBufferLookup<BlockDirection>(isReadOnly: false);
-            _terrainUpdateLookup = state.GetBufferLookup<UpdatedBlocks>(isReadOnly: false);
+            _terrainUpdateLookup = state.GetBufferLookup<TerrainBlockUpdates>(isReadOnly: false);
             _terrainColMinLookup = state.GetBufferLookup<TerrainColMinY>(isReadOnly: false);
             _terrainColMaxLookup = state.GetBufferLookup<TerrainColMaxY>(isReadOnly: false);
             _structuresToSpawnLookup = state.GetBufferLookup<TerrainStructuresToSpawn>(isReadOnly: false);
@@ -204,7 +204,7 @@ namespace Opencraft.Terrain
         [NativeDisableParallelForRestriction] public BufferLookup<TerrainBlocks> terrainBlocksLookup;
         [NativeDisableParallelForRestriction] public BufferLookup<BlockLogicState> terrainLogicStateLookup;
         [NativeDisableParallelForRestriction] public BufferLookup<BlockDirection> terrainDirectionLookup;
-        [NativeDisableParallelForRestriction] public BufferLookup<UpdatedBlocks> terrainUpdateLookup;
+        [NativeDisableParallelForRestriction] public BufferLookup<TerrainBlockUpdates> terrainUpdateLookup;
         [NativeDisableParallelForRestriction] public BufferLookup<TerrainColMinY> terrainColMinLookup;
         [NativeDisableParallelForRestriction] public BufferLookup<TerrainColMaxY> terrainColMaxLookup;
         [NativeDisableParallelForRestriction] public BufferLookup<TerrainStructuresToSpawn> _structuresToSpawnLookup;
@@ -609,7 +609,7 @@ namespace Opencraft.Terrain
                 if (BlockData.IsInput(blockType) || BlockData.IsGate(blockType))
                 {
                     Entity terrainEntity = terrainAreaEntities[index + colY];
-                    terrainUpdateLookup[terrainEntity].Add(new UpdatedBlocks { updatedLoc = TerrainUtilities.BlockIndexToLocation(blockIndex + localY) });
+                    terrainUpdateLookup[terrainEntity].Add(new TerrainBlockUpdates { blockLoc = TerrainUtilities.BlockIndexToLocation(blockIndex + localY) });
                 }
                 prevColY = colY;
             }

@@ -37,7 +37,7 @@ namespace Opencraft.Terrain.Authoring
                 AddBuffer<TerrainBlocks>(entity);
                 AddBuffer<BlockLogicState>(entity);
                 AddBuffer<BlockDirection>(entity);
-                AddBuffer<UpdatedBlocks>(entity);
+                AddBuffer<TerrainBlockUpdates>(entity);
                 AddBuffer<TerrainColMinY>(entity);
                 AddBuffer<TerrainColMaxY>(entity);
                 AddBuffer<TerrainStructuresToSpawn>(entity);
@@ -100,9 +100,9 @@ namespace Opencraft.Terrain.Authoring
     }
 
     [InternalBufferCapacity(0)]
-    public struct UpdatedBlocks : IBufferElementData
+    public struct TerrainBlockUpdates : IBufferElementData
     {
-        [GhostField] public int3 updatedLoc;
+        [GhostField] public int3 blockLoc;
     }
 
     [InternalBufferCapacity(256)]

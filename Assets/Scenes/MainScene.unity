@@ -546,16 +546,16 @@ PrefabInstance:
     - target: {fileID: 3243556258562715456, guid: 6752cefe6bfd8d09cb07eba71d738d13,
         type: 3}
       propertyPath: editorArgs
-      value: -deploymentID 0 -terrainType 1-Layer
+      value: -deploymentID 0 -userID 0 -terrainType 1-Layer -logStats -statsFile
+        stats.csv
       objectReference: {fileID: 0}
     - target: {fileID: 3243556258562715456, guid: 6752cefe6bfd8d09cb07eba71d738d13,
         type: 3}
       propertyPath: deploymentConfig
-      value: "{\n\"nodes\":[\n\t{\n\t\t\"nodeID\":0,\n\t\t\"worldConfigs\":[\n\t\t\t{\n\t\t\t\"worldName\":
-        \"GameServer\",\n\t\t\t\"worldType\":\"Server\",\n\t\t\t\"initializationMode\":\"Connect\",\n\t\t\t\"serverNodeID\":0,\n\t\t\t},\n\t\t\t{\n\t\t\t\"worldName\":
-        \"GameClient\",\n\t\t\t\"worldType\":\"Client\",\n\t\t\t\"initializationMode\":\"Connect\",\n\t\t\t\"serverNodeID\":0,\n\t\t\t}\n\t\t]\n\t},\n\t{\n\t\t\"nodeID\":1,\n\t\t\"worldConfigs\":[\n\t\t\t{\n\t\t\t\"worldName\":
-        \"SimulatorClientTest\",\n\t\t\t\"worldType\":\"SimulatedClient\",\n\t\t\t\"initializationMode\":\"Connect\",\n\t\t\t\"serverNodeID\":0,\n\t\t\t\"numSimulatedClients\":
-        4\n\t\t\t}\n\t\t]\n\t}\n], \n\"experimentActions\":[]\n}"
+      value: "{\r\n\"nodes\":[\r\n\t{\r\n\t\t\"nodeID\":0,\r\n\t\t\"worldConfigs\":[\r\n\t\t\t{\r\n\t\t\t\"worldName\":
+        \"GameServer\",\r\n\t\t\t\"worldType\":\"Server\",\r\n\t\t\t\"initializationMode\":\"Connect\",\r\n\t\t\t\"serverNodeID\":0,\r\n\t\t\t},\r\n\t\t\t{\r\n\t\t\t\"worldName\":
+        \"GameClient\",\r\n\t\t\t\"worldType\":\"Client\",\r\n\t\t\t\"initializationMode\":\"Connect\",\r\n\t\t\t\"serverNodeID\":0\r\n\t\t\t}\r\n\t\t]\r\n\t}\r\n],
+        \r\n\"experimentActions\":[]\r\n}"
       objectReference: {fileID: 0}
     - target: {fileID: 3243556258562715456, guid: 6752cefe6bfd8d09cb07eba71d738d13,
         type: 3}

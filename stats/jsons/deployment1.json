@@ -9,12 +9,6 @@
                             "worldType": "Server",
                             "initializationMode": "Connect",
                             "serverNodeID": 0
-                        },                 
-                        {
-                        "worldName": "GameClient",
-                        "worldType": "StreamedClient",
-                        "initializationMode": "Connect",
-                        "serverNodeID": 0
                         }
                     ]
                 },

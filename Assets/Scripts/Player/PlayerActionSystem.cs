@@ -21,7 +21,7 @@ namespace Opencraft.Player
         private BufferLookup<TerrainBlocks> _terrainBlocksBufferLookup;
         private BufferLookup<BlockLogicState> _terrainLogicStateLookup;
         private BufferLookup<BlockDirection> _terrainDirectionLookup;
-        private BufferLookup<UpdatedBlocks> _terrainUpdatedLookup;
+        private BufferLookup<TerrainBlockUpdates> _terrainUpdatedLookup;
         private BufferLookup<TerrainColMinY> _terrainColumnMinBufferLookup;
         private BufferLookup<TerrainColMaxY> _terrainColumnMaxBufferLookup;
         private ComponentLookup<TerrainArea> _terrainAreaLookup;
@@ -36,7 +36,7 @@ namespace Opencraft.Player
             _terrainBlocksBufferLookup = state.GetBufferLookup<TerrainBlocks>(false);
             _terrainLogicStateLookup = state.GetBufferLookup<BlockLogicState>(false);
             _terrainDirectionLookup = state.GetBufferLookup<BlockDirection>(false);
-            _terrainUpdatedLookup = state.GetBufferLookup<UpdatedBlocks>(false);
+            _terrainUpdatedLookup = state.GetBufferLookup<TerrainBlockUpdates>(false);
             _terrainColumnMinBufferLookup = state.GetBufferLookup<TerrainColMinY>(false);
             _terrainColumnMaxBufferLookup = state.GetBufferLookup<TerrainColMaxY>(false);
             _terrainAreaLookup = state.GetComponentLookup<TerrainArea>(isReadOnly: true);
@@ -119,8 +119,8 @@ namespace Opencraft.Player
 
                             if (BlockData.IsLogic(destroyedBlockType))
                             {
-                                DynamicBuffer<UpdatedBlocks> locs = _terrainUpdatedLookup[terrainAreaEntity];
-                                locs.Add(new UpdatedBlocks { updatedLoc = blockLoc });
+                                DynamicBuffer<TerrainBlockUpdates> locs = _terrainUpdatedLookup[terrainAreaEntity];
+                                locs.Add(new TerrainBlockUpdates { blockLoc = blockLoc });
                             }
                         }
                     }
@@ -160,8 +160,8 @@ namespace Opencraft.Player
 
                             if (BlockData.IsLogic(blockToPlace))
                             {
-                                DynamicBuffer<UpdatedBlocks> locs = _terrainUpdatedLookup[terrainAreaEntity];
-                                locs.Add(new UpdatedBlocks { updatedLoc = blockLoc });
+                                DynamicBuffer<TerrainBlockUpdates> locs = _terrainUpdatedLookup[terrainAreaEntity];
+                                locs.Add(new TerrainBlockUpdates { blockLoc = blockLoc });
                             }
                             DynamicBuffer<bool> boolLogicStates = _terrainLogicStateLookup[terrainAreaEntity].Reinterpret<bool>();
                             boolLogicStates[blockIndex] = false;
@@ -183,15 +183,15 @@ namespace Opencraft.Player
                         {
                             blocks[blockIndex] = BlockType.On_Input;
                             boolLogicStates[blockIndex] = true;
-                            DynamicBuffer<UpdatedBlocks> locs = _terrainUpdatedLookup[terrainAreaEntity];
-                            locs.Add(new UpdatedBlocks { updatedLoc = blockLoc });
+                            DynamicBuffer<TerrainBlockUpdates> locs = _terrainUpdatedLookup[terrainAreaEntity];
+                            locs.Add(new TerrainBlockUpdates { blockLoc = blockLoc });
                         }
                         else if (blocks[blockIndex] == BlockType.On_Input)
                         {
                             blocks[blockIndex] = BlockType.Off_Input;
                             boolLogicStates[blockIndex] = false;
-                            DynamicBuffer<UpdatedBlocks> locs = _terrainUpdatedLookup[terrainAreaEntity];
-                            locs.Add(new UpdatedBlocks { updatedLoc = blockLoc });
+                            DynamicBuffer<TerrainBlockUpdates> locs = _terrainUpdatedLookup[terrainAreaEntity];
+                            locs.Add(new TerrainBlockUpdates { blockLoc = blockLoc });
                         }
                     }
                 }

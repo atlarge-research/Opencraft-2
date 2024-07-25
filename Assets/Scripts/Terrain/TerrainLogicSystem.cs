@@ -33,7 +33,7 @@ namespace Opencraft.Terrain
         private BufferLookup<BlockLogicState> terrainLogicStateLookup;
         private BufferLookup<BlockDirection> terrainDirectionLookup;
         private BufferLookup<TerrainBlocks> terrainBlocksLookup;
-        private BufferLookup<UpdatedBlocks> terrainUpdatedLookup;
+        private BufferLookup<TerrainBlockUpdates> terrainUpdatedLookup;
         private ComponentLookup<TerrainNeighbors> terrainNeighborsLookup;
         private ComponentLookup<TerrainArea> terrainAreaLookup;
         static int3 sixteens = new int3(16, 0, 16);
@@ -55,7 +55,7 @@ namespace Opencraft.Terrain
             terrainLogicStateLookup = state.GetBufferLookup<BlockLogicState>(isReadOnly: false);
             terrainDirectionLookup = state.GetBufferLookup<BlockDirection>(isReadOnly: false);
             terrainBlocksLookup = state.GetBufferLookup<TerrainBlocks>(isReadOnly: false);
-            terrainUpdatedLookup = state.GetBufferLookup<UpdatedBlocks>(isReadOnly: false);
+            terrainUpdatedLookup = state.GetBufferLookup<TerrainBlockUpdates>(isReadOnly: false);
             terrainNeighborsLookup = state.GetComponentLookup<TerrainNeighbors>(isReadOnly: false);
             terrainAreaLookup = state.GetComponentLookup<TerrainArea>(isReadOnly: false);
         }

@@ -39,7 +39,7 @@ namespace Opencraft.Rendering
                 ComponentType.ReadOnly<TerrainBlocks>(),
                 ComponentType.ReadOnly<BlockLogicState>(),
                 ComponentType.ReadOnly<BlockDirection>(),
-                ComponentType.ReadOnly<UpdatedBlocks>(),
+                ComponentType.ReadOnly<TerrainBlockUpdates>(),
                 ComponentType.ReadOnly<TerrainArea>(),
                 ComponentType.ReadOnly<TerrainNeighbors>(),
                 ComponentType.ReadOnly<LocalTransform>(),
