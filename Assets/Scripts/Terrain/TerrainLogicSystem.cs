@@ -29,6 +29,7 @@ namespace Opencraft.Terrain
         private static bool isRunning = true;
         private double tickRate;
         private float timer;
+        private int tickCount;
         private static Dictionary<int3, LogicBlockData> inputBlocks;
         private static Dictionary<int3, LogicBlockData> gateBlocks;
         private static Dictionary<int3, LogicBlockData> activeGateBlocks;
@@ -65,6 +66,7 @@ namespace Opencraft.Terrain
             state.RequireForUpdate<TerrainArea>();
             tickRate = 1;
             timer = 0;
+            tickCount = 0;
             inputBlocks = new Dictionary<int3, LogicBlockData>();
             gateBlocks = new Dictionary<int3, LogicBlockData>();
             activeGateBlocks = new Dictionary<int3, LogicBlockData>();
@@ -105,6 +107,7 @@ namespace Opencraft.Terrain
             terrainAreasEntities = terrainAreasQuery.ToEntityArray(state.WorldUpdateAllocator);
 
             GetUpdatesMarker.Begin();
+            int updateCount = 0;
             foreach (var terrainEntity in terrainAreasEntities)
             {
                 DynamicBuffer<int3> updateBlocks = terrainUpdatedLookup[terrainEntity].Reinterpret<int3>();
@@ -123,6 +126,7 @@ namespace Opencraft.Terrain
                     LogicBlockData value = new LogicBlockData { BlockLocation = blockLoc, TerrainEntity = terrainEntity };
 
                     toReevaluate.Add(value);
+                    updateCount++;
 
                     if (blockType == BlockType.Air)
                     {
@@ -139,7 +143,7 @@ namespace Opencraft.Terrain
             GetUpdatesMarker.End();
 
             ReevaluatePropagateMarker.Begin();
-            if (toReevaluate.Count != 0)
+            if (updateCount > 0)
             {
                 PropagateLogicState(toReevaluate, false);
                 toReevaluate.Clear();
@@ -158,6 +162,7 @@ namespace Opencraft.Terrain
 
             GameStatistics.NumInputTypeBlocks.Value = inputBlocks.Count;
             GameStatistics.NumGateTypeBlocks.Value = gateBlocks.Count;
+            Debug.Log($"TerrainLogicSystem Tick {++tickCount}");
             _markerTerrainLogic.End();
         }
 

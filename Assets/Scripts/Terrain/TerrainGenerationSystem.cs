@@ -45,6 +45,7 @@ namespace Opencraft.Terrain
         private BufferLookup<TerrainColMaxY> _terrainColMaxLookup;
         private BufferLookup<TerrainStructuresToSpawn> _structuresToSpawnLookup;
         private int _hashedSeed;
+        private int circuitRadius;
         private NativeArray<Entity> terrainAreasEntities;
         private NativeArray<TerrainArea> terrainAreas;
 
@@ -74,7 +75,7 @@ namespace Opencraft.Terrain
             MD5 md5Hasher = MD5.Create();
             var hashed = md5Hasher.ComputeHash(Encoding.UTF8.GetBytes(ApplicationConfig.Seed.Value));
             _hashedSeed = BitConverter.ToInt32(hashed, 0);
-
+            circuitRadius = ApplicationConfig.CircuitChunkRadius.Value;
         }
 
         public void OnDestroy(ref SystemState state)
@@ -158,7 +159,8 @@ namespace Opencraft.Terrain
                 noiseSeed = _hashedSeed,
                 worldHeight = worldHeight,
                 columnHeight = columnHeight,
-                terrainGenLayers = _terrainGenLayers
+                terrainGenLayers = _terrainGenLayers,
+                circuitRadius = circuitRadius
 
             }.Schedule(numColumnsToSpawn, 1, sortHandle); // Each thread gets 1 column
             populateHandle.Complete();
@@ -212,6 +214,7 @@ namespace Opencraft.Terrain
         public int columnHeight;
         public int worldHeight;
         [ReadOnly] public NativeArray<TerrainGenerationLayer> terrainGenLayers;
+        public int circuitRadius;
 
         [BurstCompile]
         public void Execute(int jobIndex)
@@ -475,7 +478,17 @@ namespace Opencraft.Terrain
             ref NativeArray<DynamicBuffer<byte>> colMaxBuffers,
             int blockIndex, int heightSoFar, ref TerrainGenerationLayer terrainGenLayer, int columnAccess, int columnX, int columnZ, int index = -1)
         {
-            if (math.abs(columnX / 16) > 3 || math.abs(columnZ / 16) > 3) return 0;
+            bool WithinRange(int val, int n)
+            {
+                return val >= (0 - n / 2) && val <= (n - 1) - n / 2;
+            }
+
+            if (circuitRadius == 0) return 0;
+            int x = columnX / 16;
+            int z = columnZ / 16;
+            if (!WithinRange(x, circuitRadius) || !WithinRange(z, circuitRadius)) return 0;
+
+
             BlockType blockType = terrainGenLayer.blockType;
             float add = TerrainUtilities.GetAdd[(int)blockType];
             int3 blockLoc = TerrainUtilities.BlockIndexToLocation(blockIndex);
@@ -495,6 +508,10 @@ namespace Opencraft.Terrain
             {
                 return Strips(row) && !Edges(row, col) && (col % 14 == (add + (row + 1) * 0.5) % 14);
             }
+            bool FirstHalf(int val)
+            {
+                return val < 8;
+            }
 
             int heightToAdd;
             switch (blockType)
@@ -509,7 +526,7 @@ namespace Opencraft.Terrain
                     heightToAdd = ((Strips(row) && !Edges(row, col) && (col % 6 != (add + (row + 1) * 0.5) % 6)) || (row == 15 && col != 8 && col != 0 && col != 15)) ? 1 : 0;
                     break;
                 case BlockType.AND_Gate:
-                    heightToAdd = (TwoInputGate(row, col, add)) ? 1 : 0;
+                    heightToAdd = (TwoInputGate(row, col, add) && !FirstHalf(col)) ? 1 : 0;
                     break;
                 case BlockType.OR_Gate:
                     heightToAdd = (TwoInputGate(row, col, add)) ? 1 : 0;
@@ -518,16 +535,16 @@ namespace Opencraft.Terrain
                     heightToAdd = (!Strips(row) && !Edges(row, col) && (col % 6 == (add + (row + 1) * 0.5) % 6)) ? 1 : 0;
                     break;
                 case BlockType.XOR_Gate:
-                    heightToAdd = (TwoInputGate(row, col, add)) ? 1 : 0;
+                    heightToAdd = (TwoInputGate(row, col, add) && FirstHalf(col)) ? 1 : 0;
                     break;
                 default:
                     heightToAdd = (false) ? 1 : 0;
                     break;
             }
-
             int end = heightSoFar + heightToAdd < worldHeight ? heightSoFar + heightToAdd : worldHeight;
+
             SetColumnBlocks(ref terrainBlockBuffers, ref colMinBuffers, ref colMaxBuffers, heightSoFar, end,
-            terrainGenLayer.blockType, blockIndex, columnAccess, index);
+            blockType, blockIndex, columnAccess, index);
 
             return end;
         }

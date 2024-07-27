@@ -1,6 +1,39 @@
 from enum import Enum
 from colorama import Fore, Style
+import math
 
+def get_range(n): 
+    nums = []
+
+    for i in range(n):
+        for j in range(n):
+            nums.append((i, j)) 
+    return [(x -math.floor(n/2), y-math.floor(n/2)) for x, y in nums]
+
+def check_in_range(x, y, n):
+    if n == 0:
+        return False
+    elif n == 1:
+        return x == 0 and y == 0
+    else:
+        k = (n - 1) // 2
+        return -k <= x <= k and -k <= y <= k
+
+def get_min_max(n):
+    if n == 0:
+        return None
+    else:
+        return 0 - n // 2, (n-1)- n //2 
+print(get_min_max(0))
+print(get_min_max(1))
+print(get_min_max(2))
+print(get_min_max(3))
+print(get_min_max(4))
+print(get_min_max(5))
+print(get_min_max(6))
+
+
+exit()
 
 class Block(Enum):
     EMPTY = 0
@@ -66,37 +99,39 @@ grid_populator(Block.INPUT,0,
     lambda row, col, _: (col == min_side or col == max_side) and strips(row) and not row == max_side,
 )
 grid_populator(Block.CLOCK, 0, lambda row, col, _: (row == 15) and (col == 8))
-grid_populator(Block.WIRE, 3,
+grid_populator(Block.WIRE, 2,
     lambda row, col, addition: (strips(row)
     and not edges(row, col)
-    and (col % 6 != (addition + (row + 1) * 0.5) % 6))
+    and (col % 4 != (addition + (row + 1) * 0.5) % 4))
     or (row == max_side  and col != 8),
 )
 print_grid(grid)
-grid_populator(Block.LAMP, 0,
-    lambda row, col, _: (
-        edges(row, col) and not strips(row) and (col % 3 != 2) or row == min_side
-    ),
-)
-grid_populator(Block.AND, 9,
+# grid_populator(Block.LAMP, 0,
+#     lambda row, col, _: (
+#         edges(row, col) and not strips(row) and (col % 3 != 2) or row == min_side
+#     ),
+# )
+grid_populator(Block.AND, 2,
     lambda row, col, addition: strips(row)
     and not edges(row, col)
-    and (col % 14 == (addition + (row + 1) * 0.5) % 14),
-)
-grid_populator(Block.OR, 3,
-    lambda row, col, addition: strips(row)
-    and not edges(row, col)
-    and (col % 14 == (addition + (row + 1) * 0.5) % 14),
+    and (col % 12 == (addition + (row + 1) * 0.5) % 12),
 )
 print_grid(grid)
-grid_populator(Block.NOT, 3.5,
-    lambda row, col, addition: not strips(row)
-    and not edges(row, col)
-    and (col % 6 == (addition + (row + 1) * 0.5) % 6),
-)
-grid_populator(Block.XOR, 11,
+grid_populator(Block.OR, 6,
     lambda row, col, addition: strips(row)
     and not edges(row, col)
-    and (col % 14 == (addition + (row + 1) * 0.5) % 14),
+    and (col % 12 == (addition + (row + 1) * 0.5) % 12),
+)
+print_grid(grid)
+grid_populator(Block.XOR, 10,
+    lambda row, col, addition: strips(row)
+    and not edges(row, col)
+    and (col % 12 == (addition + (row + 1) * 0.5) % 12),
+)
+print_grid(grid)
+grid_populator(Block.NOT, 2.5,
+    lambda row, col, addition: not strips(row)
+    and not edges(row, col)
+    and (col % 4 == (addition + (row + 1) * 0.5) % 4),
 )
 print_grid(grid)
