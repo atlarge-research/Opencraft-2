@@ -15,7 +15,7 @@ MonoBehaviour:
   layerType: 0
   layerName: Stone base layer
   index: 100
-  blockType: 1
+  blockType: 8
   frequency: 32
   exponent: 1
   minHeight: 10

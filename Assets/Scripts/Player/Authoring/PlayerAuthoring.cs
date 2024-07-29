@@ -7,14 +7,14 @@ using UnityEngine;
 
 namespace Opencraft.Player.Authoring
 {
-    
+
     public struct PlayerComponent : IComponentData
     {
         // Movement related fields
         [GhostField] public int JumpVelocity;
         [GhostField] public float Pitch;
         [GhostField] public float Yaw;
-            
+
         // Connection related fields
         [GhostField] public FixedString32Bytes Username;
         public BlobAssetReference<BlobString> multiplayConnectionID;
@@ -24,17 +24,17 @@ namespace Opencraft.Player.Authoring
     public struct PlayerInGame : IComponentData, IEnableableComponent
     {
     }
-    
+
     // Marks this player entity as freshly instantiated
     public struct NewPlayer : IComponentData, IEnableableComponent
     {
     }
-    
+
     // Marks this player entity as a guest player
     public struct GuestPlayer : IComponentData, IEnableableComponent
     {
     }
-    
+
     public struct PlayerContainingArea : IComponentData
     {
         // Link to containing area
@@ -42,7 +42,7 @@ namespace Opencraft.Player.Authoring
         // Where that area is
         public int3 AreaLocation;
     }
-    
+
     // Component marking this entity as having a specific block selected.
     // Neighbor block refers to the block neighbor of the selected block closest to this entity
     public struct SelectedBlock : IComponentData
@@ -53,17 +53,19 @@ namespace Opencraft.Player.Authoring
         public int3 neighborBlockLoc;
     }
 
-    
+
     // All of a player's input for a frame, uses special component type IInputComponentData
     [GhostComponent(PrefabType = GhostPrefabType.AllPredicted, OwnerSendType = SendToOwnerType.SendToNonOwner)]
     public struct PlayerInput : IInputComponentData
     {
-        [GhostField]public float2 Movement;
-        [GhostField]public InputEvent Jump;
-        [GhostField]public InputEvent PrimaryAction;
-        [GhostField]public InputEvent SecondaryAction;
-        [GhostField]public float Pitch;
-        [GhostField]public float Yaw;
+        [GhostField] public float2 Movement;
+        [GhostField] public InputEvent Jump;
+        [GhostField] public InputEvent PrimaryAction;
+        [GhostField] public InputEvent SecondaryAction;
+        [GhostField] public InputEvent ThirdAction;
+        [GhostField] public int SelectedItem;
+        [GhostField] public float Pitch;
+        [GhostField] public float Yaw;
     }
 
     // Group player related component accessors for ease of use
@@ -86,8 +88,10 @@ namespace Opencraft.Player.Authoring
         public ref PlayerComponent PlayerComponent => ref m_Character.ValueRW;
 
         public ref PlayerContainingArea ContainingArea => ref m_Area.ValueRW;
-        
+
         public ref SelectedBlock SelectedBlock => ref m_SelectedBlock.ValueRW;
+
+        public ref LocalTransform TransformComponent => ref Transform.ValueRW;
     }
 
     [DisallowMultipleComponent]

@@ -20,7 +20,7 @@ namespace Opencraft.Terrain
             state.RequireForUpdate<TerrainSpawner>();
             _worldConfigName = new FixedString128Bytes(GameConfig.TerrainType.Value);
         }
-        
+
         public void OnUpdate(ref SystemState state)
         {
             TerrainBank terrain = TerrainBankSingleton.Instance;
@@ -36,32 +36,32 @@ namespace Opencraft.Terrain
             TerrainSpawner terrainSpawner = SystemAPI.GetSingleton<TerrainSpawner>();
             EntityCommandBuffer ecb = new EntityCommandBuffer(Allocator.Temp);
             Entity terrainConfigEntity = ecb.Instantiate(terrainSpawner.TerrainConfiguration);
-            ecb.SetComponent(terrainConfigEntity, new WorldParameters { ColumnHeight = config.AreaColumnHeight});
-            
-            foreach(var layer in config.Layers)
+            ecb.SetComponent(terrainConfigEntity, new WorldParameters { ColumnHeight = config.AreaColumnHeight });
+
+            foreach (var layer in config.Layers)
             {
                 Entity layerEntity = ecb.CreateEntity();
-                
+
                 ecb.AddComponent(layerEntity, new TerrainGenerationLayer
                 {
-                    layerType=layer.LayerType,
-                    index=layer.Index,
-                    blockType=layer.BlockType,
+                    layerType = layer.LayerType,
+                    index = layer.Index,
+                    blockType = layer.BlockType,
                     structureType = layer.StructureType,
                     frequency = layer.Frequency,
-                    exponent =layer.Exponent,
+                    exponent = layer.Exponent,
                     //baseHeight = layer.BaseHeight,
                     minHeight = layer.MinHeight,
-                    maxHeight= layer.MaxHeight,
+                    maxHeight = layer.MaxHeight,
                     amplitude = layer.MaxHeight - layer.MinHeight,
                     chance = layer.Chance,
                 });
             }
-            
+
             ecb.Playback(state.EntityManager);
             ecb.Dispose();
             state.Enabled = false;
         }
-        
+
     }
 }
