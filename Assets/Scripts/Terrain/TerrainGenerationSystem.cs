@@ -45,7 +45,8 @@ namespace Opencraft.Terrain
         private BufferLookup<TerrainColMaxY> _terrainColMaxLookup;
         private BufferLookup<TerrainStructuresToSpawn> _structuresToSpawnLookup;
         private int _hashedSeed;
-        private int circuitRadius;
+        private int circuitX;
+        private int circuitZ;
         private NativeArray<Entity> terrainAreasEntities;
         private NativeArray<TerrainArea> terrainAreas;
 
@@ -75,7 +76,8 @@ namespace Opencraft.Terrain
             MD5 md5Hasher = MD5.Create();
             var hashed = md5Hasher.ComputeHash(Encoding.UTF8.GetBytes(ApplicationConfig.Seed.Value));
             _hashedSeed = BitConverter.ToInt32(hashed, 0);
-            circuitRadius = ApplicationConfig.CircuitChunkRadius.Value;
+            circuitX = ApplicationConfig.CircuitX.Value;
+            circuitZ = ApplicationConfig.CircuitZ.Value;
         }
 
         public void OnDestroy(ref SystemState state)
@@ -160,7 +162,8 @@ namespace Opencraft.Terrain
                 worldHeight = worldHeight,
                 columnHeight = columnHeight,
                 terrainGenLayers = _terrainGenLayers,
-                circuitRadius = circuitRadius
+                circuitX = circuitX,
+                circuitZ = circuitZ
 
             }.Schedule(numColumnsToSpawn, 1, sortHandle); // Each thread gets 1 column
             populateHandle.Complete();
@@ -214,7 +217,8 @@ namespace Opencraft.Terrain
         public int columnHeight;
         public int worldHeight;
         [ReadOnly] public NativeArray<TerrainGenerationLayer> terrainGenLayers;
-        public int circuitRadius;
+        public int circuitX;
+        public int circuitZ;
 
         [BurstCompile]
         public void Execute(int jobIndex)
@@ -483,10 +487,10 @@ namespace Opencraft.Terrain
                 return val >= (0 - n / 2) && val <= (n - 1) - n / 2;
             }
 
-            if (circuitRadius == 0) return 0;
+            if (circuitX == 0 || circuitZ == 0) return 0;
             int x = columnX / 16;
             int z = columnZ / 16;
-            if (!WithinRange(x, circuitRadius) || !WithinRange(z, circuitRadius)) return 0;
+            if (!WithinRange(x, circuitX) || !WithinRange(z, circuitZ)) return 0;
 
 
             BlockType blockType = terrainGenLayer.blockType;
