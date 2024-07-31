@@ -7,7 +7,7 @@
 					"worldName": "GameServer",
 					"worldType": "Server",
 					"initializationMode": "Connect",
-					"serverNodeID": 0,
+					"serverNodeID": 0
 				},
 				{
 					"worldName": "GameClient",
