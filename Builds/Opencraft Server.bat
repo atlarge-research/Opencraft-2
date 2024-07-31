@@ -1,1 +1,1 @@
-opencraft2.exe -deploymentID 0 -deploymentJson deploymentMul.json
+Opencraft.exe -batchmode -nographics -deploymentID 0 -deploymentJson deploymentMul.json

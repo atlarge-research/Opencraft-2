@@ -22,7 +22,7 @@ flag must be set. The builds folder is location under `./Builds/`. This folder a
 
 ## Play
 
-Build the game using the instructions in the previous section and save it as `opencraft2.exe`.
+Build the game using the instructions in the previous section and save it as `Opencraft.exe`.
 To run and play the game, you'll need to run the game with your desired configuration settings.
 The `Builds` directory contains three `.bat` scripts to get you started: `Opencraft Server.bat`, `Opencraft Client.bat`,
 and `Opencraft Local.bat`.
