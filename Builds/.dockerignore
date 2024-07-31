@@ -11,6 +11,7 @@
 !*/logs
 !*/input_recordings
 
+**/*_BackUpThisFolder_ButDontShipItWithYourGame
 
 # Ignore unnecessary files inside allowed directories
 # This should go after the allowed directories
