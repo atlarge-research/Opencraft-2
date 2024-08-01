@@ -8,11 +8,13 @@ combinations = []
 for k in range(1, 4):
     for i in range(1, 7):
         for j in range(1, 7):
-            vals.add(k * i * j)
-            if (k * i * j) in nums:
+            # vals.add(k * i * j)
+            if (k * i * j) not in vals:
                 print(f"({i}, {j}), {k} => {k * i * j}")
                 combinations.append((i, j, k))
-                nums.remove(k * i * j)
+                # nums.remove(k * i * j)
+                vals.add(k * i * j)
+                
 print(sorted(list(vals)))
 print(len(vals))
 
