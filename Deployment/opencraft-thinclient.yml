@@ -1,0 +1,36 @@
+﻿apiVersion: batch/v1
+kind: Job
+metadata:
+  name: opencraft-thinclient
+  labels:
+    app.kubernetes.io/name: opencraft-thinclient
+spec:
+  template:
+    spec:
+      containers:
+        - name: opencraft-thinclient
+          image: jdonkervliet/opencraft
+          args:
+            - "-playType"
+            - "Client"
+            - "-multiplayRole"
+            - "Guest"
+            - "-signalingUrl"
+            - "some-url" # FIXME this should point to the signaling server
+            - "-iceServerUrl"
+            - "stun:stun.l.google.com:19302" # FIXME maybe this should point also to a TURN server for relay?
+            - "-logFile"
+            - "/opencraft2/logs/opencraft2_thinclient_log.txt"
+            - "-profiler-enable"
+            - "-logStats"
+            - "-statsFile"
+            - "/opencraft2/logs/opencraft2_thinclient_stats.csv"
+          volumeMounts:
+            - mountPath: /opencraft2/logs
+              name: logs-volume
+      volumes:
+        - name: logs-volume
+          hostPath:
+            path: /logs
+            type: DirectoryOrCreate
+      restartPolicy: Never

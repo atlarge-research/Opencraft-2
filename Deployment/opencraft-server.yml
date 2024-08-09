@@ -1,0 +1,41 @@
+﻿apiVersion: batch/v1
+kind: Job
+metadata:
+  name: opencraft-server
+  labels:
+    app.kubernetes.io/name: opencraft-server
+spec:
+  template:
+    spec:
+      containers:
+        - name: opencraft
+          image: jdonkervliet/opencraft
+          args:
+            - "-playType"
+            - "Server"
+            - "-serverUrl"
+            - "0.0.0.0" # FIXME this needs to point to the server instance
+            - "-nographics"
+            - "-batchmode"
+            - "-logFile"
+            - "/opencraft2/logs/opencraft2_server_log.txt"
+            - "-profiler-enable"
+            - "-logStats"
+            - "-statsFile"
+            - "/opencraft2/logs/opencraft2_server_stats.csv"
+          ports:
+            - containerPort: 7979
+              name: game-state
+              protocol: UDP
+            - containerPort: 7980
+              name: deployment
+              protocol: UDP
+          volumeMounts:
+            - mountPath: /opencraft2/logs
+              name: logs-volume
+      volumes:
+        - name: logs-volume
+          hostPath:
+            path: /logs
+            type: DirectoryOrCreate
+      restartPolicy: Never

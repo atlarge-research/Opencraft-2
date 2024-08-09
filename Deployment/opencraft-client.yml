@@ -1,0 +1,34 @@
+﻿apiVersion: batch/v1
+kind: Job
+metadata:
+  name: opencraft-client
+  labels:
+    app.kubernetes.io/name: opencraft-client
+spec:
+  template:
+    spec:
+      containers:
+        - name: opencraft-client
+          image: jdonkervliet/opencraft
+          args:
+            - "-playType"
+            - "SimulatedClient"
+            - "-serverUrl"
+            - "opencraft-service" # FIXME this needs to point to the server instance
+            - "-nographics"
+            - "-batchmode"
+            - "-logFile"
+            - "/opencraft2/logs/opencraft2_client_log.txt"
+            - "-profiler-enable"
+            - "-logStats"
+            - "-statsFile"
+            - "/opencraft2/logs/opencraft2_client_stats.csv"
+          volumeMounts:
+            - mountPath: /opencraft2/logs
+              name: logs-volume
+      volumes:
+        - name: logs-volume
+          hostPath:
+            path: /logs
+            type: DirectoryOrCreate
+      restartPolicy: Never

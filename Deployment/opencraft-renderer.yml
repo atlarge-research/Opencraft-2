@@ -1,0 +1,56 @@
+﻿apiVersion: batch/v1
+kind: Job
+metadata:
+  name: opencraft-renderer
+  labels:
+    app.kubernetes.io/name: opencraft-renderer
+spec:
+  template:
+    spec:
+      containers:
+        - name: opencraft-renderer
+          image: jdonkervliet/opencraft
+          args:
+            - "-playType"
+            - "Client"
+            - "-multiplayRole"
+            - "CloudHost"
+            - "-signalingUrl"
+            - "some-url" # FIXME this should point to the signaling server
+            - "-iceServerUrl"
+            - "stun:stun.l.google.com:19302"
+            - "-iceServerUrl"
+            - "turn:the-other-container-in-this-pod:3478" # FIXME how to connect these two things?
+            - "-logFile"
+            - "/opencraft2/logs/opencraft2_renderer_log.txt"
+            - "-profiler-enable"
+            - "-logStats"
+            - "-statsFile"
+            - "/opencraft2/logs/opencraft2_renderer_stats.csv"
+          volumeMounts:
+            - mountPath: /opencraft2/logs
+              name: logs-volume
+        - name: turn-server
+          image: coturn/coturn
+          args:
+            - "--min-port"
+            - "49610"
+            - "--max-port"
+            - "49610"
+          ports:
+            - containerPort: 3478
+              protocol: TCP
+            - containerPort: 3478
+              protocol: UDP
+            - containerPort: 5349
+              protocol: TCP
+            - containerPort: 5349
+              protocol: UDP
+            - containerPort: 49160
+              protocol: UDP
+      volumes:
+        - name: logs-volume
+          hostPath:
+            path: /logs
+            type: DirectoryOrCreate
+      restartPolicy: Never
