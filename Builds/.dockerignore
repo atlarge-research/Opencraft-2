@@ -1,17 +1,18 @@
-# Ignore everything
-*
-
-# Allow certain files and directories
-!*/opencraft2_Data
-!*/GameAssembly.so
-!*/UnityPlayer.so
-!*/opencraft2.x86_64
-!*/localconfig.json
-!/Multiplay_WebApp
-!*/logs
-!*/input_recordings
+## Ignore everything
+#*
+#
+## Allow certain files and directories
+#!*/opencraft2_Data
+#!*/GameAssembly.so
+#!*/UnityPlayer.so
+#!*/opencraft2.x86_64
+#!*/localconfig.json
+#!/Multiplay_WebApp
+#!*/logs
+#!*/input_recordings
 
 **/*_BackUpThisFolder_ButDontShipItWithYourGame
+**/*_DoNotShip
 
 # Ignore unnecessary files inside allowed directories
 # This should go after the allowed directories
