@@ -5,8 +5,8 @@
 /[Ll]ibrary/
 /[Tt]emp/
 /[Oo]bj/
-/[Bb]uild/*/
-/[Bb]uilds/*/
+/[Bb]uild/*
+/[Bb]uilds/*
 /[Ll]ogs/
 /[Uu]ser[Ss]ettings/
 /[Pp]rofile[Aa]nalyzer/
@@ -93,3 +93,5 @@ InitCodeMarker
 .idea/**/usage.statistics.xml
 .idea/**/dictionaries
 .idea/**/shelf
+
+.vscode
