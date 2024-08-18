@@ -20,7 +20,43 @@ Opencraft 2 is built by the Unity editor, using `File -> Build Settings` with `P
 `Target Platform` set to `Linux` or `Windows` (Mac is untested). For debugging, analysis, and metric collection the `Development Build`
 flag must be set. The builds folder is location under `./Builds/`. This folder also contains the Docker files for containerizing Opencraft 2.
 
-## Play
+## Running the Game
+
+Opencraft builds a single executable that can run in several roles such as server, client, and thin client.
+You can indicate in which mode the process should run in one of three ways:
+
+1. Using commandline arguments
+2. Using a deployment configuration file
+3. Using remote configuration
+
+Below we explain how to run the game using commandline arguments.
+
+### Running the Game Using Commandline Arguments
+
+To run the game as a server:
+
+```powershell
+.\Opencraft.exe -playType Server -batchmode -nographics
+```
+
+To run the game as a client:
+
+```powershell
+.\Opencraft.exe -playType Client
+```
+
+To run the game as a thin-client:
+
+```powershell
+.\Opencraft.exe -playType StreamedClient -signalingPort <FOO>
+```
+
+To run the game as a renderer (i.e., positioned between a server and a thin client):
+
+```powershell
+.\Opencraft.exe -playType Client -multiplayRole CloudHost
+.\webserver.exe -p <FOO>
+```
 
 Build the game using the instructions in the previous section and save it as `Opencraft.exe`.
 To run and play the game, you'll need to run the game with your desired configuration settings.
