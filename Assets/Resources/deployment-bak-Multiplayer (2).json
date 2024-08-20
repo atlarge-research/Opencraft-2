@@ -1,0 +1,38 @@
+{
+ "nodes":[
+     {
+         "nodeID":0,
+         "worldConfigs":[
+             {
+             "worldName": "GameServer",
+             "worldType":"Server",
+             "initializationMode":"Connect",
+             "serverNodeID":0,
+             }
+         ]
+     },
+     {
+         "nodeID":1,
+         "worldConfigs":[
+             {
+             "worldName": "GameClient",
+             "worldType":"Client",
+             "initializationMode":"Connect",
+             "serverNodeID":0
+             }
+         ]
+     }
+ ], 
+ "experimentActions":[
+     {
+         "delay": 30,
+         "actions": [ 
+             {
+                 "nodeID": 1,
+                 "worldNames": ["GameClient"],
+                 "actions": ["Stop"]
+             }
+         ]
+     }
+ ]
+ }

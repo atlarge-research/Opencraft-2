@@ -1,0 +1,5 @@
+param (
+    [Parameter(Mandatory=$true)][string]$executable
+)
+echo $executable
+ssh joachim@192.168.23.94 "DISPLAY=:0 nohup ~/Opencraft2/universal/linux.x86_64 -deploymentID 0 -deploymentJson ~/Opencraft2/deploymentSing.json -renderDist $executable -logStats True -statsFile ~/Opencraft2/universal/	stats$executable.csv -profiler-enable -profiler-log-file $executable.raw -playerFly"

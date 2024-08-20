@@ -1,14 +1,21 @@
-﻿namespace Opencraft
+﻿using Oculus.Platform;
+using PolkaDOTS;
+
+namespace Opencraft
 {
     public static class Env
     {
-        // 2^AREA_POW = blocks per area side
+        // 2^AREA_POW = blocks per area side   rel
         public const int AREA_POW = 4;
         
         public const int INITIAL_COLUMNS_X = 3;
         public const int INITIAL_COLUMNS_Z = 3;
         public const int PLAYER_VIEW_RANGE = 2;
-        public const int TERRAIN_SPAWN_RANGE = 3;
+        //public static int TERRAIN_SPAWN_RANGE = ApplicationConfig.renderDistance.Value;
+        public static int getTerrainSpawnRange()
+        {
+            return ApplicationConfig.renderDistance.Value;
+        }
         public const int MAX_COL_PER_TICK = 10;
         
         #region DO NOT CHANGE THESE!

@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.18028378, g: 0.22571412, b: 0.30692285, a: 1}
+  m_IndirectSpecularColor: {r: 0.18028352, g: 0.22571376, b: 0.30692244, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -314,6 +314,12 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: -0.000017404556
       objectReference: {fileID: 0}
+    - target: {fileID: 2961454703037126351, guid: cb41686a2c8a154faa94f2e018e016bb,
+        type: 3}
+      propertyPath: playerPrefab
+      value: 
+      objectReference: {fileID: 3194879136077857405, guid: edb2e7197597d3b4e8cecb2881c5bd24,
+        type: 3}
     - target: {fileID: 3277994445462553918, guid: cb41686a2c8a154faa94f2e018e016bb,
         type: 3}
       propertyPath: m_AnchorMax.x
@@ -333,6 +339,16 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Name
       value: PolkaDOTS_Frontend
+      objectReference: {fileID: 0}
+    - target: {fileID: 5157662374275073135, guid: cb41686a2c8a154faa94f2e018e016bb,
+        type: 3}
+      propertyPath: m_RecordButtonPath
+      value: <Keyboard>/f12
+      objectReference: {fileID: 0}
+    - target: {fileID: 5157662374275073135, guid: cb41686a2c8a154faa94f2e018e016bb,
+        type: 3}
+      propertyPath: m_SimulateOriginalTimingOnReplay
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6142303217096642274, guid: cb41686a2c8a154faa94f2e018e016bb,
         type: 3}
@@ -379,15 +395,20 @@ PrefabInstance:
       propertyPath: m_AnchorMin.x
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8184333004859735801, guid: cb41686a2c8a154faa94f2e018e016bb,
+        type: 3}
+      propertyPath: emulationType
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8450253508570564206, guid: cb41686a2c8a154faa94f2e018e016bb,
         type: 3}
       propertyPath: m_AnchorMax.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8450253508570564206, guid: cb41686a2c8a154faa94f2e018e016bb,
         type: 3}
       propertyPath: m_AnchorMin.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8450253508570564206, guid: cb41686a2c8a154faa94f2e018e016bb,
         type: 3}
@@ -407,7 +428,7 @@ PrefabInstance:
     - target: {fileID: 8450253508570564206, guid: cb41686a2c8a154faa94f2e018e016bb,
         type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0
+      value: -32.5
       objectReference: {fileID: 0}
     - target: {fileID: 8478204388487518502, guid: cb41686a2c8a154faa94f2e018e016bb,
         type: 3}
@@ -418,6 +439,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_SizeDelta.x
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8977719323361880928, guid: cb41686a2c8a154faa94f2e018e016bb,
+        type: 3}
+      propertyPath: m_Enabled
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -546,16 +572,16 @@ PrefabInstance:
     - target: {fileID: 3243556258562715456, guid: 6752cefe6bfd8d09cb07eba71d738d13,
         type: 3}
       propertyPath: editorArgs
-      value: -deploymentID 0
+      value: -deploymentID 0 -deploymentJson deployment -emulationType playback -emulationFile
+        C:\Users\joach\Desktop\Opencraft-2-VR\traces\testTrace.inputtrace
       objectReference: {fileID: 0}
     - target: {fileID: 3243556258562715456, guid: 6752cefe6bfd8d09cb07eba71d738d13,
         type: 3}
       propertyPath: deploymentConfig
-      value: "{\n\"nodes\":[\n\t{\n\t\t\"nodeID\":0,\n\t\t\"worldConfigs\":[\n\t\t\t{\n\t\t\t\"worldName\":
-        \"GameServer\",\n\t\t\t\"worldType\":\"Server\",\n\t\t\t\"initializationMode\":\"Connect\",\n\t\t\t\"serverNodeID\":0,\n\t\t\t},\n\t\t\t{\n\t\t\t\"worldName\":
-        \"GameClient\",\n\t\t\t\"worldType\":\"Client\",\n\t\t\t\"initializationMode\":\"Connect\",\n\t\t\t\"serverNodeID\":0,\n\t\t\t}\n\t\t]\n\t},\n\t{\n\t\t\"nodeID\":1,\n\t\t\"worldConfigs\":[\n\t\t\t{\n\t\t\t\"worldName\":
-        \"SimulatorClientTest\",\n\t\t\t\"worldType\":\"SimulatedClient\",\n\t\t\t\"initializationMode\":\"Connect\",\n\t\t\t\"serverNodeID\":0,\n\t\t\t\"numSimulatedClients\":
-        4\n\t\t\t}\n\t\t]\n\t}\n], \n\"experimentActions\":[]\n}"
+      value: "{\r\n\"nodes\":[\r\n\t{\r\n\t\t\"nodeID\":0,\r\n\t\t\"worldConfigs\":[\r\n\t\t\t{\r\n\t\t\t\"worldName\":
+        \"GameServer\",\r\n\t\t\t\"worldType\":\"Server\",\r\n\t\t\t\"initializationMode\":\"Connect\",\r\n\t\t\t\"serverNodeID\":0,\r\n\t\t\t},\r\n\t\t\t{\r\n\t\t\t\"worldName\":
+        \"GameClient\",\r\n\t\t\t\"worldType\":\"Client\",\r\n\t\t\t\"initializationMode\":\"Connect\",\r\n\t\t\t\"serverNodeID\":0\r\n\t\t\t}\r\n\t\t]\r\n\t}\r\n],
+        \r\n\"experimentActions\":[]\r\n}"
       objectReference: {fileID: 0}
     - target: {fileID: 3243556258562715456, guid: 6752cefe6bfd8d09cb07eba71d738d13,
         type: 3}

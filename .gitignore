@@ -10,6 +10,7 @@
 /[Ll]ogs/
 /[Uu]ser[Ss]ettings/
 /[Pp]rofile[Aa]nalyzer/
+/measurements
 
 # Include docker related files in build directories
 !/[Bb]uild/Dockerfile
@@ -93,3 +94,8 @@ InitCodeMarker
 .idea/**/usage.statistics.xml
 .idea/**/dictionaries
 .idea/**/shelf
+*.meta
+*.meta
+/Linux
+/profiler
+/Packages/com.unity.netcode@1.0.17
