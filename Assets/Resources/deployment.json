@@ -1,0 +1,22 @@
+{
+"nodes":[
+	{
+		"nodeID":0,
+		"worldConfigs":[
+			{
+			"worldName": "GameServer",
+			"worldType":"Server",
+			"initializationMode":"Connect",
+			"serverNodeID":0,
+			},
+			{
+			"worldName": "GameClient",
+			"worldType":"Client",
+			"initializationMode":"Connect",
+			"serverNodeID":0
+			}
+		]
+	}
+], 
+"experimentActions":[]
+}
