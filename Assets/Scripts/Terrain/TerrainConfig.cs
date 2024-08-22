@@ -10,8 +10,19 @@
         public const int PLAYER_VIEW_RANGE = 2;
         public const int TERRAIN_SPAWN_RANGE = 3;
         public const int MAX_COL_PER_TICK = 10;
-        
+
         #region DO NOT CHANGE THESE!
+
+        public static int getTerrainSpawnRange()
+        {
+            //when Variable renderdistance is desired, add 
+            // public static readonly CommandLineParser.IntArgument renderDistance = new CommandLineParser.IntArgument("-renderDist", 10);
+            // to Opencraft-2/Packages/PolkaDOTS/Runtime/Configuration/Applicationconfig.cs
+            //and uncomment this line:
+            // return ApplicationConfig.renderDistance.Value;
+            //Because this breaks polkaDOTS' abstraction model, this is not desired as default
+            return TERRAIN_SPAWN_RANGE;
+        }
 
         public const float CAMERA_Y_OFFSET = 0.5f;
         
