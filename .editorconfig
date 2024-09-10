@@ -1,0 +1,21 @@
+﻿root = true
+[*]
+# Most of the standard properties are supported
+indent_size=4
+max_line_length = 120
+trim_trailing_whitespace = true
+insert_final_newline = true
+end_of_line = lf
+
+[*.cs]
+# See https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/code-style-rule-options for list of options
+
+csharp_space_between_parentheses=expressions
+
+# Prefer "var" everywhere
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = true:suggestion
+
+csharp_default_private_modifier=explicit
+csharp_prefer_braces = true:suggestion
