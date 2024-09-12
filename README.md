@@ -1,20 +1,20 @@
 # Opencraft 2
 
 Opencraft 2 is an Minecraft-like online game built in Unity. It is intended for supporting experimental research on
-online game and cloud gaming performance. 
+online game and cloud gaming performance.
 
 ## Setup
 
-Install *Unity 2022 LTS*, clone this repository using `git clone --recurse-submodules`, and open it in Unity. 
+Install *Unity 2022 LTS*, clone this repository using `git clone --recurse-submodules`, and open it in Unity.
 Unity should automatically install required packages. This includes the [ParrelSync](https://github.com/VeriorPies/ParrelSync) package,
 which is useful for testing multiplayer functionality in-editor.
 The [Rider](https://www.jetbrains.com/rider/) IDE is recommended, it has direct integration with Unity.
 
 The game can be started from `Scenes/MainScene`. To run select `Server & Client` in `Multiplayer -> Window: PlayMode Tools`,
-then press the play button. Additional configuration can be specified in command line arguments, 
+then press the play button. Additional configuration can be specified in command line arguments,
 which can be set in-editor on the `Editor Args` field of the `GameBootstrap -> Editor Cmd Args` singleton component.
 
-## Builds
+## Building the Game
 
 Opencraft 2 is built by the Unity editor, using `File -> Build Settings` with `Platform` set to `Windows, Mac, Linux` and
 `Target Platform` set to `Linux` or `Windows` (Mac is untested). For debugging, analysis, and metric collection the `Development Build`
@@ -22,16 +22,34 @@ flag must be set. The builds folder is location under `./Builds/`. This folder a
 
 ## Running the Game
 
-Opencraft builds a single executable that can run in several roles such as server, client, and thin client.
-You can indicate in which mode the process should run in one of three ways:
+Opencraft 2 can be started in three ways:
 
-1. Using commandline arguments
-2. Using a deployment configuration file
-3. Using remote configuration
+1. From the Unity Editor (no building required!)
+2. Using command-line arguments
+3. Using a deployment graph.
 
-Below we explain how to run the game using commandline arguments.
+The sub-sections deploy describe how to run the game in each case.
 
-### Running the Game Using Commandline Arguments
+### From the Editor
+
+To run the game from the editor in its simplest setup (a client connecting to a single, locally running server), all you need to do is open the game in the Unity editor, open `MainScene`, and click the play button. To configure how to run the game, keep reading.
+
+You can configure how you want to run the game in the editor.
+To do so, first make sure you have the game open the Unity editor,
+then open the `MainScene` and click the `GameBootstrap` game object.
+This should show the `Editor Cmd Args` script in the panel on the right-hand side.
+This panel allows you to pass either command-line arguments or a deployment graph.
+To determine which command-line arguments to pass,
+or how to construct your deployment graph, see the sections on using [command-line arguments](#using-command-line-arguments) and [using a deployment graph respectively](#using-a-deployment-graph).
+
+To run multiple instances of the game from the editor, use Parrelsync as described in the [Parrelsync Section](#parrelsync).
+
+### Using Command-Line Arguments
+
+This section gives a brief overview of how to launch Opencraft 2 in its most common configurations using command-line arguments.
+For a full overview of available command-line arguments, see the [command-line arguments section](#command-line-arguments).
+
+When using the commands below, replace `.\Opencraft.exe` with the name of your executable. (Probably `./opencraft2.x86_64` on Linux!)
 
 To run the game as a server:
 
@@ -48,47 +66,50 @@ To run the game as a client:
 To run the game as a thin-client:
 
 ```powershell
-.\Opencraft.exe -playType StreamedClient -signalingPort <FOO>
+.\Opencraft.exe -playType StreamedClient -iceServerUrl stun:stun.l.google.com:19302 -signalingUrl ws://<host>:<FOO>
 ```
 
 To run the game as a renderer (i.e., positioned between a server and a thin client):
 
 ```powershell
-.\Opencraft.exe -playType Client -multiplayRole CloudHost
+.\Opencraft.exe -playType Client -multiplayRole CloudHost -iceServerUrl stun:stun.l.google.com:19302
 .\webserver.exe -p <FOO>
 ```
 
-Build the game using the instructions in the previous section and save it as `Opencraft.exe`.
-To run and play the game, you'll need to run the game with your desired configuration settings.
 The `Builds` directory contains three `.bat` scripts to get you started: `Opencraft Server.bat`, `Opencraft Client.bat`,
 and `Opencraft Local.bat`.
-These files require `opencraft2.exe` to be present, and run the game as a stand-alone server, a client,
+These files require `Opencraft.exe` to be present, and run the game as a stand-alone server, a client,
 or a combined server and client, respectively.
+
 See the [Configuration Deployment section](#deployment-configuration) for a more in-depth example of the game's
 configuration file.
 
-## Contributing
+### Using a Deployment Graph
 
-See [WORKFLOW.md](WORKFLOW.md) for contribution guidelines and workflow.
+This section gives a brief overview of how to launch Opencraft 2 in its most common configurations using a Deployment Configuration.
+For a detailed description of the Deployment Configuration, see the [Deployment Configuration Section](#deployment-configuration).
 
-### Docker
+>[!WARNING]
+>TODO: add common Deployment Configuration snippets here.
 
-Opencraft 2 can be run as a container. The main game container can be built from the `./Builds/` folder using 
+## Docker
+
+Opencraft 2 can be run as a container. The main game container can be built from the `./Builds/` folder using
 `docker build -t jerriteic/opencraft2:base .`. This base image depends on `jerriteic/gpu_ubuntu20.04` which allows
-container application to run graphics applications with NVIDIA GPU hardware acceleration. That container can 
+container application to run graphics applications with NVIDIA GPU hardware acceleration. That container can
 be built in the same folder using the `Dockerfile.ubuntugpu` dockerfile.
 
-#### Docker Requirements
+### Docker Requirements
 
-The game container runs a hardware-accelerated 3D graphics application through VirtualGL. 
+The game container runs a hardware-accelerated 3D graphics application through VirtualGL.
 This requires extensive configuration to the host platform:
 1. Install correct NVIDIA drivers for your platform and GPU.
-   1. Container is tested on Ubuntu 20.04 on NVIDIA Tesla T4 with proprietary driver version 535. 
+   1. Container is tested on Ubuntu 20.04 on NVIDIA Tesla T4 with proprietary driver version 535.
 2. Install [Docker + NVIDIA container toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#docker)
-3. On headless hosts, configure display settings according to [this guide](https://github.com/trn84/recipe-wizard/blob/master/nvidia-headless.md). 
+3. On headless hosts, configure display settings according to [this guide](https://github.com/trn84/recipe-wizard/blob/master/nvidia-headless.md).
    1. Do not reinstall the NVIDIA drivers, skip the step marked `Install NVIDIA Driver from CUDA .run shell script`.
 
-#### Running the Container
+### Running the Container
 
 If the Docker requirements are met, run the container using the following command:
 
@@ -115,23 +136,26 @@ jerriteic/opencraft2:base \
 ## Parrelsync
 
 [ParrelSync](https://github.com/VeriorPies/ParrelSync) allows synchronizing multiple copies of a Unity project. These
-can be run in parallel to test networked functionality. In `ParrelSync -> Preferences`, make sure that `/UnityRenderStreaming`
-is listed under `Optional Folders to Symbolically Link`. Then, to create a new ParrelSync clone select `Add new clone` in `ParrelSync -> Clones Manager`.
+can be run in parallel to test networked functionality.
+
+> [!WARNING]
+> In `ParrelSync -> Preferences`, make sure that `/UnityRenderStreaming`
+> is listed under `Optional Folders to Symbolically Link`. Then, to create a new ParrelSync clone select `Add new clone` in `ParrelSync -> Clones Manager`.
 
 ## Multiplay
 
-This project supports a single game client acting as a streamed gaming host for many players on guest clients.  
+This project supports a single game client acting as a streamed gaming host for many players on guest clients.
 Testing Multiplay is easiest using ParrelSync, in the clone's launch arguments in the clone manager add `-multiplayRole Guest`
 to run it as a Multiplay guest client.
 
 ### Signalling Service WebApp
 
 Multiplay functionality requires a signalling service to establish a direct connection between host and guest clients.
-The signaling service is run as a webapp, the source is available in `./UnityRenderStreaming/WebApp/` 
-and can be build using `./UnityRenderStreaming/pack_webapp.sh` which has `npm` as a dependency. 
+The signaling service is run as a webapp, the source is available in `./UnityRenderStreaming/WebApp/`
+and can be build using `./UnityRenderStreaming/pack_webapp.sh` which has `npm` as a dependency.
 The webapp can be run with a convenience script `.Builds/Multiplay_WebApp/start.sh` or directly with `.\webserver -p <PORT>`.
 The port the webserver listens on must be the same as the signaling port configured using the
-application command line argument `-signalingPort <int>`. 
+application command line argument `-signalingPort <int>`.
 
 
 ## Debugging and Analysis
@@ -194,6 +218,7 @@ when run standalone. In editor, the hierarchy of configuration is `Deployment Gr
 | -statsFile                  | _FilePath_                                                                   | Application.persistentDataPath\stats.csv                 | What file to log statistics to.                                      |
 
 ### Deployment Configuration
+
 The deployment service constructs a deployment graph based on a configuration file. The deployment configuration file path is set
 using the command line argument `-deploymentJson <FilePath>`. In editor, a json file can be set on the `Deployment Config` field of the `GameBootstrap->Cmd Args Reader` singleton component.
 The Json is expected to follow this formatting (excluding comments):
@@ -249,11 +274,11 @@ The Json is expected to follow this formatting (excluding comments):
          }
       ]
    }
-], 
+],
 "experimentActions":[
 	{
 		"delay": 30,                                              // Trigger these actions after a delay
-		"actions": [ 
+		"actions": [
 			{
 				"nodeID": 1,                                      // ID of node to take actions on
 				"worldNames": ["GameClient", "StreamedClient"],   // List of worlds on that node to take actions on
@@ -269,3 +294,6 @@ The Json is expected to follow this formatting (excluding comments):
 ]
 }
 ```
+## Contributing
+
+See [WORKFLOW.md](WORKFLOW.md) for contribution guidelines and workflow.

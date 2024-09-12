@@ -10,7 +10,7 @@ end_of_line = lf
 [*.cs]
 # See https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/code-style-rule-options for list of options
 
-csharp_space_between_parentheses=expressions
+csharp_space_between_parentheses=false
 
 # Prefer "var" everywhere
 csharp_style_var_for_built_in_types = true:suggestion
