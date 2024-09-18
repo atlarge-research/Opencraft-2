@@ -21,6 +21,7 @@ namespace Opencraft.Player.Multiplay
     public partial class MultiplayPlayerLinkSystem : SystemBase
     {
         private EntityQuery playerQuery;
+
         protected override void OnCreate()
         {
             playerQuery = new EntityQueryBuilder(Allocator.Temp)
@@ -33,6 +34,7 @@ namespace Opencraft.Player.Multiplay
                 RequireForUpdate<PlayerSpawner>();
             }
         }
+
         protected override void OnUpdate()
         {
             var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
@@ -73,7 +75,7 @@ namespace Opencraft.Player.Multiplay
                 // Check if a player has a spawned player with the same name, link to it if it exists
                 if (playerController.playerEntityRequestSent && !playerController.playerEntityExists)
                 {
-                    if (linkPlayerIfExists(ref playerController, ref commandBuffer, in playerSpawner, in connID))
+                    if (LinkPlayerIfExists(ref playerController, ref commandBuffer, in playerSpawner, in connID))
                     {
                         playerController.playerEntityRequestSent = false;
                         playerController.playerEntityExists = true;
@@ -139,7 +141,8 @@ namespace Opencraft.Player.Multiplay
         /// <param name="playerSpawner"></param>
         /// <param name="connID"></param>
         /// <returns></returns>
-        bool linkPlayerIfExists(ref PolkaDOTS.Multiplay.MultiplayPlayerController playerController, ref EntityCommandBuffer commandBuffer, in PlayerSpawner playerSpawner, in string connID)
+        bool LinkPlayerIfExists(ref PolkaDOTS.Multiplay.MultiplayPlayerController playerController,
+            ref EntityCommandBuffer commandBuffer, in PlayerSpawner playerSpawner, in string connID)
         {
             var playerData = playerQuery.ToComponentDataArray<PlayerComponent>(Allocator.Temp);
             var playerEntities = playerQuery.ToEntityArray(Allocator.Temp);
@@ -172,7 +175,9 @@ namespace Opencraft.Player.Multiplay
                     commandBuffer.SetComponentEnabled<NewPlayer>(playerEntity, false);
 
                     if (playerController.username != "LOCALPLAYER")
+                    {
                         commandBuffer.AddComponent<GuestPlayer>(playerEntity);
+                    }
 
                     // Color the player red since it is locally controlled
                     commandBuffer.SetComponent(playerEntity,
@@ -180,12 +185,9 @@ namespace Opencraft.Player.Multiplay
                     return true;
                 }
             }
-
             return false;
         }
-
     }
-
 
     /*// Stub version of the link system run on thin clients
     [WorldSystemFilter(WorldSystemFilterFlags.ThinClientSimulation)]

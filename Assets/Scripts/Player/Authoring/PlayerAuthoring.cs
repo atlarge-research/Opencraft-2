@@ -55,7 +55,7 @@ namespace Opencraft.Player.Authoring
 
 
     // All of a player's input for a frame, uses special component type IInputComponentData
-    [GhostComponent(PrefabType = GhostPrefabType.AllPredicted, OwnerSendType = SendToOwnerType.SendToNonOwner)]
+    [GhostComponent(PrefabType = GhostPrefabType.All, OwnerSendType = SendToOwnerType.SendToNonOwner)]
     public struct PlayerInput : IInputComponentData
     {
         [GhostField] public float2 Movement;

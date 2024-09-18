@@ -10,6 +10,9 @@ end_of_line = lf
 [*.cs]
 # See https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/code-style-rule-options for list of options
 
+max_line_length = 120
+csharp_wrap_long_lines = true
+
 csharp_space_between_parentheses=false
 
 # Prefer "var" everywhere

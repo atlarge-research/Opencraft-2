@@ -9,8 +9,7 @@ using UnityEngine;
 
 namespace Opencraft.Player
 {
-    // Applies collected input to player entities
-    // Also moves the camera locally for these clients
+    // Applies collected input to player entities Also moves the camera locally for these clients
     [UpdateInGroup(typeof(GhostInputSystemGroup))]
     public partial struct SamplePlayerInput : ISystem
     {
