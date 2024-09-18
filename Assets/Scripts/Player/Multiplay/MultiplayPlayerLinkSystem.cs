@@ -8,12 +8,13 @@ using Unity.VisualScripting;
 using UnityEngine;
 
 /*
- * Links player entities and objects 
+ * Links player entities and objects
  */
 namespace Opencraft.Player.Multiplay
 {
     // Run on Multiplay hosts, handles sending player spawn/destroy RPCs for Multiplay guests and linking
     // player GameObjects to player entities based on Multiplay connectionID
+    // JD: comment above says this runs on Multiplay hosts, but afaik it also runs on regular clients...
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateAfter(typeof(PolkaDOTS.Multiplay.MultiplayInitSystem))]
     [UpdateInGroup(typeof(InitializationSystemGroup))]
@@ -22,7 +23,7 @@ namespace Opencraft.Player.Multiplay
         private EntityQuery playerQuery;
         protected override void OnCreate()
         {
-            playerQuery= new EntityQueryBuilder(Allocator.Temp)
+            playerQuery = new EntityQueryBuilder(Allocator.Temp)
                 .WithAllRW<PlayerComponent>()
                 .WithAll<NewPlayer>()
                 .WithAll<GhostOwnerIsLocal>()
@@ -35,7 +36,7 @@ namespace Opencraft.Player.Multiplay
         protected override void OnUpdate()
         {
             var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
-            
+
             // Simulated players do not need to deal with objects
             if (World.Unmanaged.IsSimulatedClient())
             {
@@ -44,36 +45,36 @@ namespace Opencraft.Player.Multiplay
                              .WithAll<NetworkStreamInGame>())
                 {
                     var req = commandBuffer.CreateEntity();
-                    FixedString32Bytes name = new FixedString32Bytes(World.Unmanaged.Name);
+                    var name = new FixedString32Bytes(World.Unmanaged.Name);
                     var spawnPlayerRequest = new SpawnPlayerRequest
-                        { Username =  name };
+                    { Username = name };
                     commandBuffer.AddComponent(req, spawnPlayerRequest);
-                    Debug.Log($"Sending spawn player RPC for user { name }");
+                    Debug.Log($"Sending spawn player RPC for user {name}");
                     commandBuffer.AddComponent(req, new SendRpcCommandRequest { TargetConnection = netEntity });
                     Enabled = false;
                 }
-                
+
                 commandBuffer.Playback(EntityManager);
-              
+
                 return;
             }
-            
-            PolkaDOTS.Multiplay.Multiplay multiplay = PolkaDOTS.Multiplay.MultiplaySingleton.Instance;
+
+            var multiplay = PolkaDOTS.Multiplay.MultiplaySingleton.Instance;
             if (multiplay.IsUnityNull())
+            {
                 return;
-            
-            
-            
+            }
+
             var playerSpawner = SystemAPI.GetSingleton<PlayerSpawner>();
-            
+
             foreach (var (connID, playerObj) in multiplay.connectionPlayerObjects)
             {
                 var playerController = playerObj.GetComponent<PolkaDOTS.Multiplay.MultiplayPlayerController>();
-                
                 // Check if a player has a spawned player with the same name, link to it if it exists
                 if (playerController.playerEntityRequestSent && !playerController.playerEntityExists)
                 {
-                    if(linkPlayerIfExists(ref playerController, ref commandBuffer, in playerSpawner, in connID)){
+                    if (linkPlayerIfExists(ref playerController, ref commandBuffer, in playerSpawner, in connID))
+                    {
                         playerController.playerEntityRequestSent = false;
                         playerController.playerEntityExists = true;
                     }
@@ -94,7 +95,7 @@ namespace Opencraft.Player.Multiplay
                     {
                         var req = commandBuffer.CreateEntity();
                         SpawnPlayerRequest spawnPlayerRequest = new SpawnPlayerRequest
-                            { Username = playerController.username };
+                        { Username = playerController.username };
                         commandBuffer.AddComponent(req, spawnPlayerRequest);
                         Debug.Log($"Sending spawn player RPC for user {playerController.username}");
                         commandBuffer.AddComponent(req, new SendRpcCommandRequest { TargetConnection = entity });
@@ -102,7 +103,7 @@ namespace Opencraft.Player.Multiplay
                     }
                 }
             }
-            
+
             // Handle disconnected Multiplay connections
             foreach (var connectionId in multiplay.disconnectedIds)
             {
@@ -128,14 +129,23 @@ namespace Opencraft.Player.Multiplay
             multiplay.disconnectedIds.Clear();
 
             commandBuffer.Playback(EntityManager);
-
         }
 
+        /// <summary>
+        /// TODO find out what this method does
+        /// </summary>
+        /// <param name="playerController"></param>
+        /// <param name="commandBuffer"></param>
+        /// <param name="playerSpawner"></param>
+        /// <param name="connID"></param>
+        /// <returns></returns>
         bool linkPlayerIfExists(ref PolkaDOTS.Multiplay.MultiplayPlayerController playerController, ref EntityCommandBuffer commandBuffer, in PlayerSpawner playerSpawner, in string connID)
         {
-            NativeArray<PlayerComponent> playerData = playerQuery.ToComponentDataArray<PlayerComponent>(Allocator.Temp);
-            NativeArray<Entity> playerEntities = playerQuery.ToEntityArray(Allocator.Temp);
-            for (int i = 0; i < playerEntities.Length; i++)
+            var playerData = playerQuery.ToComponentDataArray<PlayerComponent>(Allocator.Temp);
+            var playerEntities = playerQuery.ToEntityArray(Allocator.Temp);
+
+            // loop through player entities
+            for (var i = 0; i < playerEntities.Length; i++)
             {
                 var player = playerData[i];
                 var playerEntity = playerEntities[i];
@@ -147,7 +157,7 @@ namespace Opencraft.Player.Multiplay
 
                     // Store connectionID in components as a blob reference.
                     var builder = new BlobBuilder(Allocator.Temp);
-                    ref BlobString blobString = ref builder.ConstructRoot<BlobString>();
+                    ref var blobString = ref builder.ConstructRoot<BlobString>();
                     builder.AllocateString(ref blobString, connID);
                     // Copy new player component
                     commandBuffer.SetComponent(playerEntity, new PlayerComponent
@@ -160,10 +170,10 @@ namespace Opencraft.Player.Multiplay
                     // Create a new block outline entity. Used by the HighlightSelectedBlockSystem on clients
                     commandBuffer.Instantiate(playerSpawner.BlockOutline);
                     commandBuffer.SetComponentEnabled<NewPlayer>(playerEntity, false);
-                    
+
                     if (playerController.username != "LOCALPLAYER")
                         commandBuffer.AddComponent<GuestPlayer>(playerEntity);
-                    
+
                     // Color the player red since it is locally controlled
                     commandBuffer.SetComponent(playerEntity,
                         new URPMaterialPropertyBaseColor() { Value = new float4(1, 0, 0, 1) });
@@ -173,10 +183,10 @@ namespace Opencraft.Player.Multiplay
 
             return false;
         }
-        
+
     }
-    
-    
+
+
     /*// Stub version of the link system run on thin clients
     [WorldSystemFilter(WorldSystemFilterFlags.ThinClientSimulation)]
     [UpdateInGroup(typeof(InitializationSystemGroup))]
@@ -191,7 +201,7 @@ namespace Opencraft.Player.Multiplay
         {
 
             var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
-            
+
             // Create a spawn player rpc
             foreach (var (id, netEntity) in SystemAPI.Query<RefRO<NetworkId>>().WithEntityAccess()
                          .WithAll<NetworkStreamInGame>())
@@ -204,12 +214,12 @@ namespace Opencraft.Player.Multiplay
                 Debug.Log($"Sending spawn player RPC for user { name }");
                 commandBuffer.AddComponent(req, new SendRpcCommandRequest { TargetConnection = netEntity });
             }
-        
+
 
             commandBuffer.Playback(EntityManager);
             Enabled = false;
 
         }
-        
+
     }*/
 }
